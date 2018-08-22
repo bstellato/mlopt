@@ -1,17 +1,12 @@
 # Functions
 
 
-
-
-
 # Define problem in JuMP
-function solve_supply_chain()
+function solve_supply_chain(x0, w, T)
     srand(1)  # reset rng
-    T = 10
     M = 10  # Maximum ordering capacity
     K = 10
     c = 3
-    w = M * rand(T)  # Disturbance
     h = 10      # Storage cost
     p = 30      # Shortage cost
 
@@ -25,6 +20,7 @@ function solve_supply_chain()
     @variable(m, v[i=1:T], Bin)
 
     # Constraints
+    @constraint(m, [i=1:length(x0)], x[i] == x0[i])
     @constraint(m, evolution[t=1:T], x[t + 1] == x[t] + u[t] - w[t])
     @constraint(m, yh[t=1:T], y[t] >= h * x[t])
     @constraint(m, yp[t=1:T], y[t] >= -p * x[t])
@@ -34,18 +30,40 @@ function solve_supply_chain()
     # Cost
     @objective(m, Min, sum(y[i] + K * v[i] + c * u[i] for i in 1:T))
 
-
     # Solve problem
     solve(m)
 
     # Plot behavior x, u, v and w
-    t_vec = 0:1:T-1
-    p1 = plot(t_vec, getvalue(x)[1:T], line=:steppre, lab="x")
-    p2 = plot(t_vec, getvalue(u), line=:steppre, lab="u")
-    p3 = plot(t_vec, getvalue(v), line=:steppre, lab="v")
-    p4 = plot(t_vec, w, line=:steppre, lab="w")
-    plot(p1, p2, p3, p4, layout = (4,1))
+    #  t_vec = 0:1:T-1
+    #  p1 = plot(t_vec, getvalue(x)[1:T], line=:steppost, lab="x")
+    #  p2 = plot(t_vec, getvalue(u), line=:steppost, lab="u")
+    #  p3 = plot(t_vec, getvalue(v), line=:steppost, lab="v")
+    #  p4 = plot(t_vec, w, line=:steppost, lab="w")
+    #  plot(p1, p2, p3, p4, layout = (4,1))
 
+    return getobjectivevalue(m)
+
+end
+
+
+function estimate_cost(w, T)
+    # Sample state
+    N = 100
+    X = randn(N, 1)
+    y = Array{Float64}(N)
+
+    # For each state solve optimization problem
+    for i = 1:N
+        y[i] = solve_supply_chain(X[i, :], w[2:end], T-1)
+    end
+
+    # fit tree
+    lnr = OptimalTrees.OptimalTreeRegressor()
+    lnr = OptimalTrees.OptimalTreeRegressor(max_depth=10)
+    OptimalTrees.fit!(lnr, X, y)
+
+    # return tree
+    lnr
 
 end
 
