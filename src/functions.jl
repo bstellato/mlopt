@@ -1,6 +1,75 @@
 # Functions
 
 
+TOL = 1e-05
+
+function solve_lp(c, A, b)
+
+    n_var = length(c)
+    n_constr = length(b)
+
+    m = Model(solver = GurobiSolver(OutputFlag=0))
+    @variable(m, x[1:n_var])
+    @constraint(m, lin_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) <= b[j])
+    @objective(m, Min, sum(c[i] * x[i] for i = 1:n_var))
+
+    status = solve(m)
+
+    if status != :Optimal
+        error("LP not solved to optimality. Status $(status)")
+    end
+
+    return getvalue(x), -getdual(lin_constr)
+
+end
+
+function get_basis(c, A, b)
+
+    x, y = solve_lp(c, A, b)
+
+
+    # Extract basis
+    basis = find(y .>= TOL)
+    #  n_basis = length(basis)
+
+    return basis
+end
+
+function solve_with_basis(c, A, b, basis)
+    n_var = length(c)
+    n_constr = length(b)
+    n_basis = length(basis)
+
+    # Solve using Basis
+    A_red = A[basis, :]
+    b_red = b[basis]
+
+    x = A_red \ b_red
+    y = zeros(n_constr)
+    y[basis] = A_red' \ (-c)
+
+    return x, y
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Define problem in JuMP
 function solve_supply_chain(x0, w, T)
     srand(1)  # reset rng
