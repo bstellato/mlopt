@@ -5,8 +5,8 @@ include("../src/MyModule.jl")
 
     # Define LP
     srand(1)
-    n = 10
-    m = 50
+    n = 100
+    m = 500
     c = randn(n)
     b = rand(m)
     A = sprandn(m, n, 0.5)

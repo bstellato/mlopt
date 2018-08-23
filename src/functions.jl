@@ -3,12 +3,37 @@
 
 TOL = 1e-05
 
-function solve_lp(c, A, b)
+function basis_to_number(basis::Vector{Vector{Int64}})
+
+    N = length(basis)
+    unique_basis = unique(basis)
+    n_basis = length(unique_basis)
+
+    # Map basis to number
+    y = Vector{Int64}(N)
+    for i = 1:N
+        # Get which basis is the current one
+        y[i] = 0
+        for j = 1:n_basis
+            if basis[i] == unique_basis[j]
+                y[i] = j
+                break
+            end
+        end
+        (y[i] == 0) && (error("Found no matching basis"))
+    end
+
+    return y, unique_basis
+end
+
+function solve_lp(c::Vector{Float64},
+                  A::SparseMatrixCSC,
+                  b::Vector{Float64})
 
     n_var = length(c)
     n_constr = length(b)
 
-    m = Model(solver = GurobiSolver(OutputFlag=0))
+    m = Model(solver = MosekSolver(QUIET=1))
     @variable(m, x[1:n_var])
     @constraint(m, lin_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) <= b[j])
     @objective(m, Min, sum(c[i] * x[i] for i = 1:n_var))
@@ -23,7 +48,9 @@ function solve_lp(c, A, b)
 
 end
 
-function get_basis(c, A, b)
+function get_basis(c::Vector{Float64},
+                   A::SparseMatrixCSC,
+                   b::Vector{Float64})
 
     x, y = solve_lp(c, A, b)
 
@@ -35,10 +62,11 @@ function get_basis(c, A, b)
     return basis
 end
 
-function solve_with_basis(c, A, b, basis)
-    n_var = length(c)
+function solve_with_basis(c::Vector{Float64},
+                          A::SparseMatrixCSC,
+                          b::Vector{Float64},
+                          basis::Vector{Int64})
     n_constr = length(b)
-    n_basis = length(basis)
 
     # Solve using Basis
     A_red = A[basis, :]
