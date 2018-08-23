@@ -46,16 +46,16 @@ y_train, unique_basis = MyModule.basis_to_number(basis)
 X_train = vcat(Θ'...)
 
 # Train tree
-lnr = OT.OptimalTreeClassifier(max_depth = 5,
+lnr = OT.OptimalTreeClassifier(max_depth = 10,
                                minbucket = 1,
                                cp = 0.0001)
 OT.fit!(lnr, X_train, y_train)
 
 # Export tree
-export_tree_name = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
-println("Export tree to $(export_tree_name)")
-OT.writedot("$(export_tree_name).dot", lnr)
-run(`dot -Tpdf -o $(export_tree_name).pdf $(export_tree_name).dot`)
+#  export_tree_name = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
+#  println("Export tree to $(export_tree_name)")
+#  OT.writedot("$(export_tree_name).dot", lnr)
+#  run(`dot -Tpdf -o $(export_tree_name).pdf $(export_tree_name).dot`)
 
 
 # Generate new dataset to predict
@@ -92,6 +92,8 @@ n_correct_eval = 0
 for i = 1:length(y_pred)
     if basis_pred[i] == basis_test[i]
         n_correct_eval += 1
+    else
+        println("Bad prediction at index $i")
     end
 end
 
@@ -102,6 +104,13 @@ println("Results")
 
 
 
+# Solve problems with learned basis
+x_pred = Vector{Vector{Float64}}(length(y_pred))
+x_test = Vector{Vector{Float64}}(length(y_pred))
+for i = 1:length(y_pred)
+    x_pred[i], _ = MyModule.solve_with_basis(c_test[i], A, [b_test[i]; ub; -lb], basis_pred[i])
+    x_test[i], _ = MyModule.solve_lp(c_test[i], A, [b_test[i]; ub; -lb])
+end
 
 
 
