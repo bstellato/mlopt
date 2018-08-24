@@ -95,6 +95,63 @@ function solve_with_basis(c::Vector{Float64},
 
 end
 
+function gen_supply_chain_model(x0::Array{Float64},
+                                w::Array{Float64},
+                                T::Int64,
+                                bin_vars::Bool=false)
+    M = 10  # Maximum ordering capacity
+    K = 10
+    c = 3
+    h = 10      # Storage cost
+    p = 30      # Shortage cost
+
+    # Define JuMP model
+    m = Model(solver = GurobiSolver())
+
+    # Variables
+    @variable(m, x[i=1:T+1])
+    (bin_vars) && (@variable(m, u[i=1:T]))
+    @variable(m, y[i=1:T])  # Auxiliary: y[t] = max{h * x[t], -p * x[t]}
+    @variable(m, v[i=1:T], Bin)
+
+    # Constraints
+    @constraint(m, [i=1:length(x0)], x[i] == x0[i])
+    @constraint(m, yh[t=1:T], y[t] >= h * x[t])
+    @constraint(m, yp[t=1:T], y[t] >= -p * x[t])
+    if bin_vars
+        @constraint(m, evolution[t=1:T], x[t + 1] == x[t] + u[t] - w[t])
+        @constraint(m, [t=1:T], u[t] >= 0)
+        @constraint(m, [t=1:T], u[t] <= M * v[t])
+    else
+        @constraint(m, evolution[t=1:T], x[t + 1] == x[t] - w[t])
+    end
+
+    # Cost
+    if bin_vars
+        @objective(m, Min, sum(y[i] + K * v[i] + c * u[i] for i in 1:T))
+    else
+        @objective(m, Min, sum(y[i] + K * v[i] for i in 1:T))
+    end
+
+    # Solve problem
+    JuMP.build(m)
+
+    # Extract problem data
+    m_in = m.internalModel
+
+    # Get c, A, b, lb, ub
+    c = getobj(m_in)
+    A = getconstrmatrix(m_in)
+    A_ub = getconstrUB(m_in)
+    A_lb = getconstrLB(m_in)
+    ub = setvarUB(m_in)
+    lb = getvarLB(m_in)
+
+    return c, A_lb, A, A_ub, lb, ub
+
+end
+
+
 
 
 
@@ -114,7 +171,10 @@ end
 
 
 # Define problem in JuMP
-function solve_supply_chain(x0, w, T)
+function solve_supply_chain(x0::Array{Float64},
+                            w::Array{Float64},
+                            T::Int64,
+                            bin_vars::Bool=false)
     srand(1)  # reset rng
     M = 10  # Maximum ordering capacity
     K = 10
@@ -127,20 +187,28 @@ function solve_supply_chain(x0, w, T)
 
     # Variables
     @variable(m, x[i=1:T+1])
-    @variable(m, u[i=1:T])
+    (bin_vars) && (@variable(m, u[i=1:T]))
     @variable(m, y[i=1:T])  # Auxiliary: y[t] = max{h * x[t], -p * x[t]}
     @variable(m, v[i=1:T], Bin)
 
     # Constraints
     @constraint(m, [i=1:length(x0)], x[i] == x0[i])
-    @constraint(m, evolution[t=1:T], x[t + 1] == x[t] + u[t] - w[t])
     @constraint(m, yh[t=1:T], y[t] >= h * x[t])
     @constraint(m, yp[t=1:T], y[t] >= -p * x[t])
-    @constraint(m, [t=1:T], u[t] >= 0)
-    @constraint(m, [t=1:T], u[t] <= M * v[t])
+    if bin_vars
+        @constraint(m, evolution[t=1:T], x[t + 1] == x[t] + u[t] - w[t])
+        @constraint(m, [t=1:T], u[t] >= 0)
+        @constraint(m, [t=1:T], u[t] <= M * v[t])
+    else
+        @constraint(m, evolution[t=1:T], x[t + 1] == x[t] - w[t])
+    end
 
     # Cost
-    @objective(m, Min, sum(y[i] + K * v[i] + c * u[i] for i in 1:T))
+    if bin_vars
+        @objective(m, Min, sum(y[i] + K * v[i] + c * u[i] for i in 1:T))
+    else
+        @objective(m, Min, sum(y[i] + K * v[i] for i in 1:T))
+    end
 
     # Solve problem
     solve(m)
