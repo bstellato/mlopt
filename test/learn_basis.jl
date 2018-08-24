@@ -18,7 +18,7 @@ lb = -5 * ones(n)
 
 
 # Add upper and lower bounds in A and b
-A = [A; eye(n); -eye(n)]
+#  A = [A; eye(n); -eye(n)]
 #  b = [b; ub; -lb]
 
 
@@ -36,7 +36,7 @@ end
 # Get basis for each point
 basis = Vector{Vector{Int64}}(N)
 @showprogress 1 "Computing basis..." for i = 1:N
-    basis[i] = MyModule.get_basis(c[i], A, [b[i]; ub; -lb])
+    basis[i] = MyModule.get_basis(c[i], A, b[i], lb, ub)
 end
 
 # Get unique bases as numbers
@@ -73,9 +73,8 @@ end
 basis_test = Vector{Vector{Int64}}(N)
 @showprogress 1 "Computing basis..." for i = 1:N
     basis_test[i] = MyModule.get_basis(c_test[i], A,
-                                       [b_test[i]; ub; -lb])
+                                       b_test[i], lb, ub)
 end
-
 
 # Test Θ
 X_test = vcat(Θ_test'...)
@@ -85,7 +84,6 @@ y_pred = OT.predict(lnr, X_test)
 
 # Convert encoding to actual basis
 basis_pred = [unique_basis[y_pred[i]] for i in 1:length(y_pred)]
-
 
 # Compare basis
 n_correct_eval = 0
@@ -108,8 +106,13 @@ println("Results")
 x_pred = Vector{Vector{Float64}}(length(y_pred))
 x_test = Vector{Vector{Float64}}(length(y_pred))
 for i = 1:length(y_pred)
-    x_pred[i], _ = MyModule.solve_with_basis(c_test[i], A, [b_test[i]; ub; -lb], basis_pred[i])
-    x_test[i], _ = MyModule.solve_lp(c_test[i], A, [b_test[i]; ub; -lb])
+    x_pred[i], _ = MyModule.solve_with_basis(c_test[i],
+                                             A, b_test[i],
+                                             lb, ub,
+                                             basis_pred[i])
+    x_test[i], _ = MyModule.solve_lp(c_test[i],
+                                     A, b_test[i],
+                                     lb, ub)
 end
 
 

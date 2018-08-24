@@ -28,14 +28,21 @@ end
 
 function solve_lp(c::Vector{Float64},
                   A::SparseMatrixCSC,
-                  b::Vector{Float64})
+                  b::Vector{Float64},
+                  lb::Vector{Float64},
+                  ub::Vector{Float64})
 
     n_var = length(c)
     n_constr = length(b)
 
+    # Cumulative constraints taking into account
+    # variable bounds
+    A_c = [A; eye(n_var); -eye(n_var)]
+    b_c = [b; ub; -lb]
+
     m = Model(solver = MosekSolver(QUIET=1))
     @variable(m, x[1:n_var])
-    @constraint(m, lin_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) <= b[j])
+    @constraint(m, lin_constr[j=1:n_constr + 2*n_var], sum(A_c[j, i] * x[i] for i = 1:n_var) <= b_c[j])
     @objective(m, Min, sum(c[i] * x[i] for i = 1:n_var))
 
     status = solve(m)
@@ -50,30 +57,38 @@ end
 
 function get_basis(c::Vector{Float64},
                    A::SparseMatrixCSC,
-                   b::Vector{Float64})
+                   b::Vector{Float64},
+                   lb::Vector{Float64},
+                   ub::Vector{Float64})
 
-    x, y = solve_lp(c, A, b)
+    x, y = solve_lp(c, A, b, lb, ub)
 
 
     # Extract basis
-    basis = find(y .>= TOL)
-    #  n_basis = length(basis)
+    return find(y .>= TOL)
 
-    return basis
 end
 
 function solve_with_basis(c::Vector{Float64},
                           A::SparseMatrixCSC,
                           b::Vector{Float64},
+                          lb::Vector{Float64},
+                          ub::Vector{Float64},
                           basis::Vector{Int64})
+    n_var = length(c)
     n_constr = length(b)
 
+    # Create cumulative vecs
+    A_c = [A; eye(n_var); -eye(n_var)]
+    b_c = [b; ub; -lb]
+    n_c = length(b) + 2 * length(c)
+
     # Solve using Basis
-    A_red = A[basis, :]
-    b_red = b[basis]
+    A_red = A_c[basis, :]
+    b_red = b_c[basis]
 
     x = A_red \ b_red
-    y = zeros(n_constr)
+    y = zeros(n_c)
     y[basis] = A_red' \ (-c)
 
     return x, y
