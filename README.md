@@ -7,11 +7,9 @@
 
 
 ### Inventory Control
-- Rewrite problem as MathProgBase form: https://mathprogbasejl.readthedocs.io/en/latest/lpqcqp.html
-- Fix basis computation and solve using the functions in extract_basis.jl and learn_basis.jl
-- Use getbasis function from MathProgBase
-- Finish Inventory control example
-
+- OK - Rewrite problem as MathProgBase form: https://mathprogbasejl.readthedocs.io/en/latest/lpqcqp.html
+- OK Fix basis computation and solve using the functions in extract_basis.jl and learn_basis.jl
+- TODO Finish Inventory control example
 
 - [ ] Try more realistic LP with parameters
   - [ ] Reasonable parameters influence (linear interaction?)

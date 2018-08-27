@@ -3,11 +3,16 @@
 
 TOL = 1e-05
 
+"""
+    active_constr_to_number(active_constr::Vector{Vector{Int64}})
+
+Map vector of active constraints vectors to numbers
+"""
 function active_constr_to_number(active_constr::Vector{Vector{Int64}})
 
     N = length(active_constr)
     unique_active_constr = unique(active_constr)
-    n_active_constr = length(unique_active_constr)
+    n_active_constr = length(unique_active_constr)  # Number of active constr vectors
 
     # Map active_constr to number
     y = Vector{Int64}(N)

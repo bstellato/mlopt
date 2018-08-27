@@ -7,15 +7,12 @@ include("../src/MyModule.jl")
 
 # Define LP
 srand(1)
-n = 2
-m = 5
-#  c = randn(n)
-#  b = rand(m)
-A = sprandn(m, n, 0.5)
-ub = 5 * ones(n)
-lb = -5 * ones(n)
-
-
+n_var = 2
+n_constr_A = 10
+n_constr = n_constr_A + n_var
+A = [sprandn(n_constr_A, n_var, 0.5); eye(n_var)]
+u_x = 5 * ones(n_var)
+l_x = -5 * ones(n_var)
 
 # Add upper and lower bounds in A and b
 #  A = [A; eye(n); -eye(n)]
@@ -23,20 +20,22 @@ lb = -5 * ones(n)
 
 
 # Define vector of c and b (sample points)
-N = 300
+N = 500
 c = Vector{Vector{Float64}}(N)
-b = Vector{Vector{Float64}}(N)
+u = Vector{Vector{Float64}}(N)
+l = Vector{Vector{Float64}}(N)
 Θ = Vector{Vector{Float64}}(N)
 for i = 1:N
-    c[i] = 1 * randn(n)
-    b[i] = 1 * rand(m)
-    Θ[i] = [c[i]; b[i]]
+    c[i] = .1 * randn(n_var)
+    u[i] = 1. + .1 * rand(n_constr_A)
+    l[i] = -1 -.1 * rand(n_constr_A)
+    Θ[i] = [c[i]; u[i]; l[i]]
 end
 
 # Get active_constr for each point
 active_constr = Vector{Vector{Int64}}(N)
 @showprogress 1 "Computing active constraints..." for i = 1:N
-    active_constr[i] = MyModule.get_active_constr(c[i], A, b[i], lb, ub)
+    active_constr[i] = MyModule.get_active_constr(c[i], [l[i]; l_x], A, [u[i]; u_x])
 end
 
 # Get unique bases as numbers
@@ -46,9 +45,9 @@ y_train, unique_active_constr = MyModule.active_constr_to_number(active_constr)
 X_train = vcat(Θ'...)
 
 # Train tree
-lnr = OT.OptimalTreeClassifier(max_depth = 10,
+lnr = OT.OptimalTreeClassifier(max_depth = 20,
                                minbucket = 1,
-                               cp = 0.0001)
+                               cp = 0.000001)
 OT.fit!(lnr, X_train, y_train)
 
 # Export tree
@@ -61,19 +60,22 @@ OT.fit!(lnr, X_train, y_train)
 # Generate new dataset to predict
 N = 100
 c_test = Vector{Vector{Float64}}(N)
-b_test = Vector{Vector{Float64}}(N)
+u_test = Vector{Vector{Float64}}(N)
+l_test = Vector{Vector{Float64}}(N)
 Θ_test = Vector{Vector{Float64}}(N)
 for i = 1:N
-    c_test[i] = 1 * randn(n)
-    b_test[i] = 1 * rand(m)
-    Θ_test[i] = [c_test[i]; b_test[i]]
+    c_test[i] = .1 * randn(n_var)
+    u_test[i] = 1. + .1 * rand(n_constr_A)
+    l_test[i] = -1. - .1 * rand(n_constr_A)
+    Θ_test[i] = [c_test[i]; u_test[i]; l_test[i]]
 end
 
 # Get active_constr for each point
 active_constr_test = Vector{Vector{Int64}}(N)
 @showprogress 1 "Computing active constraints..." for i = 1:N
-    active_constr_test[i] = MyModule.get_active_constr(c_test[i], A,
-                                       b_test[i], lb, ub)
+    active_constr_test[i] = MyModule.get_active_constr(c_test[i],
+                                                       [l_test[i]; l_x], A,
+                                                       [u_test[i]; u_x])
 end
 
 # Test Θ
@@ -104,12 +106,14 @@ x_pred = Vector{Vector{Float64}}(length(y_pred))
 x_test = Vector{Vector{Float64}}(length(y_pred))
 for i = 1:length(y_pred)
     x_pred[i], _ = MyModule.solve_with_active_constr(c_test[i],
-                                             A, b_test[i],
-                                             lb, ub,
-                                             active_constr_pred[i])
+                                                     [l_test[i]; l_x],
+                                                     A,
+                                                     [u_test[i]; u_x],
+                                                     active_constr_pred[i])
     x_test[i], _ = MyModule.solve_lp(c_test[i],
-                                     A, b_test[i],
-                                     lb, ub)
+                                     [l_test[i]; l_x],
+                                     A,
+                                     [u_test[i]; u_x])
 end
 
 
