@@ -69,17 +69,20 @@ end
 
 
 println("Results")
-@printf "Number of correct evaluations: %d\n" n_correct_eval
+@printf "Number of correct evaluations: %d/%d\n" n_correct_eval N_test
 
 # Solve problems with learned active_constr
 x_pred = Vector{Vector{Float64}}(length(y_pred))
 x_test = Vector{Vector{Float64}}(length(y_pred))
 for i = 1:length(y_pred)
-    @show length(active_constr_pred[i])
     c, l, A, u = MyModule.gen_supply_chain_model(X_test[i], w, T)
     x_pred[i], _ = MyModule.solve_with_active_constr(c, l, A, u,
                                                      active_constr_pred[i])
     x_test[i], _ = MyModule.solve_lp(c, l, A, u)
+
+    if abs(c'* x_pred[i] - c' * x_test[i]) > 1e-05
+        println("Not matching cost at problem $i")
+    end
 end
 
 

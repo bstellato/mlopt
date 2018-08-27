@@ -1,7 +1,8 @@
 # Functions
 
 
-TOL = 1e-05
+TOL = 1e-06
+INFINITY = 1e15
 
 """
     active_constr_to_number(active_constr::Vector{Vector{Int64}})
@@ -43,7 +44,8 @@ function solve_lp(c::Vector{Float64},
     n_var = length(c)
     n_constr = length(l)
 
-    m = Model(solver = MosekSolver(QUIET=1))
+    m = Model(solver = CplexSolver(CPX_PARAM_SCRIND = 0))
+    #  m = Model(solver = MosekSolver(QUIET = 1))
     @variable(m, x[1:n_var])
     @constraint(m, upper_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) <= u[j])
     @constraint(m, lower_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) >= l[j])
@@ -97,28 +99,51 @@ function solve_with_active_constr(c::Vector{Float64},
     n_constr = length(u)
 
     # Solve using Basis
+    n_active = length(active_constr)
     active_constr_upper = find(active_constr .== 1)
+    n_upper = length(active_constr_upper)
     active_constr_lower = find(active_constr .== -1)
-    A_upper = @view A[active_constr_upper, :]
-    u_upper = @view u[active_constr_upper]
-    A_lower = @view A[active_constr_lower, :]
-    l_lower = @view l[active_constr_lower]
+    n_lower = length(active_constr_lower)
+    A_upper = A[active_constr_upper, :]
+    u_upper = u[active_constr_upper]
+    A_lower = A[active_constr_lower, :]
+    l_lower = l[active_constr_lower]
     A_red = [A_lower; A_upper]
-    #  A_red = A_c[active_constr, :]
-    #  b_red = b_c[active_constr]
 
-    # Find x
-    #  x = A_red \ b_red
-    x = A_red \ [l_lower; u_upper]
+    # TODO: Go on from here!
 
-    # Finx y
+    # Solve problem with just equality constraints
+    m = Model(solver = CplexSolver(CPX_PARAM_SCRIND = 0))
+    #  m = Model(solver = MosekSolver(QUIET = 1))
+    @variable(m, x[1:n_var])
+    @constraint(m, upper_constr[j=1:n_upper], sum(A_upper[j, i] * x[i] for i = 1:n_var) == u_upper[j])
+    @constraint(m, lower_constr[j=1:n_lower], sum(A_lower[j, i] * x[i] for i = 1:n_var) == l_lower[j])
+    @objective(m, Min, sum(c[i] * x[i] for i = 1:n_var))
+
+    status = solve(m)
+
+    if status != :Optimal
+        error("LP not solved to optimality. Status $(status)")
+    end
+
+    x = getvalue(x)
     y = zeros(n_constr)
-    #  y[active_constr] = A_red' \ (-c)
-    y_temp = A_red' \ (-c)
-    y[active_constr_lower] = y_temp[1:length(active_constr_lower)]
-    y[active_constr_upper] = y_temp[length(active_constr_lower) + 1:end]
-
+    y[active_constr_lower] = -getdual(lower_constr)
+    y[active_constr_upper] = -getdual(upper_constr)
     return x, y
+
+    # Solve ONLY a single linear system (does not always work)
+
+    #  # Find x
+    #  x = A_red \ [l_lower; u_upper]
+    #
+    #  # Find y
+    #  y = zeros(n_constr)
+    #  y_temp = (A_red') \ (-c)
+    #  y[active_constr_lower] = y_temp[1:length(active_constr_lower)]
+    #  y[active_constr_upper] = y_temp[length(active_constr_lower) + 1:end]
+    #
+    #  return x, y
 
 end
 
@@ -132,7 +157,7 @@ function gen_supply_chain_model(x0::Array{Float64},
                                 p = 30.,  # Shortage cost
                                 bin_vars::Bool=false)
     # Define JuMP model
-    m = Model(solver = MosekSolver(QUIET=1))
+    m = Model(solver = CplexSolver())
 
     # Variables
     @variable(m, x[i=1:T+1])
@@ -170,6 +195,9 @@ function gen_supply_chain_model(x0::Array{Float64},
     A = [MathProgBase.getconstrmatrix(m_in); eye(length(c))]
     l = [MathProgBase.getconstrLB(m_in); MathProgBase.getvarLB(m_in)]
     u = [MathProgBase.getconstrUB(m_in); MathProgBase.getvarUB(m_in)]
+
+    l = max.(l, -INFINITY)
+    u = min.(u, INFINITY)
 
     return c, l, A, u
 
