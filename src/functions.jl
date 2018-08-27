@@ -124,16 +124,15 @@ end
 
 function gen_supply_chain_model(x0::Array{Float64},
                                 w::Array{Float64},
-                                T::Int64,
+                                T::Int64;
+                                M = 10.,  # Max ordering capacity
+                                K = 10.,  # Fixed ordering cost
+                                c = 3.,   # Variable ordering cost
+                                h = 10.,  # Storage cost
+                                p = 30.,  # Shortage cost
                                 bin_vars::Bool=false)
-    M = 10  # Maximum ordering capacity
-    K = 10
-    c = 3
-    h = 10      # Storage cost
-    p = 30      # Shortage cost
-
     # Define JuMP model
-    m = Model(solver = GurobiSolver())
+    m = Model(solver = MosekSolver(QUIET=1))
 
     # Variables
     @variable(m, x[i=1:T+1])
@@ -167,10 +166,10 @@ function gen_supply_chain_model(x0::Array{Float64},
     m_in = m.internalModel
 
     # Get c, A, b, lb, ub
-    c = getobj(m_in)
-    A = [getconstrmatrix(m_in); eye(n_var)]
-    l = [getconstrLB(m_in); getvarLB(m_in)]
-    u = [getconstrUB(m_in); getvarUB(m_in)]
+    c = MathProgBase.getobj(m_in)
+    A = [MathProgBase.getconstrmatrix(m_in); eye(length(c))]
+    l = [MathProgBase.getconstrLB(m_in); MathProgBase.getvarLB(m_in)]
+    u = [MathProgBase.getconstrUB(m_in); MathProgBase.getvarUB(m_in)]
 
     return c, l, A, u
 
