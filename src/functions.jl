@@ -132,8 +132,7 @@ function solve_with_active_constr(c::Vector{Float64},
     y[active_constr_upper] = -getdual(upper_constr)
     return x, y
 
-    # Solve ONLY a single linear system (does not always work)
-
+    # Solve ONLY a single linear system (does not always work because it can be non square)
     #  # Find x
     #  x = A_red \ [l_lower; u_upper]
     #

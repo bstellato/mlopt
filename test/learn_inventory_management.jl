@@ -8,12 +8,11 @@ include("../src/MyModule.jl")
 
 # Learn Inventory control problem active sets mapping
 # ----------------------------------------------------
-#  c, l, A , u = gen_supply_chain_model(x0, w, T)
-
+srand(1)
 
 # Generate parameters (Initial state)
 N_train = 500
-T = 10            # Horizon
+T = 50            # Horizon
 w = repmat([1.], T, 1)          # Constant demand
 X_train = [randn(1) for i = 1:N_train]
 
@@ -72,18 +71,23 @@ println("Results")
 @printf "Number of correct evaluations: %d/%d\n" n_correct_eval N_test
 
 # Solve problems with learned active_constr
-x_pred = Vector{Vector{Float64}}(length(y_pred))
-x_test = Vector{Vector{Float64}}(length(y_pred))
+x_pred = Vector{Vector{Float64}}(N_test)
+x_test = Vector{Vector{Float64}}(N_test)
+time_ml = Vector{Float64}(N_test)
+time_lp = Vector{Float64}(N_test)
 for i = 1:length(y_pred)
     c, l, A, u = MyModule.gen_supply_chain_model(X_test[i], w, T)
-    x_pred[i], _ = MyModule.solve_with_active_constr(c, l, A, u,
+    time_ml[i] = @elapsed x_pred[i], _ = MyModule.solve_with_active_constr(c, l, A, u,
                                                      active_constr_pred[i])
-    x_test[i], _ = MyModule.solve_lp(c, l, A, u)
+    time_lp[i] = @elapsed x_test[i], _ = MyModule.solve_lp(c, l, A, u)
 
     if abs(c'* x_pred[i] - c' * x_test[i]) > 1e-05
-        println("Not matching cost at problem $i")
+        println("Not matching cost at problem $i. Difference $(c'* x_pred[i] - c' * x_test[i])")
     end
 end
+
+@printf "Time LP = %.2e\n" mean(time_lp)
+@printf "Time ML = %.2e\n" mean(time_ml)
 
 
 
