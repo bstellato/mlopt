@@ -3,27 +3,27 @@
 
 TOL = 1e-05
 
-function basis_to_number(basis::Vector{Vector{Int64}})
+function active_constr_to_number(active_constr::Vector{Vector{Int64}})
 
-    N = length(basis)
-    unique_basis = unique(basis)
-    n_basis = length(unique_basis)
+    N = length(active_constr)
+    unique_active_constr = unique(active_constr)
+    n_active_constr = length(unique_active_constr)
 
-    # Map basis to number
+    # Map active_constr to number
     y = Vector{Int64}(N)
     for i = 1:N
-        # Get which basis is the current one
+        # Get which active_constr is the current one
         y[i] = 0
-        for j = 1:n_basis
-            if basis[i] == unique_basis[j]
+        for j = 1:n_active_constr
+            if active_constr[i] == unique_active_constr[j]  # Compare vectors. (Expensive?)
                 y[i] = j
                 break
             end
         end
-        (y[i] == 0) && (error("Found no matching basis"))
+        (y[i] == 0) && (error("Found no matching active_constr"))
     end
 
-    return y, unique_basis
+    return y, unique_active_constr
 end
 
 function solve_lp(c::Vector{Float64},
@@ -55,7 +55,7 @@ function solve_lp(c::Vector{Float64},
 
 end
 
-function get_basis(c::Vector{Float64},
+function get_active_constr(c::Vector{Float64},
                    A::SparseMatrixCSC,
                    b::Vector{Float64},
                    lb::Vector{Float64},
@@ -63,18 +63,17 @@ function get_basis(c::Vector{Float64},
 
     x, y = solve_lp(c, A, b, lb, ub)
 
-
-    # Extract basis
-    return find(y .>= TOL)
+    # Extract active_constr
+    return find(abs.(y) .>= TOL)
 
 end
 
-function solve_with_basis(c::Vector{Float64},
+function solve_with_active_constr(c::Vector{Float64},
                           A::SparseMatrixCSC,
                           b::Vector{Float64},
                           lb::Vector{Float64},
                           ub::Vector{Float64},
-                          basis::Vector{Int64})
+                          active_constr::Vector{Int64})
     n_var = length(c)
     n_constr = length(b)
 
@@ -84,12 +83,12 @@ function solve_with_basis(c::Vector{Float64},
     n_c = length(b) + 2 * length(c)
 
     # Solve using Basis
-    A_red = A_c[basis, :]
-    b_red = b_c[basis]
+    A_red = A_c[active_constr, :]
+    b_red = b_c[active_constr]
 
     x = A_red \ b_red
     y = zeros(n_c)
-    y[basis] = A_red' \ (-c)
+    y[active_constr] = A_red' \ (-c)
 
     return x, y
 

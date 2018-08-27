@@ -33,14 +33,14 @@ for i = 1:N
     Θ[i] = [c[i]; b[i]]
 end
 
-# Get basis for each point
-basis = Vector{Vector{Int64}}(N)
-@showprogress 1 "Computing basis..." for i = 1:N
-    basis[i] = MyModule.get_basis(c[i], A, b[i], lb, ub)
+# Get active_constr for each point
+active_constr = Vector{Vector{Int64}}(N)
+@showprogress 1 "Computing active constraints..." for i = 1:N
+    active_constr[i] = MyModule.get_active_constr(c[i], A, b[i], lb, ub)
 end
 
 # Get unique bases as numbers
-y_train, unique_basis = MyModule.basis_to_number(basis)
+y_train, unique_active_constr = MyModule.active_constr_to_number(active_constr)
 
 # Convert data to matrix
 X_train = vcat(Θ'...)
@@ -69,26 +69,26 @@ for i = 1:N
     Θ_test[i] = [c_test[i]; b_test[i]]
 end
 
-# Get basis for each point
-basis_test = Vector{Vector{Int64}}(N)
-@showprogress 1 "Computing basis..." for i = 1:N
-    basis_test[i] = MyModule.get_basis(c_test[i], A,
+# Get active_constr for each point
+active_constr_test = Vector{Vector{Int64}}(N)
+@showprogress 1 "Computing active constraints..." for i = 1:N
+    active_constr_test[i] = MyModule.get_active_constr(c_test[i], A,
                                        b_test[i], lb, ub)
 end
 
 # Test Θ
 X_test = vcat(Θ_test'...)
 
-# Predict basis
+# Predict active_constr
 y_pred = OT.predict(lnr, X_test)
 
-# Convert encoding to actual basis
-basis_pred = [unique_basis[y_pred[i]] for i in 1:length(y_pred)]
+# Convert encoding to actual active_constr
+active_constr_pred = [unique_active_constr[y_pred[i]] for i in 1:length(y_pred)]
 
-# Compare basis
+# Compare active_constr
 n_correct_eval = 0
 for i = 1:length(y_pred)
-    if basis_pred[i] == basis_test[i]
+    if active_constr_pred[i] == active_constr_test[i]
         n_correct_eval += 1
     else
         println("Bad prediction at index $i")
@@ -99,17 +99,14 @@ end
 println("Results")
 @printf "Number of correct evaluations: %d\n" n_correct_eval
 
-
-
-
-# Solve problems with learned basis
+# Solve problems with learned active_constr
 x_pred = Vector{Vector{Float64}}(length(y_pred))
 x_test = Vector{Vector{Float64}}(length(y_pred))
 for i = 1:length(y_pred)
-    x_pred[i], _ = MyModule.solve_with_basis(c_test[i],
+    x_pred[i], _ = MyModule.solve_with_active_constr(c_test[i],
                                              A, b_test[i],
                                              lb, ub,
-                                             basis_pred[i])
+                                             active_constr_pred[i])
     x_test[i], _ = MyModule.solve_lp(c_test[i],
                                      A, b_test[i],
                                      lb, ub)
