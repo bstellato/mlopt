@@ -27,22 +27,21 @@ function active_constr_to_number(active_constr::Vector{Vector{Int64}})
 end
 
 function solve_lp(c::Vector{Float64},
+                  l::Vector{Float64},
                   A::SparseMatrixCSC,
-                  b::Vector{Float64},
-                  lb::Vector{Float64},
-                  ub::Vector{Float64})
+                  u::Vector{Float64})
+
+    @assert length(l) == length(u)
+    @assert size(A, 1) == length(l)
+    @assert size(A, 2) == length(c)
 
     n_var = length(c)
-    n_constr = length(b)
-
-    # Cumulative constraints taking into account
-    # variable bounds
-    A_c = [A; eye(n_var); -eye(n_var)]
-    b_c = [b; ub; -lb]
+    n_constr = length(l)
 
     m = Model(solver = MosekSolver(QUIET=1))
     @variable(m, x[1:n_var])
-    @constraint(m, lin_constr[j=1:n_constr + 2*n_var], sum(A_c[j, i] * x[i] for i = 1:n_var) <= b_c[j])
+    @constraint(m, upper_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) <= u[j])
+    @constraint(m, lower_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) >= l[j])
     @objective(m, Min, sum(c[i] * x[i] for i = 1:n_var))
 
     status = solve(m)
@@ -51,44 +50,68 @@ function solve_lp(c::Vector{Float64},
         error("LP not solved to optimality. Status $(status)")
     end
 
-    return getvalue(x), -getdual(lin_constr)
+    return getvalue(x), -getdual(upper_constr) + getdual(lower_constr)
 
 end
 
 function get_active_constr(c::Vector{Float64},
-                   A::SparseMatrixCSC,
-                   b::Vector{Float64},
-                   lb::Vector{Float64},
-                   ub::Vector{Float64})
+                           l::Vector{Float64},
+                           A::SparseMatrixCSC,
+                           u::Vector{Float64})
 
-    x, y = solve_lp(c, A, b, lb, ub)
+    @assert length(l) == length(u)
+    @assert size(A, 1) == length(l)
+    @assert size(A, 2) == length(c)
+    n_constr = length(l)
 
-    # Extract active_constr
-    return find(abs.(y) .>= TOL)
+    _, y = solve_lp(c, l, A, u)
+
+    active_constr = zeros(Int64, n_constr)
+    for i = 1:n_constr
+        if y[i] >= TOL
+            active_constr[i] = 1
+        elseif y[i] <= -TOL
+            active_constr[i] = -1
+        end
+    end
+
+    # Active constr
+    return active_constr
 
 end
 
 function solve_with_active_constr(c::Vector{Float64},
-                          A::SparseMatrixCSC,
-                          b::Vector{Float64},
-                          lb::Vector{Float64},
-                          ub::Vector{Float64},
-                          active_constr::Vector{Int64})
+                                  l::Vector{Float64},
+                                  A::SparseMatrixCSC,
+                                  u::Vector{Float64},
+                                  active_constr::Vector{Int64})
+    @assert length(l) == length(u)
+    @assert size(A, 1) == length(l)
+    @assert size(A, 2) == length(c)
     n_var = length(c)
-    n_constr = length(b)
-
-    # Create cumulative vecs
-    A_c = [A; eye(n_var); -eye(n_var)]
-    b_c = [b; ub; -lb]
-    n_c = length(b) + 2 * length(c)
+    n_constr = length(u)
 
     # Solve using Basis
-    A_red = A_c[active_constr, :]
-    b_red = b_c[active_constr]
+    active_constr_upper = find(active_constr .== 1)
+    active_constr_lower = find(active_constr .== -1)
+    A_upper = @view A[active_constr_upper, :]
+    u_upper = @view u[active_constr_upper]
+    A_lower = @view A[active_constr_lower, :]
+    l_lower = @view l[active_constr_lower]
+    A_red = [A_lower; A_upper]
+    #  A_red = A_c[active_constr, :]
+    #  b_red = b_c[active_constr]
 
-    x = A_red \ b_red
-    y = zeros(n_c)
-    y[active_constr] = A_red' \ (-c)
+    # Find x
+    #  x = A_red \ b_red
+    x = A_red \ [l_lower; u_upper]
+
+    # Finx y
+    y = zeros(n_constr)
+    #  y[active_constr] = A_red' \ (-c)
+    y_temp = A_red' \ (-c)
+    y[active_constr_lower] = y_temp[1:length(active_constr_lower)]
+    y[active_constr_upper] = y_temp[length(active_constr_lower) + 1:end]
 
     return x, y
 
@@ -140,13 +163,11 @@ function gen_supply_chain_model(x0::Array{Float64},
 
     # Get c, A, b, lb, ub
     c = getobj(m_in)
-    A = getconstrmatrix(m_in)
-    A_ub = getconstrUB(m_in)
-    A_lb = getconstrLB(m_in)
-    ub = setvarUB(m_in)
-    lb = getvarLB(m_in)
+    A = [getconstrmatrix(m_in); eye(n_var)]
+    l = [getconstrLB(m_in); getvarLB(m_in)]
+    u = [getconstrUB(m_in); getvarUB(m_in)]
 
-    return c, A_lb, A, A_ub, lb, ub
+    return c, l, A, u
 
 end
 
