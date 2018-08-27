@@ -50,7 +50,7 @@ function solve_lp(c::Vector{Float64},
         error("LP not solved to optimality. Status $(status)")
     end
 
-    return getvalue(x), -getdual(upper_constr) + getdual(lower_constr)
+    return getvalue(x), -getdual(upper_constr) - getdual(lower_constr)
 
 end
 

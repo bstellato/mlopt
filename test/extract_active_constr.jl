@@ -6,11 +6,11 @@ TOL = 1e-05
 
     # Define LP
     srand(1)
-    n = 100
-    m = 500
-    c = randn(n)
+    n = 10
+    m = 50
+    c = -randn(n)
     u = rand(m)
-    l = rand(m) - 4
+    l = rand(m) - 1
     A = sprandn(m, n, 0.5)
 
 
