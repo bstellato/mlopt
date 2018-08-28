@@ -12,8 +12,8 @@ srand(1)
 
 # Generate parameters (Initial state)
 N_train = 500
-T = 50            # Horizon
-w = repmat([1.], T, 1)          # Constant demand
+T = 500            # Horizon
+w = repmat([1.3], T, 1)          # Constant demand
 X_train = [randn(1) for i = 1:N_train]
 
 # Get active_constr for each point
@@ -33,10 +33,10 @@ lnr = OT.OptimalTreeClassifier(max_depth = 20,
 OT.fit!(lnr, vcat(X_train'...), y_train)
 
 # Export tree
-#  export_tree_name = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
-#  println("Export tree to $(export_tree_name)")
-#  OT.writedot("$(export_tree_name).dot", lnr)
-#  run(`dot -Tpdf -o $(export_tree_name).pdf $(export_tree_name).dot`)
+export_tree_name = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
+println("Export tree to $(export_tree_name)")
+OT.writedot("$(export_tree_name).dot", lnr)
+run(`dot -Tpdf -o $(export_tree_name).pdf $(export_tree_name).dot`)
 
 
 # Generate new dataset to predict
