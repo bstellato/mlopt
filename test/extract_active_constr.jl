@@ -6,12 +6,12 @@ TOL = 1e-05
 
     # Define LP
     srand(1)
-    n = 10
-    m = 50
+    n = 20
+    m = 30
     c = -randn(n)
     u = rand(m)
     l = rand(m) - 1
-    A = sprandn(m, n, 0.5)
+    A = sprandn(m, n, 0.8)
 
 
     # Solve LP

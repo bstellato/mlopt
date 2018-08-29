@@ -1,25 +1,87 @@
-using Base.Test
 using OptimalTrees
-OT = OptimalTrees
-using Combinatorics
 using ProgressMeter
+using JuMP
 include("../src/MyModule.jl")
+OT = OptimalTrees
+using OSQP
 
 
-# Learn Inventory control problem active sets mapping
+function gen_inventory_management_model(x0::Array{Float64},
+                                     w::Array{Float64},
+                                     T::Int64;
+                                     M = 10.,  # Max ordering capacity
+                                     K = 10.,  # Fixed ordering cost
+                                     c = 3.,   # Variable ordering cost
+                                     h = 10.,  # Storage cost
+                                     p = 30.,  # Shortage cost
+                                     bin_vars::Bool=false)
+    # Define JuMP model
+    m = Model(solver=OSQPMathProgBaseInterface.OSQPSolver(verbose=false))
+
+    # Variables
+    @variable(m, x[i=1:T+1])
+    @variable(m, u[i=1:T])
+    @variable(m, y[i=1:T])  # Auxiliary: y[t] = max{h * x[t], -p * x[t]}
+    (bin_vars) && (@variable(m, v[i=1:T], Bin))
+
+    # Constraints
+    @constraint(m, [i=1:length(x0)], x[i] == x0[i])
+    @constraint(m, yh[t=1:T], y[t] >= h * x[t])
+    @constraint(m, yp[t=1:T], y[t] >= -p * x[t])
+    @constraint(m, evolution[t=1:T], x[t + 1] == x[t] + u[t] - w[t])
+    @constraint(m, [t=1:T], u[t] >= 0)
+    if bin_vars
+        @constraint(m, [t=1:T], u[t] <= M * v[t])
+    end
+
+    # Cost
+    if bin_vars
+        @objective(m, Min, sum(y[i] + c * u[i] + K * v[i]  for i in 1:T))
+    else
+        @objective(m, Min, sum(y[i] + c * u[i] for i in 1:T))
+    end
+
+    # Solve problem
+    JuMP.build(m)
+
+    # Extract problem data
+    m_in = m.internalModel
+
+    # Get c, A, b, lb, ub
+    c = MathProgBase.getobj(m_in)
+    A = [MathProgBase.getconstrmatrix(m_in); eye(length(c))]
+    l = [MathProgBase.getconstrLB(m_in); MathProgBase.getvarLB(m_in)]
+    u = [MathProgBase.getconstrUB(m_in); MathProgBase.getvarUB(m_in)]
+
+    #  l = max.(l, -MyModule.INFINITY)
+    #  u = min.(u, MyModule.INFINITY)
+
+    # Find indices where both bounds are infinity
+    idx = setdiff(1:length(l),
+                  intersect(find(isinf.(u)), find(isinf.(l)))
+                 )
+    A = A[idx, :]
+    l = l[idx]
+    u = u[idx]
+
+    return c, l, A, u
+
+end
+
+# Learn Inventory management problem active sets mapping
 # ----------------------------------------------------
 srand(1)
 
 # Generate parameters (Initial state)
 N_train = 500
-T = 500            # Horizon
+T = 50            # Horizon
 w = repmat([1.3], T, 1)          # Constant demand
 X_train = [randn(1) for i = 1:N_train]
 
 # Get active_constr for each point
 active_constr = Vector{Vector{Int64}}(N_train)
 @showprogress 1 "Computing active constraints..." for i = 1:N_train
-    c, l, A, u = MyModule.gen_supply_chain_model(X_train[i], w, T)
+    c, l, A, u = gen_inventory_management_model(X_train[i], w, T)
     active_constr[i] = MyModule.get_active_constr(c, l, A, u)
 end
 
@@ -46,7 +108,7 @@ X_test = [randn(1) for i = 1:N_test]
 # Get active_constr for each point
 active_constr_test = Vector{Vector{Int64}}(N_test)
 @showprogress 1 "Computing active constraints..." for i = 1:N_test
-    c, l, A, u = MyModule.gen_supply_chain_model(X_test[i], w, T)
+    c, l, A, u = gen_inventory_management_model(X_test[i], w, T)
     active_constr_test[i] = MyModule.get_active_constr(c, l, A, u)
 end
 
@@ -76,7 +138,7 @@ x_test = Vector{Vector{Float64}}(N_test)
 time_ml = Vector{Float64}(N_test)
 time_lp = Vector{Float64}(N_test)
 for i = 1:length(y_pred)
-    c, l, A, u = MyModule.gen_supply_chain_model(X_test[i], w, T)
+    c, l, A, u = gen_inventory_management_model(X_test[i], w, T)
     time_ml[i] = @elapsed x_pred[i], _ = MyModule.solve_with_active_constr(c, l, A, u,
                                                      active_constr_pred[i])
     time_lp[i] = @elapsed x_test[i], _ = MyModule.solve_lp(c, l, A, u)
