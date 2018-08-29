@@ -1,11 +1,26 @@
 # Solving and active constraints identification
 
+function active_constraints(X_train, gen_problem::Function)
+    N_train = length(X_train)
+
+    # Get active_constr for each point
+    active_constr = Vector{Vector{Int64}}(N_train)
+    @showprogress 1 "Computing active constraints..." for i = 1:N_train
+        problem = gen_problem(X_train[i])
+        active_constr[i] = MyModule.get_active_constr(problem)
+    end
+
+    return active_constr
+
+end
+
+
 """
-    active_constr_to_number(active_constr::Vector{Vector{Int64}})
+    encode(active_constr)
 
 Map vector of active constraints vectors to numbers
 """
-function active_constr_to_number(active_constr::Vector{Vector{Int64}})
+function encode(active_constr::Vector{Vector{Int64}})
 
     N = length(active_constr)
     unique_active_constr = unique(active_constr)
@@ -29,14 +44,13 @@ function active_constr_to_number(active_constr::Vector{Vector{Int64}})
 end
 
 """
-    solve_lp(c, l, A, u)
+    solve(problem)
 
 Solve linear program and return primal variables `x` and dual variables `y`
 """
-function solve_lp(c::Vector{Float64},
-                  l::Vector{Float64},
-                  A::SparseMatrixCSC,
-                  u::Vector{Float64})
+function solve(problem::OptimizationProblem)
+
+    c, l, A, u = problem.c, problem.l, problem.A, problem.u
 
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
@@ -61,25 +75,19 @@ function solve_lp(c::Vector{Float64},
 end
 
 """
-    get_active_constr(c, l, A, u)
+    active_constr(problem)
 
-Solve linear program and get vector of active constraints where each element is:
+Solve optimization problem and get vector of active constraints where each element is:
 
   - -1: if the lower bound is active
   - +1: if the upper bound is active
   -  0: if the constraint is inactive
 """
-function get_active_constr(c::Vector{Float64},
-                           l::Vector{Float64},
-                           A::SparseMatrixCSC,
-                           u::Vector{Float64})
+function active_constraints(problem::OptimizationProblem)
 
-    @assert length(l) == length(u)
-    @assert size(A, 1) == length(l)
-    @assert size(A, 2) == length(c)
-    n_constr = length(l)
+    n_constr = length(problem.l)
 
-    _, y = solve_lp(c, l, A, u)
+    _, y = solve(problem)
 
     active_constr = zeros(Int64, n_constr)
     for i = 1:n_constr
@@ -96,17 +104,17 @@ function get_active_constr(c::Vector{Float64},
 end
 
 """
-    solve_with_active_constr(c, l, A, u, active_constr)
+    solve(problem, active_constr)
 
 Solve simplified problem using the `active_constr` vector
 specifying which constraints are active according to function
 `get_active_constr`.
 """
-function solve_with_active_constr(c::Vector{Float64},
-                                  l::Vector{Float64},
-                                  A::SparseMatrixCSC,
-                                  u::Vector{Float64},
-                                  active_constr::Vector{Int64})
+function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
+
+    c, l, A, u = problem.c, problem.l, problem.A, problem.u
+
+
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
     @assert size(A, 2) == length(c)

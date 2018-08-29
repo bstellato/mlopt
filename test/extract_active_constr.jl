@@ -12,16 +12,16 @@ TOL = 1e-05
     u = rand(m)
     l = rand(m) - 1
     A = sprandn(m, n, 0.8)
-
+    problem = MyModule.OptimizationProblem(c, l, A, u)
 
     # Solve LP
-    x, y = MyModule.solve_lp(c, l, A, u)
+    x, y = MyModule.solve(problem)
 
     # Get active_constr
-    active_constr = MyModule.get_active_constr(c, l, A, u)
+    active_constr = MyModule.active_constraints(problem)
 
     # Solve with active_constr
-    x_active_constr, y_active_constr = MyModule.solve_with_active_constr(c, l, A, u, active_constr)
+    x_active_constr, y_active_constr = MyModule.solve(problem, active_constr)
 
     @test norm(x - x_active_constr) <= TOL
     @test norm(y - y_active_constr) <= TOL

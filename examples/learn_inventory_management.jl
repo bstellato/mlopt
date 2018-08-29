@@ -1,19 +1,17 @@
-using OptimalTrees
-using ProgressMeter
 using JuMP
 include("../src/MyModule.jl")
-OT = OptimalTrees
 
+function InventoryManagementProblem(x0::Array{Float64};
+                                    T = 50,   # Horizon
+                                    M = 10.,  # Max ordering capacity
+                                    K = 10.,  # Fixed ordering cost
+                                    c = 3.,   # Variable ordering cost
+                                    h = 10.,  # Storage cost
+                                    p = 30.,  # Shortage cost
+                                    bin_vars::Bool=false)
+    # Constant demand
+    w = repmat([1.3], T, 1)
 
-function gen_inventory_management_model(x0::Array{Float64},
-                                     w::Array{Float64},
-                                     T::Int64;
-                                     M = 10.,  # Max ordering capacity
-                                     K = 10.,  # Fixed ordering cost
-                                     c = 3.,   # Variable ordering cost
-                                     h = 10.,  # Storage cost
-                                     p = 30.,  # Shortage cost
-                                     bin_vars::Bool=false)
     # Define JuMP model
     m = Model(solver=MyModule.BUILD_SOLVER)
 
@@ -41,7 +39,7 @@ function gen_inventory_management_model(x0::Array{Float64},
     end
 
     # Extract problem data
-    return MyModule.extract_problem_data(m)
+    return MyModule.OptimizationProblem(MyModule.extract_problem_data(m)...)
 
 end
 
@@ -49,55 +47,38 @@ end
 # ----------------------------------------------------
 srand(1)
 
-# Generate parameters (Initial state)
+# Generate training data points
 N_train = 500
-T = 50            # Horizon
-w = repmat([1.3], T, 1)          # Constant demand
 X_train = [randn(1) for i = 1:N_train]
-
-# Get active_constr for each point
-active_constr = Vector{Vector{Int64}}(N_train)
-@showprogress 1 "Computing active constraints..." for i = 1:N_train
-    c, l, A, u = gen_inventory_management_model(X_train[i], w, T)
-    active_constr[i] = MyModule.get_active_constr(c, l, A, u)
-end
-
-# Get unique bases as numbers
-y_train, unique_active_constr = MyModule.active_constr_to_number(active_constr)
-
-# Train tree
-lnr = OT.OptimalTreeClassifier(max_depth = 20,
-                               minbucket = 1,
-                               cp = 0.000001)
-OT.fit!(lnr, vcat(X_train'...), y_train)
-
-# Export tree
-export_tree_name = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
-println("Export tree to $(export_tree_name)")
-OT.writedot("$(export_tree_name).dot", lnr)
-run(`dot -Tpdf -o $(export_tree_name).pdf $(export_tree_name).dot`)
-
-
-# Generate new dataset to predict
+# Generate testing data points
 N_test = 100
 X_test = [randn(1) for i = 1:N_test]
 
 # Get active_constr for each point
-active_constr_test = Vector{Vector{Int64}}(N_test)
-@showprogress 1 "Computing active constraints..." for i = 1:N_test
-    c, l, A, u = gen_inventory_management_model(X_test[i], w, T)
-    active_constr_test[i] = MyModule.get_active_constr(c, l, A, u)
-end
+y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(X_train, InventoryManagementProblem))
 
-# Predict active_constr
-y_pred = OT.predict(lnr, vcat(X_test'...))
+# Learn tree
+lnr = MyModule.tree(X_train, y_train, export_tree=false)
 
-# Convert encoding to actual active_constr
-active_constr_pred = [unique_active_constr[y_pred[i]] for i in 1:length(y_pred)]
+# Get active_constr for each point
+active_constr_test = MyModule.active_constraints(X_test, InventoryManagementProblem)
+
+# Predict active constraints
+active_constr_pred = MyModule.predict(X_test, lnr, enc2active_constr)
+
+
+# Evaluate performance
+
+
+
+
+
+
+
 
 # Compare active_constr
 n_correct_eval = 0
-for i = 1:length(y_pred)
+for i = 1:N_test
     if active_constr_pred[i] == active_constr_test[i]
         n_correct_eval += 1
     else
@@ -114,14 +95,13 @@ x_pred = Vector{Vector{Float64}}(N_test)
 x_test = Vector{Vector{Float64}}(N_test)
 time_ml = Vector{Float64}(N_test)
 time_lp = Vector{Float64}(N_test)
-for i = 1:length(y_pred)
-    c, l, A, u = gen_inventory_management_model(X_test[i], w, T)
-    time_ml[i] = @elapsed x_pred[i], _ = MyModule.solve_with_active_constr(c, l, A, u,
-                                                     active_constr_pred[i])
-    time_lp[i] = @elapsed x_test[i], _ = MyModule.solve_lp(c, l, A, u)
+for i = 1:N_test
+    problem = InventoryManagementProblem(X_test[i])
+    time_ml[i] = @elapsed x_pred[i], _ = MyModule.solve(problem, active_constr_pred[i])
+    time_lp[i] = @elapsed x_test[i], _ = MyModule.solve(problem)
 
-    if abs(c'* x_pred[i] - c' * x_test[i]) > 1e-05
-        println("Not matching cost at problem $i. Difference $(c'* x_pred[i] - c' * x_test[i])")
+    if abs(problem.c'* x_pred[i] - problem.c' * x_test[i]) > 1e-05
+        println("Not matching cost at problem $i. Difference $(problem.c'* x_pred[i] - problem.c' * x_test[i])")
     end
 end
 
