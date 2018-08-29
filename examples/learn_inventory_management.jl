@@ -3,7 +3,6 @@ using ProgressMeter
 using JuMP
 include("../src/MyModule.jl")
 OT = OptimalTrees
-using OSQP
 
 
 function gen_inventory_management_model(x0::Array{Float64},
@@ -16,7 +15,7 @@ function gen_inventory_management_model(x0::Array{Float64},
                                      p = 30.,  # Shortage cost
                                      bin_vars::Bool=false)
     # Define JuMP model
-    m = Model(solver=OSQPMathProgBaseInterface.OSQPSolver(verbose=false))
+    m = Model(solver=MyModule.BUILD_SOLVER)
 
     # Variables
     @variable(m, x[i=1:T+1])
@@ -41,30 +40,8 @@ function gen_inventory_management_model(x0::Array{Float64},
         @objective(m, Min, sum(y[i] + c * u[i] for i in 1:T))
     end
 
-    # Solve problem
-    JuMP.build(m)
-
     # Extract problem data
-    m_in = m.internalModel
-
-    # Get c, A, b, lb, ub
-    c = MathProgBase.getobj(m_in)
-    A = [MathProgBase.getconstrmatrix(m_in); eye(length(c))]
-    l = [MathProgBase.getconstrLB(m_in); MathProgBase.getvarLB(m_in)]
-    u = [MathProgBase.getconstrUB(m_in); MathProgBase.getvarUB(m_in)]
-
-    #  l = max.(l, -MyModule.INFINITY)
-    #  u = min.(u, MyModule.INFINITY)
-
-    # Find indices where both bounds are infinity
-    idx = setdiff(1:length(l),
-                  intersect(find(isinf.(u)), find(isinf.(l)))
-                 )
-    A = A[idx, :]
-    l = l[idx]
-    u = u[idx]
-
-    return c, l, A, u
+    return MyModule.extract_problem_data(m)
 
 end
 

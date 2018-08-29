@@ -45,28 +45,18 @@ function solve_lp(c::Vector{Float64},
     n_var = length(c)
     n_constr = length(l)
 
-
     # Solve directly with MathProgBase
     m = MathProgBase.LinearQuadraticModel(SOLVER)
     MathProgBase.loadproblem!(m, A, -Inf * ones(n_var), Inf * ones(n_var), c, l, u, :Min)
     MathProgBase.optimize!(m)
     status = MathProgBase.status(m)
 
-    #  m = Model(solver = CplexSolver(CPX_PARAM_SCRIND = 0))
-    #  #  m = Model(solver = MosekSolver(QUIET = 1))
-    #  @variable(m, x[1:n_var])
-    #  @constraint(m, upper_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) <= u[j])
-    #  @constraint(m, lower_constr[j=1:n_constr], sum(A[j, i] * x[i] for i = 1:n_var) >= l[j])
-    #  @objective(m, Min, sum(c[i] * x[i] for i = 1:n_var))
-    #  status = solve(m)
 
     if status != :Optimal
         error("LP not solved to optimality. Status $(status)")
     end
 
     return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m)
-
-    #  return getvalue(x), -getdual(upper_constr) - getdual(lower_constr)
 
 end
 
@@ -136,21 +126,12 @@ function solve_with_active_constr(c::Vector{Float64},
     A_red = [A_lower; A_upper]
     bound_red = [l_lower; u_upper]
 
-    # Solve problem with just equality constraints
-    #  m = Model(solver = MosekSolver(QUIET=1))
-    #  @variable(m, x[1:n_var])
-    #  @constraint(m, upper_constr[j=1:n_upper], sum(A_upper[j, i] * x[i] for i = 1:n_var) == u_upper[j])
-    #  @constraint(m, lower_constr[j=1:n_lower], sum(A_lower[j, i] * x[i] for i = 1:n_var) == l_lower[j])
-    #  @objective(m, Min, sum(c[i] * x[i] for i = 1:n_var))
-    #
-    #  status = solve(m)
     # Solve directly with MathProgBase
     m = MathProgBase.LinearQuadraticModel(SOLVER)
     MathProgBase.loadproblem!(m, A_red, -Inf * ones(n_var), Inf * ones(n_var),
                               c, bound_red, bound_red, :Min)
     MathProgBase.optimize!(m)
     status = MathProgBase.status(m)
-    #  return MathProgBase.getsolution(m), MathProgBase.getconstrduals(m)
 
 
     if status != :Optimal
@@ -160,8 +141,6 @@ function solve_with_active_constr(c::Vector{Float64},
     #  x = getvalue(x)
     x = MathProgBase.getsolution(m)
     y = zeros(n_constr)
-    #  y[active_constr_lower] = -getdual(lower_constr)
-    #  y[active_constr_upper] = -getdual(upper_constr)
     y_temp = -MathProgBase.getconstrduals(m)
     y[active_constr_lower] = y_temp[1:n_lower]
     y[active_constr_upper] = y_temp[n_lower+1:end]
