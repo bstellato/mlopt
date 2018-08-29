@@ -4,5 +4,3 @@ mutable struct OptimizationProblem
     A::SparseMatrixCSC
     u::Vector{Float64}
 end
-
-

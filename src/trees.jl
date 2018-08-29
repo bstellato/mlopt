@@ -19,12 +19,12 @@ function tree(X::Vector{Vector{Float64}},
 
 end
 
-function predict(X_test::Vector{Vector{Float64}},
+function predict(X::Vector{Vector{Float64}},
                  lnr::OT.OptimalTreeClassifier,
                  enc2active_constr::Vector{Vector{Int64}})
 
     # Predict active_constr
-    y = OT.predict(lnr, vcat(X_test'...))
+    y = OT.predict(lnr, vcat(X'...))
 
     # Convert encoding to actual active_constr
     active_constr = [enc2active_constr[y[i]] for i in 1:length(y)]

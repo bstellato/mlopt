@@ -4,6 +4,8 @@ module MyModule
 using ProgressMeter
 using OptimalTrees
 OT = OptimalTrees
+using DataFrames
+using CSV
 using JuMP
 using Plots
 using MathProgBase

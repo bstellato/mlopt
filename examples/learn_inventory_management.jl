@@ -43,48 +43,36 @@ function InventoryManagementProblem(x0::Array{Float64};
 
 end
 
-# Learn Inventory management problem active sets mapping
-# ----------------------------------------------------
+# Learn
+# -----
 srand(1)
 
 # Generate training data points
-N_train = 500
-X_train = [randn(1) for i = 1:N_train]
-# Generate testing data points
-N_test = 100
-X_test = [randn(1) for i = 1:N_test]
+num_train = 500
+theta_train = [randn(1) for i = 1:num_train]
 
 # Get active_constr for each point
-y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(X_train, InventoryManagementProblem))
+y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(theta_train, InventoryManagementProblem))
 
 # Learn tree
-lnr = MyModule.tree(X_train, y_train, export_tree=false)
+lnr = MyModule.tree(theta_train, y_train, export_tree=false)
 
-# Get active_constr for each point
-active_constr_test = MyModule.active_constraints(X_test, InventoryManagementProblem)
 
-# Predict active constraints
-active_constr_pred = MyModule.predict(X_test, lnr, enc2active_constr)
+# Test
+# ------
 
+# Generate testing data points
+num_test = 100
+theta_test = [randn(1) for i = 1:num_test]
 
 # Evaluate performance
+# TODO: Complete
+df = eval_performance
 
+# Write output
+CSV.write("$(output_folder)/performance.csv", df)
 
-
-
-
-
-
-
-# Compare active_constr
-n_correct_eval = 0
-for i = 1:N_test
-    if active_constr_pred[i] == active_constr_test[i]
-        n_correct_eval += 1
-    else
-        println("Bad prediction at index $i")
-    end
-end
+# TODO: Remove the following
 
 
 println("Results")

@@ -1,12 +1,12 @@
 # Solving and active constraints identification
 
-function active_constraints(X_train, gen_problem::Function)
-    N_train = length(X_train)
+function active_constraints(theta_train, gen_problem::Function)
+    N_train = length(theta_train)
 
     # Get active_constr for each point
     active_constr = Vector{Vector{Int64}}(N_train)
     @showprogress 1 "Computing active constraints..." for i = 1:N_train
-        problem = gen_problem(X_train[i])
+        problem = gen_problem(theta_train[i])
         active_constr[i] = MyModule.get_active_constr(problem)
     end
 
