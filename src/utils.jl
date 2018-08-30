@@ -26,29 +26,43 @@ function extract_problem_data(m::JuMP.Model)
     JuMP.build(m)
 
     # Extract data
-    m_in = m.internalModel
-    c = MathProgBase.getobj(m_in)
-    A = [MathProgBase.getconstrmatrix(m_in); eye(length(c))]
-    l = [MathProgBase.getconstrLB(m_in); MathProgBase.getvarLB(m_in)]
-    u = [MathProgBase.getconstrUB(m_in); MathProgBase.getvarUB(m_in)]
+    return extract_problem_data(m.internalModel)
+
+end
+
+function extract_problem_data(m::MathProgBase.AbstractLinearQuadraticModel)
+    c = MathProgBase.getobj(m)
+    A = [MathProgBase.getconstrmatrix(m); eye(length(c))]
+    l = [MathProgBase.getconstrLB(m); MathProgBase.getvarLB(m)]
+    u = [MathProgBase.getconstrUB(m); MathProgBase.getvarUB(m)]
 
     # Find indices where both bounds are infinity
     MyModule.@remove_unbounded_constraints A l u
 
     return c, l, A, u
-
 end
+
+
+function extract_problem_data(file_name::String)
+    m = MathProgBase.LinearQuadraticModel(GurobiSolver())
+    MathProgBase.loadproblem!(m, file_name)
+    return extract_problem_data(m)
+end
+
 
 """
     infeasibility(x_ml, problem)
 
 Compute infeasibility as ||(Ax - u)_{+} + (l - Ax)_{+}||_2
+weighted over the magnitude of l and u.
 """
 function infeasibility(x::Vector{Float64},
                        problem::OptimizationProblem)
     l, A, u = problem.l, problem.A, problem.u
 
-    return norm(max.(A * x - u, 0.) + max.(l - A * x, 0.))
+    upper = max.(A * x - u, 0.) ./ (abs.(u) + 1e-10)
+    lower = max.(l - A * x, 0.) ./ (abs.(l) + 1e-10)
+    return norm(upper + lower)
 
 end
 
@@ -61,6 +75,6 @@ function suboptimality(x::Vector{Float64},
                        x_opt::Vector{Float64},
                        problem::OptimizationProblem)
     c = problem.c
-    return c' * x - c' * x_opt
+    return (c' * x - c' * x_opt) / abs.(c' * x_opt + 1e-10)
 end
 

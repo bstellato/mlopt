@@ -9,8 +9,9 @@ using CSV
 using JuMP
 using Plots
 using MathProgBase
-using CPLEX
-using OSQP
+using CPLEX   # For solving problems
+using OSQP    # For creating problem structure from JuMP
+using Gurobi  # For reading problems from files
 
 
 # Define constants

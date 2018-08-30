@@ -2,10 +2,12 @@ function tree(X::Vector{Vector{Float64}},
               y::Vector{Int64};
               export_tree=false,
               problem::Function=nothing)
+    @printf "Learning Classification Tree\n"
 
-    lnr = OT.OptimalTreeClassifier(max_depth = 20,
+    lnr = OT.OptimalTreeClassifier(max_depth = 10,
                                    minbucket = 1,
-                                   cp = 0.000001)
+                                   # cp = 0.001
+                                  )
     OT.fit!(lnr, vcat(X'...), y)
 
     # Export tree
@@ -17,6 +19,8 @@ function tree(X::Vector{Vector{Float64}},
         OT.writedot("$(export_tree_name).dot", lnr)
         run(`dot -Tpdf -o $(export_tree_name).pdf $(export_tree_name).dot`)
     end
+
+    @printf "Learning completed.\n"
 
     return lnr
 

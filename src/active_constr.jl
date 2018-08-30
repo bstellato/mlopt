@@ -22,9 +22,12 @@ Map vector of active constraints vectors to numbers
 """
 function encode(active_constr::Vector{Vector{Int64}})
 
+    @printf "Encoding active constraints\n"
     N = length(active_constr)
+    @printf "Getting unique set of active constraints\n"
     unique_active_constr = unique(active_constr)
     n_active_constr = length(unique_active_constr)  # Number of active constr vectors
+    @printf "Found %d unique active constraints\n" n_active_constr
 
     # Map active_constr to number
     y = Vector{Int64}(N)
@@ -39,7 +42,7 @@ function encode(active_constr::Vector{Vector{Int64}})
         end
         (y[i] == 0) && (error("Found no matching active_constr"))
     end
-
+    @printf "Encoding done.\n"
     return y, unique_active_constr
 end
 
