@@ -15,7 +15,7 @@ TOL = 1e-05
     problem = MyModule.OptimizationProblem(c, l, A, u)
 
     # Solve LP
-    x, y = MyModule.solve(problem)
+    x, y, _ = MyModule.solve(problem)
 
     # Get active_constr
     active_constr = MyModule.active_constraints(problem)

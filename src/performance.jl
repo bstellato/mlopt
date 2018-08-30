@@ -51,24 +51,42 @@ function eval_performance(theta::Vector{Vector{Float64}},
 
     # TODO: Add radius?
 
-    # TODO: Add fields that require solution of the problem
-
     # These need an additional problem solution
-    # infeasibility
-    # suboptimality
-    # time comparison
+    infeas = Vector{Float64}(num_test)
+    subopt = Vector{Float64}(num_test)
+    time_comp = Vector{Float64}(num_test)
+    for i = 1:num_test
+        problem = gen_problem(theta[i])
+        x_ml, y_ml, time_ml = solve(problem, active_constr_pred[i])
+        x_lp, y_lp, time_lp = solve(problem)
+
+        # Compare time
+        infeas[i] = infeasibility(x_ml, problem)
+        subopt[i] = suboptimality(x_ml, x_lp, problem)
+        time_comp[i] = time_ml/time_lp
+    end
+
 
     # Create dataframe and export it
-    df = DataFrame(
-                   problem = [String(Base.function_name(gen_problem))],
-                   num_test = Int[num_test],
-                   num_train = Int[num_train],
-                   n_theta = Int[n_theta],
-                   n_active_sets = Int[n_active_sets],
-                   accuracy = Int[test_accuracy],
-                   #  fn = Int[fn[x] for x in ecg_data],
-                   #  score = [score[x] for x in ecg_data],
-                  )
+    df_general = DataFrame(
+                           problem = [String(Base.function_name(gen_problem))],
+                           num_test = Int[num_test],
+                           num_train = Int[num_train],
+                           n_theta = Int[n_theta],
+                           n_active_sets = Int[n_active_sets],
+                           accuracy = [test_accuracy],
+                           infeas = [mean([k for k in infeas if k >= TOL])],
+                           subopt = [mean([k for k in subopt if k >= TOL])],
+                           time = [mean(time_comp)],
+                          )
+
+    df_detail = DataFrame(
+                          infeas = infeas,
+                          subopt = subopt,
+                          time = time_comp
+                         )
+
+    return df_general, df_detail
 end
 
 

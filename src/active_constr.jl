@@ -70,7 +70,7 @@ function solve(problem::OptimizationProblem)
         error("LP not solved to optimality. Status $(status)")
     end
 
-    return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m)
+    return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m), MathProgBase.getsolvetime(m)
 
 end
 
@@ -87,7 +87,7 @@ function active_constraints(problem::OptimizationProblem)
 
     n_constr = length(problem.l)
 
-    _, y = solve(problem)
+    _, y, _ = solve(problem)
 
     active_constr = zeros(Int64, n_constr)
     for i = 1:n_constr
@@ -152,7 +152,7 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
     y_temp = -MathProgBase.getconstrduals(m)
     y[active_constr_lower] = y_temp[1:n_lower]
     y[active_constr_upper] = y_temp[n_lower+1:end]
-    return x, y
+    return x, y, MathProgBase.getsolvetime(m)
 
     # Solve ONLY a single linear system (does not always work because it can be non square)
     #  # Find x

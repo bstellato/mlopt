@@ -67,36 +67,11 @@ theta_test = [randn(1) for i = 1:num_test]
 
 # Evaluate performance
 # TODO: Complete
-df = eval_performance
+df_general, df_detail = eval_performance(theta_test, lnr, InventoryManagementProblem, enc2active_constr)
 
 # Write output
-CSV.write("$(output_folder)/performance.csv", df)
-
-# TODO: Remove the following
-
-
-println("Results")
-@printf "Number of correct evaluations: %d/%d\n" n_correct_eval N_test
-
-# Solve problems with learned active_constr
-x_pred = Vector{Vector{Float64}}(N_test)
-x_test = Vector{Vector{Float64}}(N_test)
-time_ml = Vector{Float64}(N_test)
-time_lp = Vector{Float64}(N_test)
-for i = 1:N_test
-    problem = InventoryManagementProblem(X_test[i])
-    time_ml[i] = @elapsed x_pred[i], _ = MyModule.solve(problem, active_constr_pred[i])
-    time_lp[i] = @elapsed x_test[i], _ = MyModule.solve(problem)
-
-    if abs(problem.c'* x_pred[i] - problem.c' * x_test[i]) > 1e-05
-        println("Not matching cost at problem $i. Difference $(problem.c'* x_pred[i] - problem.c' * x_test[i])")
-    end
-end
-
-@printf "Time LP = %.2e\n" mean(time_lp)
-@printf "Time ML = %.2e\n" mean(time_ml)
-
-
-
+output_name = String(Base.function_name(InventoryManagementProblem))
+CSV.write("$(output_name)_general.csv", df_general)
+CSV.write("$(output_name)_detail.csv", df_detail)
 
 
