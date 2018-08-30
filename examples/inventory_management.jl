@@ -66,7 +66,7 @@ srand(1)
 y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(theta_train, problem))
 
 # Learn tree
-lnr = MyModule.tree(theta_train, y_train, export_tree=false)
+lnr = MyModule.tree(theta_train, y_train, export_tree=true, problem=problem)
 
 
 # Test

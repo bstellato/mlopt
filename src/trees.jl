@@ -1,6 +1,7 @@
 function tree(X::Vector{Vector{Float64}},
               y::Vector{Int64};
-              export_tree=false)
+              export_tree=false,
+              problem::Function=nothing)
 
     lnr = OT.OptimalTreeClassifier(max_depth = 20,
                                    minbucket = 1,
@@ -9,7 +10,9 @@ function tree(X::Vector{Vector{Float64}},
 
     # Export tree
     if export_tree
-        export_tree_name = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
+        output_name = String(Base.function_name(problem))
+        date = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
+        export_tree_name = output_name * "_" * date
         println("Export tree to $(export_tree_name)")
         OT.writedot("$(export_tree_name).dot", lnr)
         run(`dot -Tpdf -o $(export_tree_name).pdf $(export_tree_name).dot`)
