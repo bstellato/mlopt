@@ -1,18 +1,5 @@
 # Functions to analyze the performance
 
-
-#  mutable struct PerformanceStatistics
-#      num_train::Int64   # Number of training samples
-#      num_test::Int64    # Number of testing samples
-#      infeas::Float64  # Average infeasibility of the solution for incorrect
-#      subopt::Float64  # Average suboptimality of the solution for incorrect
-#      n_theta::Int64   # Dimension of the parameters
-#      n_active_sets::Int64  # Number of relevant active sets from training
-#      correct::Float64  # Percentage of correct predictions
-#      r::Float64       # Sampling radius
-#      time_comparison::Float64   # Percentage of time improvement
-#  end
-
 function accuracy(active_constr_pred::Vector{Vector{Int64}},
                   active_constr_test::Vector{Vector{Int64}})
     n_total = length(active_constr_pred)
@@ -35,10 +22,10 @@ function eval_performance(theta::Vector{Vector{Float64}},
                           enc2active_constr::Vector{Vector{Int64}})
 
     # Get active_constr for each point
-    active_constr_test = MyModule.active_constraints(theta_test, gen_function)
+    active_constr_test = MyModule.active_constraints(theta, gen_problem)
 
     # Predict active constraints
-    active_constr_pred = MyModule.predict(theta_test, lnr, enc2active_constr)
+    active_constr_pred = MyModule.predict(theta, lnr, enc2active_constr)
 
     # Get statistics
     num_test = length(theta)
@@ -63,7 +50,7 @@ function eval_performance(theta::Vector{Vector{Float64}},
         # Compare time
         infeas[i] = infeasibility(x_ml, problem)
         subopt[i] = suboptimality(x_ml, x_lp, problem)
-        time_comp[i] = time_ml/time_lp
+        time_comp[i] = (1 - time_ml/time_lp)*100
     end
 
 
@@ -75,19 +62,26 @@ function eval_performance(theta::Vector{Vector{Float64}},
                            n_theta = Int[n_theta],
                            n_active_sets = Int[n_active_sets],
                            accuracy = [test_accuracy],
-                           infeas = [mean([k for k in infeas if k >= TOL])],
-                           subopt = [mean([k for k in subopt if k >= TOL])],
-                           time = [mean(time_comp)],
+                           avg_infeas = [mean([k for k in infeas if k >= TOL])],
+                           avg_subopt = [mean([k for k in subopt if k >= TOL])],
+                           avg_time_improvement_perc = [mean(time_comp)],
                           )
 
     df_detail = DataFrame(
                           infeas = infeas,
                           subopt = subopt,
-                          time = time_comp
+                          time_improvement_perc = time_comp
                          )
 
     return df_general, df_detail
 end
 
 
-
+function write_output(df_general::DataFrame,
+                      df_detail::DataFrame,
+                      gen_problem::Function)
+    output_name = String(Base.function_name(gen_problem))
+    CSV.write("$(output_name)_general.csv", df_general)
+    CSV.write("$(output_name)_detail.csv", df_detail)
+    nothing
+end

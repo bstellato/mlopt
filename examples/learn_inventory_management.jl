@@ -1,7 +1,7 @@
 using JuMP
 include("../src/MyModule.jl")
 
-function InventoryManagementProblem(x0::Array{Float64};
+function inventory_management(x0::Array{Float64};
                                     T = 50,   # Horizon
                                     M = 10.,  # Max ordering capacity
                                     K = 10.,  # Fixed ordering cost
@@ -43,16 +43,27 @@ function InventoryManagementProblem(x0::Array{Float64};
 
 end
 
-# Learn
-# -----
-srand(1)
 
+# Generate data
+# -------------
+problem = inventory_management
 # Generate training data points
 num_train = 500
 theta_train = [randn(1) for i = 1:num_train]
 
+# Generate testing data points
+num_test = 100
+theta_test = [randn(1) for i = 1:num_test]
+
+
+
+
+# Learn
+# -----
+srand(1)
+
 # Get active_constr for each point
-y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(theta_train, InventoryManagementProblem))
+y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(theta_train, problem))
 
 # Learn tree
 lnr = MyModule.tree(theta_train, y_train, export_tree=false)
@@ -60,18 +71,9 @@ lnr = MyModule.tree(theta_train, y_train, export_tree=false)
 
 # Test
 # ------
-
-# Generate testing data points
-num_test = 100
-theta_test = [randn(1) for i = 1:num_test]
-
 # Evaluate performance
-# TODO: Complete
-df_general, df_detail = eval_performance(theta_test, lnr, InventoryManagementProblem, enc2active_constr)
+df_general, df_detail = MyModule.eval_performance(theta_test, lnr, problem, enc2active_constr)
 
-# Write output
-output_name = String(Base.function_name(InventoryManagementProblem))
-CSV.write("$(output_name)_general.csv", df_general)
-CSV.write("$(output_name)_detail.csv", df_detail)
-
+# Store results
+MyModule.write_output(df_general, df_detail, problem)
 

@@ -44,7 +44,7 @@ end
 
 Compute infeasibility as ||(Ax - u)_{+} + (l - Ax)_{+}||_2
 """
-function infeasibility(x_ml::Vector{Float64},
+function infeasibility(x::Vector{Float64},
                        problem::OptimizationProblem)
     l, A, u = problem.l, problem.A, problem.u
 
@@ -57,7 +57,7 @@ end
 
 Compute suboptimality as || c' * x - c' * x_opt ||
 """
-function infeasibility(x::Vector{Float64},
+function suboptimality(x::Vector{Float64},
                        x_opt::Vector{Float64},
                        problem::OptimizationProblem)
     c = problem.c

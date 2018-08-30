@@ -7,7 +7,7 @@ function active_constraints(theta_train, gen_problem::Function)
     active_constr = Vector{Vector{Int64}}(N_train)
     @showprogress 1 "Computing active constraints..." for i = 1:N_train
         problem = gen_problem(theta_train[i])
-        active_constr[i] = MyModule.get_active_constr(problem)
+        active_constr[i] = MyModule.active_constraints(problem)
     end
 
     return active_constr
