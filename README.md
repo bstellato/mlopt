@@ -3,6 +3,18 @@
 
 ## TODO
 
+- [ ] Solve problems netlib lps.
+  - [ ] Sample different points for b and c
+  - [ ] Sample balls around them
+  - [ ] Perform training and testing
+- [ ] Develop Inventory model
+  - [ ] Increase uncertain parameters
+  - [ ] (s, S) policies
+- [ ] Investigate quadratic programs
+  - [ ] Parametric examples
+
+
+# Find additional problems
 - [ ] Find good list of example problems
   * Boyd book page 148
   * Fitting with l1
@@ -42,22 +54,15 @@ Questions
 
 
 
-
-
-
 ## Random problems
 - Get data
 - Sample within a radius from each data point
-
-
 
 ## Filter active sets
 - Sort them
 - Take most frequent ones
 - Find a way to map active sets to close ones
 - Sensitivity analysis!
-
-
 
 ### Inventory Control
 

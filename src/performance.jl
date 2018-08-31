@@ -79,8 +79,10 @@ end
 
 function write_output(df_general::DataFrame,
                       df_detail::DataFrame,
-                      gen_problem::Function)
-    output_name = String(Base.function_name(gen_problem))
+                      gen_problem::Function;
+                     output_folder::String="output")
+    output_name = joinpath(output_folder,
+                           String(Base.function_name(gen_problem)))
     CSV.write("$(output_name)_general.csv", df_general)
     CSV.write("$(output_name)_detail.csv", df_detail)
     nothing

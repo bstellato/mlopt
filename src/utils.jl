@@ -36,6 +36,10 @@ function extract_problem_data(m::MathProgBase.AbstractLinearQuadraticModel)
     l = [MathProgBase.getconstrLB(m); MathProgBase.getvarLB(m)]
     u = [MathProgBase.getconstrUB(m); MathProgBase.getvarUB(m)]
 
+    # Cap constraints with infinity
+    [u[i] = Inf for i in 1:length(u) if u[i] >= 1e20]
+    [l[i] = -Inf for i in 1:length(l) if l[i] <= -1e20]
+
     # Find indices where both bounds are infinity
     MyModule.@remove_unbounded_constraints A l u
 
@@ -48,7 +52,7 @@ function extract_problem_data(file_name::String)
     MathProgBase.loadproblem!(m, file_name)
     return extract_problem_data(m)
 end
-
+MyModule.OptimizationProblem(name::String) = MyModule.OptimizationProblem(MyModule.extract_problem_data(name)...)
 
 """
     infeasibility(x_ml, problem)
