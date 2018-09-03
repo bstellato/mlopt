@@ -9,7 +9,7 @@ macro remove_unbounded_constraints(A, l, u)
         local _A = $(esc(A))
         local _l = $(esc(l))
         local _u = $(esc(u))
-        local idx_constr = setdiff(1:length(_l), intersect(find(isinf.(_u)), find(isinf.(_l))))
+        local idx_constr = setdiff(1:length(_l), intersect(find(Base.isinf.(_u)), find(Base.isinf.(_l))))
         $(esc(A)) = _A[idx_constr, :]
         $(esc(l)) = _l[idx_constr]
         $(esc(u)) = _u[idx_constr]

@@ -21,14 +21,14 @@ function operation_points(problem::OptimizationProblem;
     l_up = l
     l_low = l - 0.1 * abs.(l)
     delta = l_up - l_low
-    [delta[i] = 0 for i = 1:n_constr if isinf(u[i])]   # Interval 0 if delta Inf
+    [delta[i] = 0 for i = 1:n_constr if Base.isinf(l[i])]   # Interval 0 if delta Inf
     l_vec = [l_low + delta .* rand(n_constr) for _ in 1:N]
 
     # Perturb upper bound
     u_up = u + 0.1 * abs.(u)
     u_low = u
     delta = u_up - u_low
-    [delta[i] = 0 for i = 1:n_constr if isinf(u[i])]   # Interval 0 if delta Inf
+    [delta[i] = 0 for i = 1:n_constr if Base.isinf(u[i])]   # Interval 0 if delta Inf
     u_vec = [u_low + delta .* rand(n_constr) for _ in 1:N]
 
     # Stack points up
@@ -41,35 +41,34 @@ end
 
 # Create multivariate distribution sampler
 struct MvBall <: Sampleable{Multivariate, Continuous}
-    n::Int64  # Dimension
-    r::Float64  # Radius
-    #  d::  # Custom sampler
+    n::Int64                 # Dimension
+    r::Float64               # Radius
+    center::Vector{Float64}  # Center of the ball
 end
 Base.length(s::MvBall) = s.n # return the length of each sample
 
-function inc_gamma_lower_reg(a, x)
-    return incGamma(a, x, false, true)
-end
-
-
-
 """
 Generate a single vector sample to x
+
 The function initially samples the points using a Normal Distribution
 with `randn`. Then the incomplete gamma function is used to map the
 points radially to fit in the hypersphere of finite radius r with
 a uniform spatial distribution.
+
+In order to have a uniform distributions over the sphere we multiply the vectors
+by f(r): f(r)*r is distributed with density proportional to r^n on [0,1].
 """
 function Distributions._rand!{T<:Real}(s::MvBall, x::AbstractVector{T})
-    n, r = s.n, s.r
-    x_sample = randn(1, n)
-    s2 = sum(x_sample.^2, 2)
+    n, r, center = s.n, s.r, s.center
+    x_sample = randn(n)
+    s2 = norm(x_sample)^2
     # NB. sf_gamma_inc_P(a, x) computes the normalized incomplete gamma function
-    # for a and x. The arguments are swapped from the Matlab version
-    fr = r*(sf_gamma_inc_P.(n/2, s2/2).^(1/n))./sqrt(s2)
-    frtiled = repmat(fr, 1, n)
-    x_sample = x_sample.*frtiled
+    # for a and x (the arguments are swapped from the Matlab version).
+    fr = r*(sf_gamma_inc_P(n/2, s2/2)^(1/n))/sqrt(s2)
+    # Multiply by fr and shift by center
+    x_sample = center + fr .* x_sample
 
+    # Assign values of x
     x[:] = x_sample[:]
 
     #  This is translated from the following Matlab implementation
@@ -99,32 +98,30 @@ function sample(theta_bar::Vector{Vector{Float64}},
                 N=100)
 
     # Get sampling points per operation point
-    n_op = length(theta_bar)
-    n_sample_per_op = floor(N / n_op)
-
+    n_op = length(theta_bar)  # Numer of operation points
+    n_sample_per_op = floor(Int, N / n_op)   # Number of samples per operation point
 
     # Get values that are not infinity (from first element)
-    idx_finite = find(.!isinf(theta_bar[1]))
+    idx_finite = find(.!Base.isinf.(theta_bar[1]))
     n_finite = length(idx_finite)
 
-    # Get sampler
-    d = MvBall(n_finite, r)
-
     # Get sampling points per operation point
-    theta = []
+    theta = Vector{Vector{Float64}}(0)
     for k = 1:length(theta_bar)
-        # Sample point and project it ont othe ball
-        theta_temp = rand(d, n_sample_per_op)
-        theta_temp *= (r / norm(theta_temp))
+        # Get sampler around the non infinity elements of theta_bar[k]
+        d = MvBall(n_finite, r, theta_bar[k][idx_finite])
 
-        theta_copy = copy(theta_bar[k])
-        theta_copy[idx_finite] = theta_temp
-        push!(theta, theta_copy)
+        # Sample uniform point on the ball
+        theta_new = [copy(theta_bar[k]) for _ in 1:n_sample_per_op]
+        [theta_new[i][idx_finite] = rand(d)
+         for i in 1:n_sample_per_op]
 
-
+        # Add sample to list of points
+        append!(theta, theta_new)
     end
 
 
+    return theta
 
 end
 
