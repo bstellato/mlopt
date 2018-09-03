@@ -8,7 +8,7 @@
   - [ ] Sample balls around them
   - [ ] Perform training and testing
 - [ ] Develop Inventory model
-  - [ ] Increase uncertain parameters
+  - [ ] Increase multiple uncertain parameters
   - [ ] (s, S) policies
 - [ ] Investigate quadratic programs
   - [ ] Parametric examples
