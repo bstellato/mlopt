@@ -1,4 +1,4 @@
-function tree(X::Vector{Vector{Float64}},
+function tree(X::DataFrame,
               y::Vector{Int64};
               export_tree=false,
               problem::OptimizationProblem=nothing,
@@ -9,7 +9,7 @@ function tree(X::Vector{Vector{Float64}},
                                    minbucket = 1,
                                    # cp = 0.001
                                   )
-    OT.fit!(lnr, vcat(X'...), y)
+    OT.fit!(lnr, X, y)
 
     # Export tree
     if export_tree
@@ -28,12 +28,12 @@ function tree(X::Vector{Vector{Float64}},
 
 end
 
-function predict(X::Vector{Vector{Float64}},
+function predict(X::DataFrame,
                  lnr::OT.OptimalTreeClassifier,
                  enc2active_constr::Vector{Vector{Int64}})
 
     # Predict active_constr
-    y = OT.predict(lnr, vcat(X'...))
+    y = OT.predict(lnr, X)
 
     # Convert encoding to actual active_constr
     active_constr = [enc2active_constr[y[i]] for i in 1:length(y)]

@@ -27,7 +27,9 @@ function populate!(problem::NetlibLP)
 end
 
 
-function populate!(problem::NetlibLP, theta::Array{Float64})
+function populate!(problem::NetlibLP, theta::DataFrame)
+    @assert size(theta, 1) == 1  # Only one row in dataframe
+    theta_vec = Array(theta[1, :])[:]
 
     if problem.to_read
         # Extract nominal problem data if not defined
@@ -43,9 +45,9 @@ function populate!(problem::NetlibLP, theta::Array{Float64})
     n_constr = length(problem.data.l)
 
     # Populate prblem data using theta
-    problem.data.c += theta[1:n_var]
-    problem.data.l += theta[n_var+1:n_var+n_constr]
-    problem.data.u += theta[n_var+n_constr+1:end]
+    problem.data.c += theta_vec[1:n_var]
+    problem.data.l += theta_vec[n_var+1:n_var+n_constr]
+    problem.data.u += theta_vec[n_var+n_constr+1:end]
 
 end
 
@@ -179,6 +181,9 @@ function sample(problem::NetlibLP,
                 r::Float64;
                 N=100)
 
+    n_var = length(problem.data.c)
+    n_constr = length(problem.data.l)
+
     # Get sampling points per operation point
     n_op = length(theta_bar)  # Numer of operation points
     n_sample_per_op = floor(Int, N / n_op)   # Number of samples per operation point
@@ -209,7 +214,14 @@ function sample(problem::NetlibLP,
         append!(theta, theta_new)
     end
 
-    return theta
+    # Create dataframe
+    X = vcat(theta'...)
+    d = DataFrame()
+    [d[Symbol("c$i")] = X[:, i] for i in 1:n_var]
+    [d[Symbol("l$i")] = X[:, n_var + i] for i in 1:n_constr]
+    [d[Symbol("u$i")] = X[:, n_var + n_constr + i] for i in 1:n_constr]
+
+    return d
 
 end
 

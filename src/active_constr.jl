@@ -1,12 +1,12 @@
 # Solving and active constraints identification
 
-function active_constraints(theta_train, problem::OptimizationProblem)
-    N_train = length(theta_train)
+function active_constraints(theta::DataFrame, problem::OptimizationProblem)
+    N = size(theta, 1)
 
     # Get active_constr for each point
-    active_constr = Vector{Vector{Int64}}(N_train)
-    @showprogress 1 "Computing active constraints..." for i = 1:N_train
-        populate!(problem, theta_train[i])
+    active_constr = Vector{Vector{Int64}}(N)
+    @showprogress 1 "Computing active constraints..." for i = 1:N
+        populate!(problem, theta[i, :])
 
         active_constr[i] = MyModule.active_constraints(problem)
     end

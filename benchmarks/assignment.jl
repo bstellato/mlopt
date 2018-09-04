@@ -7,13 +7,13 @@ problem.A = 50
 theta_dim = 50  # A
 
 # Generate training data points
-num_train = 1000
-theta_train = [.3 * randn(theta_dim) for i = 1:num_train]
+theta_bar = zeros(theta_dim)
 
-# Generate testing data points
-num_test = 100
-theta_test = [.3 * randn(theta_dim) for i = 1:num_test]
-
+N_train = 1000
+N_test = 100
+radius = 1.
+theta_train = MyModule.sample(problem, theta_bar, radius, N=N_train)
+theta_test = MyModule.sample(problem, theta_bar, radius, N=N_test)
 
 # Learn
 # -----
@@ -29,8 +29,8 @@ lnr = MyModule.tree(theta_train, y_train, export_tree=true, problem=problem)
 # Test
 # ------
 # Evaluate performance
-df_general, df_detail = MyModule.eval_performance(theta_test, lnr, problem, enc2active_constr)
+df, df_detail = MyModule.eval_performance(theta_test, lnr, problem, enc2active_constr)
 
 # Store results
-MyModule.write_output(df_general, df_detail, problem)
+MyModule.write_output(df, df_detail, problem)
 

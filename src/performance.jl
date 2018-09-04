@@ -16,11 +16,13 @@ function accuracy(active_constr_pred::Vector{Vector{Int64}},
 end
 
 
-function eval_performance(theta::Vector{Vector{Float64}},
+function eval_performance(theta::DataFrame,
                           lnr::OT.OptimalTreeClassifier,
                           problem::OptimizationProblem,
                           enc2active_constr::Vector{Vector{Int64}})
 
+    println("Performance evaluation")
+    println("Compute active constraints over test set")
     # Get active_constr for each point
     active_constr_test = MyModule.active_constraints(theta, problem)
 
@@ -28,15 +30,13 @@ function eval_performance(theta::Vector{Vector{Float64}},
     active_constr_pred = MyModule.predict(theta, lnr, enc2active_constr)
 
     # Get statistics
-    num_test = length(theta)
+    num_test = size(theta, 1)
     num_train = lnr.prb_.data.features.n_samples
-    n_theta = length(theta[1])
+    n_theta = size(theta, 2)
     n_active_sets = length(enc2active_constr)
 
     # accuracy
     test_accuracy = accuracy(active_constr_pred, active_constr_test)
-
-    @show test_accuracy
 
     # TODO: Add radius?
 
@@ -45,7 +45,7 @@ function eval_performance(theta::Vector{Vector{Float64}},
     subopt = Vector{Float64}(num_test)
     time_comp = Vector{Float64}(num_test)
     for i = 1:num_test
-        populate!(problem, theta[i])
+        populate!(problem, theta[i, :])
         x_ml, y_ml, time_ml = solve(problem, active_constr_pred[i])
         x_lp, y_lp, time_lp = solve(problem)
 

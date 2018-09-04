@@ -11,14 +11,17 @@ mutable struct Assignment <: OptimizationProblem
 end
 
 
-function populate!(problem::Assignment, theta::Array{Float64})
+function populate!(problem::Assignment, theta::DataFrame)
+
+    @assert size(theta, 1) == 1  # Only one row
+    theta_vec = Array(theta)[:]
 
     # Get dimension
     A = problem.A
 
     T = A  # Same tasks as agents
 
-    c = eye(A) + spdiagm(theta)
+    c = eye(A) + spdiagm(theta_vec)
 
     # Define JuMP model
     m = Model(solver=MyModule.BUILD_SOLVER)
@@ -38,4 +41,20 @@ function populate!(problem::Assignment, theta::Array{Float64})
 
 end
 
+
+function sample(problem::Assignment,
+                theta_bar::Vector{Float64},
+                r::Float64;
+                N=100)
+
+    # Get sampler
+    d = MvBall(length(theta_bar), r, theta_bar)
+
+    # Sample uniform point on the ball
+    X = rand(d, N)
+
+    # Construct and return dataframe
+    return DataFrame(X')
+
+end
 
