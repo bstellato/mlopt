@@ -1,4 +1,5 @@
 # Code for running the tree learning on the Netlib LPs
+using DataFrames
 include("../src/MyModule.jl")
 
 lp_data_dir = joinpath("benchmarks", "lp_data")
@@ -8,8 +9,8 @@ files = [f for f in readdir(lp_data_dir) if contains(f, "mps")]
 files = ["25fv47.mps"]  # TODO: remove this. Just to run only one file
 
 N_op = 5
-N_training = 10
-N_testing = 5
+N_train = 10
+N_test = 5
 
 # TODO: Preallocate variables for debugging
 problem = []
@@ -23,8 +24,8 @@ y_train = []
 problem = MyModule.NetlibLP()
 
 # Dataframes to store data
-df = [] # DataFrame()
-df_detail = [] # DataFrame()
+df = DataFrame()
+df_detail = DataFrame()
 
 for f in files
 
@@ -43,9 +44,9 @@ for f in files
     radius = .0 * mean(norm.(theta_finite, 1))
 
     # Training: Sample from operation points within Balls
-    theta_train = MyModule.sample(theta_bar, radius)
+    theta_train = MyModule.sample(theta_bar, radius, N=N_train)
     # Testing: Sample from operation points within Balls
-    theta_test = MyModule.sample(theta_bar, radius)
+    theta_test = MyModule.sample(theta_bar, radius, N=N_test)
 
     # Train
     srand(1)
@@ -67,7 +68,7 @@ for f in files
     df_detail = [df_detail; df_detail_f]
 
     # Write output to file
-    write_output(df, df_detail)
+    MyModule.write_output(df, df_detail)
 
 end
 

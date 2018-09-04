@@ -76,7 +76,20 @@ function solve(problem::OptimizationProblem)
         error("LP not solved to optimality. Status $(status)")
     end
 
-    return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m), MathProgBase.getsolvetime(m)
+
+    # Get active constraints
+    _, basis_constr = MathProgBase.getbasis(m)
+    basis = zeros(Int, n_constr)
+    for i = 1:n_constr
+        if basis_constr[i] == :NonbasicAtLower
+            basis[i] = -1
+        elseif basis_constr[i] == :NonbasicAtUpper
+            basis[i] = 1
+        end
+    end
+
+
+    return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m), MathProgBase.getsolvetime(m), basis
 
 end
 
@@ -91,18 +104,18 @@ Solve optimization problem and get vector of active constraints where each eleme
 """
 function active_constraints(problem::OptimizationProblem)
 
-    _, y, _ = solve(problem)
+    _, y, _, active_constr = solve(problem)
 
 
-    n_constr = length(problem.data.l)
-    active_constr = zeros(Int64, n_constr)
-    for i = 1:n_constr
-        if y[i] >= TOL
-            active_constr[i] = 1
-        elseif y[i] <= -TOL
-            active_constr[i] = -1
-        end
-    end
+    #  n_constr = length(problem.data.l)
+    #  active_constr = zeros(Int64, n_constr)
+    #  for i = 1:n_constr
+    #      if y[i] >= TOL
+    #          active_constr[i] = 1
+    #      elseif y[i] <= -TOL
+    #          active_constr[i] = -1
+    #      end
+    #  end
 
     # Active constr
     return active_constr
@@ -129,7 +142,6 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
     n_constr = length(u)
 
     # Solve using Basis
-    n_active = length(active_constr)
     active_constr_upper = find(active_constr .== 1)
     n_upper = length(active_constr_upper)
     active_constr_lower = find(active_constr .== -1)
@@ -151,7 +163,9 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
 
 
     if status != :Optimal
-        @show active_constr
+        @show n_var
+        @show n_upper + n_lower
+        @show n_constr
         error("LP not solved to optimality. Status $(status)")
     end
 

@@ -20,9 +20,9 @@ using Mosek
 # Define constants
 TOL = 1e-06
 INFINITY = 1e15
-#  SOLVER = CplexSolver(CPX_PARAM_SCRIND = 0)
+SOLVER = CplexSolver(CPX_PARAM_SCRIND = 0)
 #  SOLVER= GLPKSolverLP()
-SOLVER= MosekSolver(QUIET=1)
+#  SOLVER= MosekSolver(QUIET=1)
 #  SOLVER = GurobiSolver(OutputFlag=0)
 READ_SOLVER = GurobiSolver(OutputFlag=0)
 BUILD_SOLVER = OSQPMathProgBaseInterface.OSQPSolver(verbose=false)
