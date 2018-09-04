@@ -31,12 +31,12 @@ include("types.jl")  # Functions for solving and identifying active constraints
 include("active_constr.jl")  # Functions for solving and identifying active constraints
 include("trees.jl")    # Learn and predict using Optimal Trees
 include("performance.jl")    # Functions for analyzing performance of the method
-include("perturbations.jl")    # Functions to perturb benchmark problems data
 include("utils.jl")    # Functions for analyzing performance of the method
 
 # Include problem types
 include("problems/assignment.jl")
 include("problems/netliblp.jl")
+include("problems/inventory.jl")
 
 end
 

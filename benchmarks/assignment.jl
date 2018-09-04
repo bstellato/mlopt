@@ -1,4 +1,3 @@
-using JuMP
 include("../src/MyModule.jl")
 
 # Generate data

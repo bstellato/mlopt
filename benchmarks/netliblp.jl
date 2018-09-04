@@ -5,12 +5,26 @@ include("../src/MyModule.jl")
 lp_data_dir = joinpath("benchmarks", "lp_data")
 files = [f for f in readdir(lp_data_dir) if contains(f, "mps")]
 
-# For each file perform lerning
-files = ["25fv47.mps"]  # TODO: remove this. Just to run only one file
+# Sort files by size
+file_sizes = [stat(f).size for f in files]
+files = files[sortperm(file_sizes)]
 
-N_op = 5
-N_train = 10
-N_test = 5
+# Take only first 5 files
+#  files = files[3:5]
+
+# For each file perform lerning
+files = ["afiro.mps"]  # TODO: remove this. Just to run only one file
+
+N_op = 10
+N_train = 1000
+N_test = 100
+
+println("Data points")
+println(" - Training: $(N_train)")
+println(" - Testing: $(N_test)")
+println(" - Operating points: $(N_op)")
+
+radius_frac = 0.1
 
 # TODO: Preallocate variables for debugging
 problem = []
@@ -41,12 +55,12 @@ for f in files
 
     # Radius is 10% of the mean of the finite elements of theta_bar
     theta_finite = [t[.!Base.isinf.(t)] for t in theta_bar]
-    radius = .0 * mean(norm.(theta_finite, 1))
+    radius = radius_frac * mean(norm.(theta_finite, 1))
 
     # Training: Sample from operation points within Balls
-    theta_train = MyModule.sample(theta_bar, radius, N=N_train)
+    theta_train = MyModule.sample(problem, theta_bar, radius, N=N_train)
     # Testing: Sample from operation points within Balls
-    theta_test = MyModule.sample(theta_bar, radius, N=N_test)
+    theta_test = MyModule.sample(problem, theta_bar, radius, N=N_test)
 
     # Train
     srand(1)
@@ -58,7 +72,7 @@ for f in files
     # Learn tree
     lnr = MyModule.tree(theta_train, y_train, export_tree=true, problem=problem)
 
-    # Evaluate performance (TODO: Fix infeasibility/suboptimality measures)
+    # Evaluate performance
     df_f, df_detail_f = MyModule.eval_performance(theta_test,
                                                   lnr, problem,
                                                   enc2active_constr)
