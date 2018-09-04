@@ -1,3 +1,5 @@
+populate!(::OptimizationProblem) = error("custom OptimizationProblem objects must define a `populate!` method")
+
 """
     @remove_unbounded_constraints A l u
 
@@ -43,7 +45,7 @@ function extract_problem_data(m::MathProgBase.AbstractLinearQuadraticModel)
     # Find indices where both bounds are infinity
     MyModule.@remove_unbounded_constraints A l u
 
-    return c, l, A, u
+    return ProblemData(c, l, A, u)
 end
 
 
@@ -52,7 +54,6 @@ function extract_problem_data(file_name::String)
     MathProgBase.loadproblem!(m, file_name)
     return extract_problem_data(m)
 end
-MyModule.OptimizationProblem(name::String) = MyModule.OptimizationProblem(MyModule.extract_problem_data(name)...)
 
 """
     infeasibility(x_ml, problem)
@@ -62,7 +63,7 @@ weighted over the magnitude of l and u.
 """
 function infeasibility(x::Vector{Float64},
                        problem::OptimizationProblem)
-    l, A, u = problem.l, problem.A, problem.u
+    l, A, u = problem.data.l, problem.data.A, problem.data.u
 
     upper = max.(A * x - u, 0.) ./ (abs.(u) + 1e-10)
     lower = max.(l - A * x, 0.) ./ (abs.(l) + 1e-10)
@@ -78,7 +79,7 @@ Compute suboptimality as || c' * x - c' * x_opt ||
 function suboptimality(x::Vector{Float64},
                        x_opt::Vector{Float64},
                        problem::OptimizationProblem)
-    c = problem.c
+    c = problem.data.c
     return (c' * x - c' * x_opt) / abs.(c' * x_opt + 1e-10)
 end
 

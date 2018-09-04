@@ -1,7 +1,7 @@
 function tree(X::Vector{Vector{Float64}},
               y::Vector{Int64};
               export_tree=false,
-              problem::Function=nothing,
+              problem::OptimizationProblem=nothing,
               output_folder::String="output")
     @printf "Learning Classification Tree\n"
 
@@ -13,7 +13,7 @@ function tree(X::Vector{Vector{Float64}},
 
     # Export tree
     if export_tree
-        output_name = String(Base.function_name(problem))
+        output_name = string(typeof(problem))
         date = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
         export_tree_name = joinpath(output_folder,
                                     output_name * "_" * date)

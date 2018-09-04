@@ -8,9 +8,9 @@ Sample the operation points by perturbing the original problem data.
 function operation_points(problem::OptimizationProblem;
                           N::Int64=10)
     # Problem data
-    c, l, u = problem.c, problem.l, problem.u
+    c, l, u = problem.data.c, problem.data.l, problem.data.u
     n_var = length(c)
-    n_constr = length(problem.l)
+    n_constr = length(l)
 
     # Perturb cost
     c_up = c + 0.1 * abs.(c)

@@ -18,11 +18,11 @@ end
 
 function eval_performance(theta::Vector{Vector{Float64}},
                           lnr::OT.OptimalTreeClassifier,
-                          gen_problem::Function,
+                          problem::OptimizationProblem,
                           enc2active_constr::Vector{Vector{Int64}})
 
     # Get active_constr for each point
-    active_constr_test = MyModule.active_constraints(theta, gen_problem)
+    active_constr_test = MyModule.active_constraints(theta, problem)
 
     # Predict active constraints
     active_constr_pred = MyModule.predict(theta, lnr, enc2active_constr)
@@ -43,7 +43,7 @@ function eval_performance(theta::Vector{Vector{Float64}},
     subopt = Vector{Float64}(num_test)
     time_comp = Vector{Float64}(num_test)
     for i = 1:num_test
-        problem = gen_problem(theta[i])
+        populate!(problem, theta[i])
         x_ml, y_ml, time_ml = solve(problem, active_constr_pred[i])
         x_lp, y_lp, time_lp = solve(problem)
 
@@ -56,7 +56,7 @@ function eval_performance(theta::Vector{Vector{Float64}},
 
     # Create dataframe and export it
     df_general = DataFrame(
-                           problem = [String(Base.function_name(gen_problem))],
+                           problem = [string(typeof(problem))],
                            num_test = Int[num_test],
                            num_train = Int[num_train],
                            n_theta = Int[n_theta],
@@ -79,10 +79,10 @@ end
 
 function write_output(df_general::DataFrame,
                       df_detail::DataFrame,
-                      gen_problem::Function;
+                      problem::OptimizationProblem;
                      output_folder::String="output")
     output_name = joinpath(output_folder,
-                           String(Base.function_name(gen_problem)))
+                           string(typeof(problem)))
     CSV.write("$(output_name)_general.csv", df_general)
     CSV.write("$(output_name)_detail.csv", df_detail)
     nothing

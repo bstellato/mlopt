@@ -1,12 +1,12 @@
 # Solving and active constraints identification
 
-function active_constraints(theta_train, gen_problem::Function)
+function active_constraints(theta_train, problem::OptimizationProblem)
     N_train = length(theta_train)
 
     # Get active_constr for each point
     active_constr = Vector{Vector{Int64}}(N_train)
     @showprogress 1 "Computing active constraints..." for i = 1:N_train
-        problem = gen_problem(theta_train[i])
+        populate!(problem, theta_train[i])
         active_constr[i] = MyModule.active_constraints(problem)
     end
 
@@ -53,7 +53,7 @@ Solve linear program and return primal variables `x` and dual variables `y`
 """
 function solve(problem::OptimizationProblem)
 
-    c, l, A, u = problem.c, problem.l, problem.A, problem.u
+    c, l, A, u = problem.data.c, problem.data.l, problem.data.A, problem.data.u
 
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
@@ -88,7 +88,7 @@ Solve optimization problem and get vector of active constraints where each eleme
 """
 function active_constraints(problem::OptimizationProblem)
 
-    n_constr = length(problem.l)
+    n_constr = length(problem.data.l)
 
     _, y, _ = solve(problem)
 
@@ -115,7 +115,7 @@ specifying which constraints are active according to function
 """
 function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
 
-    c, l, A, u = problem.c, problem.l, problem.A, problem.u
+    c, l, A, u = problem.data.c, problem.data.l, problem.data.A, problem.data.u
 
 
     @assert length(l) == length(u)

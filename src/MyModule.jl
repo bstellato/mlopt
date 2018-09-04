@@ -32,5 +32,9 @@ include("performance.jl")    # Functions for analyzing performance of the method
 include("perturbations.jl")    # Functions to perturb benchmark problems data
 include("utils.jl")    # Functions for analyzing performance of the method
 
+# Include problem types
+include("problems/assignment.jl")
+include("problems/netliblp.jl")
+
 end
 
