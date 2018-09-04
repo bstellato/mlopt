@@ -55,10 +55,12 @@ function eval_performance(theta::Vector{Vector{Float64}},
         time_comp[i] = (1 - time_ml/time_lp)*100
     end
 
+    # Get problem name
+    problem_name = lowercase(split(string(typeof(problem)), ".")[end])
 
     # Create dataframe and export it
     df = DataFrame(
-                   problem = [string(typeof(problem))],
+                   problem = [problem_name],
                    num_test = Int[num_test],
                    num_train = Int[num_train],
                    n_theta = Int[n_theta],
@@ -70,7 +72,7 @@ function eval_performance(theta::Vector{Vector{Float64}},
                   )
 
     df_detail = DataFrame(
-                          problem = repmat([string(typeof(problem))], num_test),
+                          problem = repmat([problem_name], num_test),
                           infeas = infeas,
                           subopt = subopt,
                           time_improvement_perc = time_comp
@@ -84,8 +86,10 @@ function write_output(df::DataFrame,
                       df_detail::DataFrame,
                       problem::OptimizationProblem;
                      output_folder::String="output")
+    # Get problem name
+    problem_name = lowercase(split(string(typeof(problem)), ".")[end])
     output_name = joinpath(output_folder,
-                           string(typeof(problem)))
+                           problem_name)
     CSV.write("$(output_name).csv", df)
     CSV.write("$(output_name)_detail.csv", df_detail)
     nothing
@@ -94,7 +98,7 @@ end
 function write_output(df::DataFrame,
                       df_detail::DataFrame;
                       file_name::String="results",
-                     output_folder::String="output")
+                      output_folder::String="output")
     output_name = joinpath(output_folder, file_name)
     CSV.write("$(output_name).csv", df)
     CSV.write("$(output_name)_detail.csv", df_detail)

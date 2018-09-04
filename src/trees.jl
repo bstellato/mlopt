@@ -13,7 +13,7 @@ function tree(X::Vector{Vector{Float64}},
 
     # Export tree
     if export_tree
-        output_name = string(typeof(problem))
+        output_name = lowercase(split(string(typeof(problem)), ".")[end])
         date = string(Dates.format(Dates.now(), "yy-mm-dd_HH:MM:SS"))
         export_tree_name = joinpath(output_folder,
                                     output_name * "_" * date)

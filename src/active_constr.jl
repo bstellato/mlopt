@@ -151,6 +151,7 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
 
 
     if status != :Optimal
+        @show active_constr
         error("LP not solved to optimality. Status $(status)")
     end
 
