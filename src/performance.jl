@@ -3,16 +3,14 @@
 function accuracy(active_constr_pred::Vector{Vector{Int64}},
                   active_constr_test::Vector{Vector{Int64}})
     n_total = length(active_constr_pred)
-    n_correct = 0
+    idx_correct = zeros(Int, n_total)
     for i = 1:n_total
         if active_constr_pred[i] == active_constr_test[i]
-            n_correct += 1
-        else
-            println("Bad prediction at index $i")
+            idx_correct[i] == 1
         end
     end
 
-    return n_correct / n_total
+    return sum(idx_correct) / n_total, idx_correct
 end
 
 
@@ -36,7 +34,7 @@ function eval_performance(theta::DataFrame,
     n_active_sets = length(enc2active_constr)
 
     # accuracy
-    test_accuracy = accuracy(active_constr_pred, active_constr_test)
+    test_accuracy, idx_correct = accuracy(active_constr_pred, active_constr_test)
 
     # TODO: Add radius?
 
@@ -64,8 +62,10 @@ function eval_performance(theta::DataFrame,
                    num_test = Int[num_test],
                    num_train = Int[num_train],
                    n_theta = Int[n_theta],
+                   n_correct = Int[sum(idx_correct)],
                    n_active_sets = Int[n_active_sets],
                    accuracy = [test_accuracy],
+                   n_infeas = [sum(infeas .>= TOL)],
                    avg_infeas = [mean(infeas)],
                    avg_subopt = [mean(subopt)],
                    max_infeas = [maximum(infeas)],
@@ -76,6 +76,7 @@ function eval_performance(theta::DataFrame,
 
     df_detail = DataFrame(
                           problem = repmat([problem_name], num_test),
+                          correct = idx_correct,
                           infeas = infeas,
                           subopt = subopt,
                           time_improvement_perc = time_comp

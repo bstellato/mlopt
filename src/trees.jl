@@ -7,7 +7,7 @@ function tree(X::DataFrame,
 
     lnr = OT.OptimalTreeClassifier(max_depth = 10,
                                    minbucket = 1,
-                                   # cp = 0.001
+                                   cp = 0.001
                                   )
     OT.fit!(lnr, X, y)
 
