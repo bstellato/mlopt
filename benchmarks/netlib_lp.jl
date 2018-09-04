@@ -22,6 +22,10 @@ y_train = []
 
 problem = MyModule.NetlibLP()
 
+# Dataframes to store data
+df = [] # DataFrame()
+df_detail = [] # DataFrame()
+
 for f in files
 
     # Update internal file name
@@ -54,7 +58,16 @@ for f in files
     lnr = MyModule.tree(theta_train, y_train, export_tree=true, problem=problem)
 
     # Evaluate performance (TODO: Fix infeasibility/suboptimality measures)
+    df_f, df_detail_f = MyModule.eval_performance(theta_test,
+                                                  lnr, problem,
+                                                  enc2active_constr)
 
+    # Concatenate dataframes
+    df = [df; df_f]
+    df_detail = [df_detail; df_detail_f]
+
+    # Write output to file
+    write_output(df, df_detail)
 
 end
 

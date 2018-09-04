@@ -36,6 +36,8 @@ function eval_performance(theta::Vector{Vector{Float64}},
     # accuracy
     test_accuracy = accuracy(active_constr_pred, active_constr_test)
 
+    @show test_accuracy
+
     # TODO: Add radius?
 
     # These need an additional problem solution
@@ -55,35 +57,76 @@ function eval_performance(theta::Vector{Vector{Float64}},
 
 
     # Create dataframe and export it
-    df_general = DataFrame(
-                           problem = [string(typeof(problem))],
-                           num_test = Int[num_test],
-                           num_train = Int[num_train],
-                           n_theta = Int[n_theta],
-                           n_active_sets = Int[n_active_sets],
-                           accuracy = [test_accuracy],
-                           avg_infeas = [mean([k for k in infeas if k >= TOL])],
-                           avg_subopt = [mean([k for k in subopt if k >= TOL])],
-                           avg_time_improvement_perc = [mean(time_comp)],
-                          )
+    df = DataFrame(
+                   problem = [string(typeof(problem))],
+                   num_test = Int[num_test],
+                   num_train = Int[num_train],
+                   n_theta = Int[n_theta],
+                   n_active_sets = Int[n_active_sets],
+                   accuracy = [test_accuracy],
+                   avg_infeas = [mean([k for k in infeas if k >= TOL])],
+                   avg_subopt = [mean([k for k in subopt if k >= TOL])],
+                   avg_time_improvement_perc = [mean(time_comp)],
+                  )
 
     df_detail = DataFrame(
+                          problem = repmat([string(typeof(problem))], num_test),
                           infeas = infeas,
                           subopt = subopt,
                           time_improvement_perc = time_comp
                          )
 
-    return df_general, df_detail
+    return df, df_detail
 end
 
 
-function write_output(df_general::DataFrame,
+function write_output(df::DataFrame,
                       df_detail::DataFrame,
                       problem::OptimizationProblem;
                      output_folder::String="output")
     output_name = joinpath(output_folder,
                            string(typeof(problem)))
-    CSV.write("$(output_name)_general.csv", df_general)
+    CSV.write("$(output_name).csv", df)
     CSV.write("$(output_name)_detail.csv", df_detail)
     nothing
 end
+
+function write_output(df::DataFrame,
+                      df_detail::DataFrame;
+                      file_name::String="results",
+                     output_folder::String="output")
+    output_name = joinpath(output_folder, file_name)
+    CSV.write("$(output_name).csv", df)
+    CSV.write("$(output_name)_detail.csv", df_detail)
+    nothing
+end
+
+"""
+    infeasibility(x_ml, problem)
+
+Compute infeasibility weighted over the magnitude of l and u.
+"""
+function infeasibility(x::Vector{Float64},
+                       problem::OptimizationProblem)
+    l, A, u = problem.data.l, problem.data.A, problem.data.u
+
+    normA = [norm(A[i, :], Inf) for i = 1:size(A, 1)]
+    upper = max.(A * x - u, 0.) ./ max.(normA, abs.(u))
+    lower = max.(l - A * x, 0.) ./ max.(normA, abs.(l))
+
+    return norm(upper + lower)
+
+end
+
+"""
+    suboptimality(x, x_opt, problem)
+
+Compute suboptimality weighted over the magnitude of c.
+"""
+function suboptimality(x::Vector{Float64},
+                       x_opt::Vector{Float64},
+                       problem::OptimizationProblem)
+    c = problem.data.c
+    return (c' * x - c' * x_opt) / norm(c, Inf)
+end
+

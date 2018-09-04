@@ -143,6 +143,7 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
 
     # Solve directly with MathProgBase
     m = MathProgBase.LinearQuadraticModel(SOLVER)
+    #  m = MathProgBase.LinearQuadraticModel(MosekSolver())
     MathProgBase.loadproblem!(m, A_red, -Inf * ones(n_var), Inf * ones(n_var),
                               c, bound_red, bound_red, :Min)
     MathProgBase.optimize!(m)
