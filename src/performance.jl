@@ -66,9 +66,12 @@ function eval_performance(theta::Vector{Vector{Float64}},
                    n_theta = Int[n_theta],
                    n_active_sets = Int[n_active_sets],
                    accuracy = [test_accuracy],
-                   avg_infeas = [mean([k for k in infeas if k >= TOL])],
-                   avg_subopt = [mean([k for k in subopt if k >= TOL])],
+                   avg_infeas = [mean(infeas)],
+                   avg_subopt = [mean(subopt)],
+                   max_infeas = [maximum(infeas)],
+                   max_subopt = [maximum(subopt)],
                    avg_time_improvement_perc = [mean(time_comp)],
+                   max_time_improvement_perc = [maximum(time_comp)],
                   )
 
     df_detail = DataFrame(
@@ -114,9 +117,15 @@ function infeasibility(x::Vector{Float64},
                        problem::OptimizationProblem)
     l, A, u = problem.data.l, problem.data.A, problem.data.u
 
-    normA = [norm(A[i, :], Inf) for i = 1:size(A, 1)]
-    upper = max.(A * x - u, 0.) ./ max.(normA, abs.(u))
-    lower = max.(l - A * x, 0.) ./ max.(normA, abs.(l))
+
+    norm_A = [norm(A[i, :], Inf) for i = 1:size(A, 1)]
+
+    upper = max.(A * x - u, 0.)
+    lower = max.(l - A * x, 0.)
+
+    # For the non zero ones, normalize
+    [upper[i] /= max.(norm_A[i], abs.(u[i])) for i = 1:length(upper) if upper[i] >= TOL]
+    [lower[i] /= max.(norm_A[i], abs.(l[i])) for i = 1:length(lower) if lower[i] >= TOL]
 
     return norm(upper + lower)
 
