@@ -59,9 +59,11 @@ function solve(problem::OptimizationProblem)
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
     @assert size(A, 2) == length(c)
+    @assert !any(l .> u)
 
     n_var = length(c)
     n_constr = length(l)
+
 
     # Solve directly with MathProgBase
     m = MathProgBase.LinearQuadraticModel(SOLVER)
@@ -122,6 +124,7 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
     @assert size(A, 2) == length(c)
+    @assert !any(l .> u)
     n_var = length(c)
     n_constr = length(u)
 

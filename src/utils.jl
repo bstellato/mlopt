@@ -42,7 +42,7 @@ function extract_problem_data(m::MathProgBase.AbstractLinearQuadraticModel)
     [u[i] = Inf for i in 1:length(u) if u[i] >= 1e20]
     [l[i] = -Inf for i in 1:length(l) if l[i] <= -1e20]
 
-    # Find indices where both bounds are infinity
+    # Remove indices where both bounds are infinity
     MyModule.@remove_unbounded_constraints A l u
 
     return ProblemData(c, l, A, u)
