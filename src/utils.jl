@@ -50,7 +50,7 @@ end
 
 
 function extract_problem_data(file_name::String)
-    m = MathProgBase.LinearQuadraticModel(GurobiSolver())
+    m = MathProgBase.LinearQuadraticModel(READ_SOLVER)
     MathProgBase.loadproblem!(m, file_name)
     return extract_problem_data(m)
 end

@@ -18,12 +18,15 @@ theta_train = []
 theta_test = []
 theta_finite = []
 radius = 1.0
+y_train = []
 
 problem = MyModule.NetlibLP()
 
 for f in files
+
     # Update internal file name
     problem.file_name = joinpath(lp_data_dir, f)
+    problem.to_read = true
 
     # Populate problem data using nominal model
     MyModule.populate!(problem)
@@ -33,7 +36,7 @@ for f in files
 
     # Radius is 10% of the mean of the finite elements of theta_bar
     theta_finite = [t[.!Base.isinf.(t)] for t in theta_bar]
-    radius = .001 * mean(norm.(theta_finite, 1))
+    radius = .0 * mean(norm.(theta_finite, 1))
 
     # Training: Sample from operation points within Balls
     theta_train = MyModule.sample(theta_bar, radius)

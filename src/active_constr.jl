@@ -89,10 +89,10 @@ Solve optimization problem and get vector of active constraints where each eleme
 """
 function active_constraints(problem::OptimizationProblem)
 
-    n_constr = length(problem.data.l)
-
     _, y, _ = solve(problem)
 
+
+    n_constr = length(problem.data.l)
     active_constr = zeros(Int64, n_constr)
     for i = 1:n_constr
         if y[i] >= TOL

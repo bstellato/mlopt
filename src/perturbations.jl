@@ -7,7 +7,7 @@ Sample the operation points by perturbing the original problem data.
 """
 function operation_points(problem::OptimizationProblem;
                           N::Int64=10)
-    perturb_frac = 0.05
+    perturb_frac = 1e-08
 
     # Problem data
     c, l, u = problem.data.c, problem.data.l, problem.data.u

@@ -5,6 +5,7 @@ mutable struct NetlibLP <: OptimizationProblem
     # Additional data to build the problem
     # (independent from the parameters)
     file_name::String
+    to_read::Bool
 
     # Empty constructor
     NetlibLP() = new()
@@ -13,17 +14,21 @@ end
 
 function populate!(problem::NetlibLP)
 
-    # Extract nominal problem data
-    problem.data = extract_problem_data(problem.file_name)
+    if problem.to_read
+        # Extract nominal problem data
+        problem.data = extract_problem_data(problem.file_name)
+        problem.to_read = false
+    end
 
 end
 
 
 function populate!(problem::NetlibLP, theta::Array{Float64})
 
-    if !isdefined(problem, :data)
+    if problem.to_read
         # Extract nominal problem data if not defined
         problem.data = extract_problem_data(problem.file_name)
+        problem.to_read = false
     end
 
     # Get problem dimensions
