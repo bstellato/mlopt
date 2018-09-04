@@ -33,7 +33,7 @@ for f in files
 
     # Radius is 10% of the mean of the finite elements of theta_bar
     theta_finite = [t[.!Base.isinf.(t)] for t in theta_bar]
-    radius = .1 * mean(norm.(theta_finite, 1))
+    radius = .001 * mean(norm.(theta_finite, 1))
 
     # Training: Sample from operation points within Balls
     theta_train = MyModule.sample(theta_bar, radius)

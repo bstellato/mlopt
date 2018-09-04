@@ -7,25 +7,27 @@ Sample the operation points by perturbing the original problem data.
 """
 function operation_points(problem::OptimizationProblem;
                           N::Int64=10)
+    perturb_frac = 0.05
+
     # Problem data
     c, l, u = problem.data.c, problem.data.l, problem.data.u
     n_var = length(c)
     n_constr = length(l)
 
     # Perturb cost
-    c_up = c + 0.1 * abs.(c)
-    c_low = c - 0.1 * abs.(c)
+    c_up = c + perturb_frac * abs.(c)
+    c_low = c - perturb_frac * abs.(c)
     c_vec = [c_low + (c_up - c_low) .* rand(n_var) for _ in 1:N]
 
     # Perturb lower bound
     l_up = l
-    l_low = l - 0.1 * abs.(l)
+    l_low = l - perturb_frac * abs.(l)
     delta = l_up - l_low
     [delta[i] = 0 for i = 1:n_constr if Base.isinf(l[i])]   # Interval 0 if delta Inf
     l_vec = [l_low + delta .* rand(n_constr) for _ in 1:N]
 
     # Perturb upper bound
-    u_up = u + 0.1 * abs.(u)
+    u_up = u + perturb_frac * abs.(u)
     u_low = u
     delta = u_up - u_low
     [delta[i] = 0 for i = 1:n_constr if Base.isinf(u[i])]   # Interval 0 if delta Inf
@@ -103,6 +105,9 @@ function sample(theta_bar::Vector{Vector{Float64}},
 
     # Get values that are not infinity (from first element)
     idx_finite = find(.!Base.isinf.(theta_bar[1]))
+
+    # TODO: Get index that are not equalities
+
     n_finite = length(idx_finite)
 
     # Get sampling points per operation point

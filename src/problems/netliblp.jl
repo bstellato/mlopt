@@ -13,8 +13,6 @@ end
 
 function populate!(problem::NetlibLP)
 
-    println("Called `lp_data`. Problem $(problem.file_name)")
-
     # Extract nominal problem data
     problem.data = extract_problem_data(problem.file_name)
 
@@ -22,8 +20,6 @@ end
 
 
 function populate!(problem::NetlibLP, theta::Array{Float64})
-
-    println("Called `lp_data`. Problem $(problem.file_name)")
 
     if !isdefined(problem, :data)
         # Extract nominal problem data if not defined
