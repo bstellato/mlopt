@@ -64,18 +64,15 @@ function solve(problem::OptimizationProblem)
     n_var = length(c)
     n_constr = length(l)
 
-
     # Solve directly with MathProgBase
     m = MathProgBase.LinearQuadraticModel(SOLVER)
     MathProgBase.loadproblem!(m, A, -Inf * ones(n_var), Inf * ones(n_var), c, l, u, :Min)
     MathProgBase.optimize!(m)
     status = MathProgBase.status(m)
 
-
     if status != :Optimal
         error("LP not solved to optimality. Status $(status)")
     end
-
 
     # Get active constraints
     _, basis_constr = MathProgBase.getbasis(m)
@@ -87,7 +84,6 @@ function solve(problem::OptimizationProblem)
             basis[i] = 1
         end
     end
-
 
     return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m), MathProgBase.getsolvetime(m), basis
 
