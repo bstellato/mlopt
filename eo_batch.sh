@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=16G
-#SBATCH --partition=sched_mit_sloan_interactive
+#SBATCH --partition=sched_mit_sloan_batch
 #SBATCH --time=0-24:00
 #SBATCH -o /home/stellato/projects/ml_for_param_opt/output/output.txt
 #SBATCH -e /home/stellato/projects/ml_for_param_opt/output/error.txt
