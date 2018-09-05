@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          GROW22                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-946-440
-
 ROWS
  N  REVENUE 
  E  PRI0101 

@@ -1,27 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          FIT2P                                                             
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-
-*   It the primal version of a problem that originates from
-*   a model for fitting linear inequalities to data, by
-*   minimization of a sum of piecewise-linear penalties.
-*   The FIT2 problems are based on 3000 data points and 4-5 pieces 
-*   per pl term.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-13525-3000
-
 ROWS
  N  PENALTY 
  E  R0000001

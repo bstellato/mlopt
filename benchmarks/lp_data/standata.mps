@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          STANDATA                                                          
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-1075-359
-
 ROWS
  E  A..1..S1
  E  A..2..S1

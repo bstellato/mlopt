@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          RECIPELP                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-
-*   Source: The RECIPE problem from 
-*   the NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-180-91
-
 ROWS
  E  BAL...BE
  E  BCC...BE

@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          SCTAP3                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-2480-1480
-
 ROWS
  N  OBJZZZZZ
  G  NCZZ1ZZ1

@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          PEROLD
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Nick Gould.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-1376-625
-
 ROWS
  E  DCOL01  
  E  DCRO01  

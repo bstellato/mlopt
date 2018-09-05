@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          ISRAEL                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Michael Saunders.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-142-174
-
 ROWS
  N  COST    
  L  B1      

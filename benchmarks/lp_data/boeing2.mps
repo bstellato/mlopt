@@ -1,22 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          BOEING2                                                           
-
-*   Problem:
-*   ********
-
-*   An LP, having to do with flap settings on aircraft for economical
-*   operations, contributed by Nick Gould.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-143-166
-
 ROWS
  G  REVENUES
  G  ACOCOSTS

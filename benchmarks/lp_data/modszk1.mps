@@ -1,23 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          MODSZK1                                                           
-
-*   Problem:
-*   ********
-
-*   An very degenerate LP, contributed by Istvan Maros.
-*   It is "is a multi-sector economic planning model (a kind of an input/output
-*   model in economy)"
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-1620-688
-
 ROWS
  N  OBJ.FUNC
  E  ROW0002 

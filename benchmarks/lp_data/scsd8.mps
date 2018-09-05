@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          SCSD8                                                             
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-2750-397
-
 ROWS
  N  50000000
  E  10000001

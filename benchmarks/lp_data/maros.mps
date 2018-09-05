@@ -1,23 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          MAROS                                                             
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Istvan Maros.
-*   It is an industrial production/allocation model about which 
-*   "the customer does not want to reveal the exact meaning". 
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-RN-1443-846
-
 ROWS
  N  REVENUE1
  E  S0100110

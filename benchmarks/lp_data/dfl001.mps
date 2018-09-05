@@ -1,28 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          DFL001                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Marc Meketon.
-*   It "is a 'real-world' airline schedule planning
-*   (fleet assignment) problem.  This LP was preprocessed by a modified
-*   version of the KORBX(r) System preprocessor.  The problem reduced in
-*   size (rows, columns, non-zeros) significantly.  The row and columns were
-*   randomly sorted and renamed, and a fixed adjustment to the objective
-*   function was eliminated.  The name of the problem is derived from the
-*   initials of the person who created it."
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-12230-6071
-
 ROWS
  E  R0001   
  E  R0002   

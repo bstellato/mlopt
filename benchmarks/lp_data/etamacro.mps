@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          ETAMACRO                                                          
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Michael Saunders.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-688-400
-
 ROWS
  N  OPTIMALG
  E  COSTEN00

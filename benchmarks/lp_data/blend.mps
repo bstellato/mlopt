@@ -1,25 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          BLEND 
-
-*   Problem:
-*   ********
-
-*   An LP: Bruce Murtaghs blending problem (MINIMIZE), contributed by Nick Gould.
-*   It "is a variant of the [oil refinery] problem in Murtagh's book (the
-*   coefficients are different) which I understand John Reid obtained
-*   from the people at NPL (Gill and Murray?); they were also the original
-*   sources for the SC problems."
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-83-74
-
 ROWS
  E  1       
  E  2       

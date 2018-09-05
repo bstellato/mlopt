@@ -1,22 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          25FV47                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Reid.
-*   This problem is sometimes called BP or BP1.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-1571-822
-
 ROWS
  N  R0000   
  E  F1X.0   

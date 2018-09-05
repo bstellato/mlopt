@@ -1,23 +1,5 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          FIT1P    
                                                          
-*   An LP, contributed by Robert Fourer.
-*   It is the primal version of a problem that originates from
-*   a model for fitting linear inequalities to data, by
-*   minimization of a sum of piecewise-linear penalties.
-*   The FIT1 problems are based on 627 data points and 2-3
-*   pieces per primal pl penalty term.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-1677-627
-
 ROWS
  N  PENALTY 
  E  R0000001

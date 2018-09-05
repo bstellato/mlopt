@@ -1,27 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          STOCFOR2
-
-*   Problem:
-*   ********
-
-*   An LP arising in approaches to forest management, contributed
-*   by Gus Gassman.
-
-*   It is a version of a seven-period descriptions of a forestry
-*   problem with a random occurrence of forest fires, and the size varies
-*   according to the number of realizations you use in each period.
-*   It has 2 realizations each in periods 2 to 7.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-2031-2157
-
 ROWS
  N  HARV    
  L  BOUND301

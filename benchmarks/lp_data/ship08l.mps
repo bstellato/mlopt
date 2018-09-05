@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          SHIP08L                                                           
-
-*   Problem:
-*   ********
-
-*   An LP.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-4283-778
-
 ROWS
  N  COST    
  G  REGMIN  

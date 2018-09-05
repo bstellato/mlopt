@@ -1,22 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          PILOT    
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Michael Saunders.
-*   (PILOTS) PILOT VERSION 1983/MOD 3    P MCALLISTER        
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-3652-1441
-
 ROWS
  N  ENDCAP  
  L  BAGR01  

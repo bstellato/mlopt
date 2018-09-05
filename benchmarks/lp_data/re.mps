@@ -1,37 +1,26 @@
 This directory contains the NETLIB (http://www.netlib.org/lp/data/)
 set of Linear Programming test problems.
-
 The problems are all in MPS format, which is itself a subset of SIF.
 The problems have been classified according to the CUTE classification
 system (see, Bongartz, Conn, Gould and Toint, ACM Transactions on
 Mathematical Software 21, 1995, pp.  123-160), and have been slightly
 reformatted for consistency.
-
-
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 -=-=-=-=-=-= Original readme from http://www.netlib.org/lp/data/ =-=-=-=-=-=-=-
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-
 ==== LP/DATA README (formerly index) =====
-
 To reduce transmission times, linear programming test problems
 are stored in a compressed format; issue the netlib request
-
     send emps.f from lp/data
-
 to obtain a Fortran 77 Subset program for expanding the test problems
 into MPS-standard input form.  The program includes comments giving
 test data.  To get a (more efficient and convenient) C version of this
 program (without the test data), issue the netlib request
-
     send emps.c from lp/data
-
 If you are not familiar with MPS files, see Chapter 9 of "Advanced
 Linear Programming" by Bruce A. Murtagh, McGraw-Hill, 1981,
 or Appendix A of "Exploring Interior-Point Linear Programming"
 by Ami Arbel, MIT Press, 1993.
-
 All the material described here is now available by ftp from
 netlib.bell-labs.com (login: anonymous; Password: your E-mail address;
 cd /netlib/lp/data).  If you can, please use ftp to obtain the larger
@@ -45,23 +34,18 @@ you may also be able to use a named pipe, e.g.,
     /etc/mknod pilot.mps p
     zcat pilot.Z | emps >pilot.mps & solver pilot.mps
     rm pilot.mps
-
 The "Kennington" problems, sixteen problems described in "An Empirical
 Evaluation of the KORBX Algorithms for Military Airlift Applications"
 by W. J. Carolan, J. E. Hill, J. L. Kennington, S. Niemi, S. J.
 Wichmann (Operations Research vol. 38, no. 2 (1990), pp. 240-248),
 are available only by ftp: login as above, and cd lp/data/kennington .
 More details appear in lp/data/kennington/readme .
-
 People who use EBCDIC systems may wish to issue the netlib request
-
     send ascii from lp/data
-
 to get a listing of the distinct character codes that appear in the
 compressed LP data files -- for the uncompression routines to work,
 these distinct ASCII characters must be translated into distinct EBCDIC
 characters.
-
 The column and nonzero counts in the PROBLEM SUMMARY TABLE below exclude
 slack and surplus columns and the right-hand side vector, but include
 the cost row.  We have omitted other free rows and all but the first
@@ -72,16 +56,11 @@ mail programs from discarding any of the data.  The BR column indicates
 whether a problem has bounds or ranges:  B stands for "has bounds", R
 for "has ranges".  The BOUND-TYPE TABLE below shows the bound types
 present in those problems that have bounds.
-
 The problems below are sorted (according to the ASCII collating
 sequence) on their names.  Unless problem characteristics suggest a
 more rational order, we suggest using this order for reporting results.
-
-
                        PROBLEM SUMMARY TABLE
-
 Name       Rows   Cols   Nonzeros    Bytes  BR      Optimal Value
-
 25FV47      822   1571    11127      70477        5.5018458883E+03
 80BAU3B    2263   9799    29063     298952  B     9.8723216072E+05
 ADLITTLE     57     97      465       3690        2.2549496316E+05
@@ -180,10 +159,7 @@ TUFF        334    587     4523      29439  B     2.9214776509E-01
 VTP.BASE    199    203      914       8175  B     1.2983146246E+05
 WOOD1P      245   2594    70216     328905        1.4429024116E+00
 WOODW      1099   8405    37478     240063        1.3044763331E+00
-
-
         BOUND-TYPE TABLE
-
 80BAU3B    UP LO FX
 BOEING1    UP LO
 BOEING2    UP LO
@@ -226,12 +202,8 @@ STANDGUB   UP    FX
 STANDMPS   UP    FX
 TUFF       UP LO FX FR
 VTP.BASE   UP LO FX FR
-
-
 Several problems have an empty RHS section:  BORE3D, CYCLE, GREENBEA,
 GREENBEB, KB2, RECIPE, and TUFF.
-
-
 HEARTY THANKS go to the people who supplied the above problems.
 Michael Saunders provided 13 problems from the Systems Optimization
 Laboratory at Stanford University:  ADLITTLE, AFIRO, BANDM, BEACONFD,
@@ -259,7 +231,6 @@ D6CUBE.  Problems QAP8, QAP12, and QAP15 are from a generator by Terri
 Johnson (communicated by a combination of Bob Bixby, Matt Saltzman, and
 Terri Johnson).
   Thanks also go to Irv Lustig for helpful comments on this index file.
-
 NOTES:  we have omitted extra right-hand side vectors from BEACONFD,
 BRANDY, FFFFF800, ISRAEL; extra bound sets from GREENBEA, GREENBEB,
 GROW15, GROW22, GROW7, RECIPE; extra free rows from 80BAU3B, BOEING1,
@@ -273,7 +244,6 @@ PILOT, PILOT.JA, PILOT.WE, PILOTNOV, SC105, SC50A, SC50B, STAIR.  In
 their original form, these problems are usually maximized.  In their
 modified form, all problems are to be minimized.  (PILOT4 appeared
 to be a minimization problem already).
-
 Problem 25FV47 is sometimes called BP or BP1, and FFFFF800 is sometimes
 called POWELL.  Problems GREENBEA and GREENBEB differ only in their
 BOUNDS sections.  The names shown above come mostly from the original
@@ -283,17 +253,14 @@ DFL001 and the QAP problems).  [Earlier versions of this index file gave
 values from earlier versions of MINOS.  Prior to 29 April 1987, this
 index file gave the optimal value from maximizing rather than minimizing
 PILOTNOV.]
-
 Note that MINOS control parameters, such as SCALE, PARTIAL PRICE,
 FEASIBILITY TOLERANCE, OPTIMALITY TOLERANCE, and CRASH OPTION may
 affect the optimal value that MINOS reports (as may the version of
 MINOS, the computer, and even the compiler used).
-
 This directory does not provide compressed MPS files for the QAP
 problems.  Instead, source for Terri Johnson's generator and input data
 for producing MPS files for QAP8, QAP12, and QAP15 appear in directory
 lp/generators/qap.
-
 For discussion of some of the above test problems, including sparsity
 graphs and MINOS performance with and without scaling and partial
 pricing, see "An Analysis of an Available Set of Linear Programming
@@ -303,7 +270,6 @@ Stanford, CA 94305-4022; a shorter version appears in Comput. Opns.
 Res. vol. 16, no. 2, pp. 173-184, 1989].  Be warned that the
 reproduction process may have dropped isolated nonzeros from graphs of
 the larger problems.
-
 Bob Bixby reports that the CPLEX solver (running on a Sparc station)
 finds slightly different optimal values for some of the problems.
 On a MIPS processor, MINOS version 5.3 (with crash and scaling of
@@ -311,9 +277,7 @@ December 1989) also finds different optimal values for some of the
 problems.  The following table shows the values that differ from those
 shown above.  (Whether CPLEX finds different values on the recently
 added problems remains to be seen.)
-
 Problem        CPLEX(Sparc)          MINOS(MIPS)
-
 25FV47                            5.5018467791E+03
 80BAU3B      9.8722419241E+05     9.8722952818E+05
 BNL1         1.9776295615E+03     1.9776293385E+03
@@ -338,22 +302,18 @@ SCRS8        9.0429695380E+02     9.0429695380E+02
 SCSD6        5.0500000077E+01
 SIERRA                            1.5394364186E+07
 STOCFOR3    -3.9976785944E+04    -3.9976776417E+04
-
 The above CPLEX and MINOS results were both obtained using double-
 precision IEEE (binary) arithmetic, i.e., arithmetic of precision
 similar to the VAX double precision with which the MINOS 5.3 results
 in the PROBLEM SUMMARY TABLE were computed.
-
 The old problem GUB was the same as CZPROB (except for the NAME line)
 and hence is withdrawn.
-
 STANDGUB includes GUB markers; with these lines removed (lines in
 the expanded MPS file that contain primes, i.e., that mention the rows
 'EGROUP' and 'ENDX'), STANDGUB becomes the same as problem STANDATA;
 MINOS does not understand the GUB markers, so we cannot report an
 optimal value from MINOS for STANDGUB.  STANDMPS amounts to STANDGUB
 with the GUB constraints as explicit constraints.
-
 STOCFOR1,2,3 are stochastic forestry problems from Gus Gassmann.  To
 quote Gus, "All of them are seven-period descriptions of a forestry
 problem with a random occurrence of forest fires, and the size varies
@@ -369,7 +329,6 @@ M.A.H. Dempster, H.I. Gassmann, E.A. Gunn, A.J. King, and S.W. Wallace
 [COAL Newsletter No. 17 (Dec. 1987), pp. 1-19].  Data files are also
 included for generating versions of STOCFOR1,2 that have more decimal
 places than the versions in lp/data.
-
 Concerning the problems he supplied, Nick Gould says that BLEND "is
 is a variant of the [oil refinery] problem in Murtagh's book (the
 coefficients are different) which I understand John Reid obtained
@@ -378,7 +337,6 @@ sources for the SC problems"; BOEING1 and BOEING2 "have to do with
 flap settings on aircraft for economical operations"; PEROLD "is
 another Pilot model (Pilot1)"; and FINNIS "is from Mike Finnis at
 Harwell, a model for the selection of alternative fuel types."
-
 BOEING1 and BOEING2 were originally mixed-integer programming problems.
 The COLUMNS section of BOEING1 had
     INTBEG    'MARKER'                 'INTORG'
@@ -390,7 +348,6 @@ been removed.  These problems also had a few rows defined as linear
 combinations of other rows.  These rows are now given explicitly, since
 the compression/expansion programs do not understand D lines in the ROWS
 section.
-
 LOTFI, says Vahid Lotfi, "involves audit staff scheduling.  This problem
 is semi real world and we have used it in a study, the results of which
 are to appear in Decision Sciences (Fall 1990).  The detailed
@@ -398,7 +355,6 @@ description of the problem is also in the paper.  The problem is
 actually an MOLP with seven objectives, the first is maximization and
 the other six are minimization.  The version that I am sending has the
 aggregated objective (i.e., z1-z2-z3-z4-z5-z6-z7)."
-
 On the problems supplied by John Tomlin, MINOS 5.3 reports that about
 10% to 57% of its steps are degenerate:
      Name     Steps  Degen  Percent
@@ -412,16 +368,13 @@ On the problems supplied by John Tomlin, MINOS 5.3 reports that about
      TUFF       745    345   46.31
      WOOD1P    1059    471   44.48
      WOODW     4147   1604   38.68
-
 Concerning PILOT87, Irv Lustig says, "PILOT87 is considered (by John
 Stone, at least) to be harder than PILOT because of the bad scaling in
 the numerics."
-
 Requesting TRUSS will get you a bundle of Fortran source and data for
 generating an MPS file for TRUSS, a problem of minimizing the weight
 of a certain structure.  The bundle also includes a description of the
 problem.
-
 DFL001, says Marc Meketon, "is a 'real-world' airline schedule planning
 (fleet assignment) problem.  This LP was preprocessed by a modified
 version of the KORBX(r) System preprocessor.  The problem reduced in
@@ -429,7 +382,6 @@ size (rows, columns, non-zeros) significantly.  The row and columns were
 randomly sorted and renamed, and a fixed adjustment to the objective
 function was eliminated.  The name of the problem is derived from the
 initials of the person who created it."
-
 Of D6CUBE, Robert Hughes says, "Mike Anderson and I are working on the
 problem of finding the minimum cardinality of triangulations of the
 6-dimensional cube.  The optimal objective value of the problem I sent
@@ -437,7 +389,6 @@ you provides a lower bound for the cardinalities of all triangulations
 which contain a certain simplex of volume 8/6! and which contains the
 centroid of the 6-cube in its interior.  The linear programming
 problem is not easily described."
-
 Concerning the problems he submitted, Istvan Maros says that MAROS is
 an industrial production/allocation model about which "the customer does
 not want to reveal the exact meaning".   MAROS-R7 is "an interesting
@@ -455,8 +406,6 @@ up to 10 times" fewer iterations than a primal simplex algorithm.  It
 "is a multi-sector economic planning model (a kind of an input/output
 model in economy)" and "is an old problem of mine and it is not easy to
 recall more."
-
-** On an IEEE-arithmetic machine (an SGI 4D/380S), I (dmg) succeeded in
 getting MINOS 5.3 to report optimal objective values, 1.1261702419E+07
 and 1.1249281428E+07, for DFL001 only by starting with LOAD files
 derived from the solution obtained on the same machine by Bob
@@ -472,23 +421,19 @@ floating-point arithmetic strongly affect the "optimal" solution that
 MINOS reports.  On the SGI machine, ALPO with SPLIT 3 found
  primal:  obj value =  1.126639607e+07      FEASIBLE   ( 2.79e-09 )
  dual:    obj value =  1.126639604e+07      FEASIBLE   ( 1.39e-16 )
-
 Bob Bixby reports the following about his experience solving DFL001
 with CPLEX:
   First, the value for the objective function that I get running
   defaults is 1.1266396047e+07, with the following residuals:
-
   Max. unscaled (scaled) bound        infeas.: 4.61853e-14 (2.30926e-14)
   Max. unscaled (scaled) reduced-cost infeas.: 6.40748e-08 (6.40748e-08)
   Max. unscaled (scaled) Ax-b          resid.: 4.28546e-14 (4.28546e-14)
   Max. unscaled (scaled) c_B-B'pi      resid.: 8.00937e-08 (8.00937e-08)
-
   The L_infinity condition number of the (scaled) optimal basis is
   213737.  I got exactly the same objective value solving the problem in
   several different ways.  I played a bit trying to get a better
   reduced-cost infeasibility, but that seems hopeless (if not pointless)
   given the c-Bpi residuals.
-
   Just as an aside, this problem exhibits very interesting behavior when
   solved using a simplex method.  I ran reduced-cost pricing on it in
   phase I, with the result that it took 465810 iterations to get
@@ -496,13 +441,9 @@ with CPLEX:
   problem solved in 94337 iterations (33059 in phase I) on a
   Sparcstation.  Steepest-edge pricing (and a different scaling) took
   25803 iterations.  This is a nasty problem.
-
-
 Notes from Michael Saunders describing experience with MINOS on the
 problems he provided are available via the netlib request
-
     send minos from lp/data
-
 Sources for the problems from Bob Fourer:
   BORE3D, RECIPE, SHIP04L, SHIP04S, SHIP08L, SHIP08S, SHIP12L,
 SHIP12S, STANDATA, STANDGUB, STANDMPS, VTP.BASE: consulting.
@@ -525,7 +466,6 @@ Math. Prog. 20 (1981), pp. 245-250.
   NESM: Gerald Brown, Naval Postgraduate School.
   FORPLAN: John Mulvey, Princeton.
   FIT1D, FIT1P, FIT2D, FIT2P: Bob Fourer himself.
-
 Concerning FIT1D, FIT1P, FIT2D, FIT2P, Bob Fourer says
     The pairs FIT1P/FIT1D and FIT2P/FIT2D are primal and
     dual versions of the same two problems [except that we
@@ -537,11 +477,8 @@ Concerning FIT1D, FIT1P, FIT2D, FIT2P, Bob Fourer says
     pieces per primal pl penalty term.  The FIT2 problems
     are based on 3000 data points (from a different sample
     altogether) and 4-5 pieces per pl term.
-
 To get C source for the compression program, issue the netlib request
-
     send mpc.src from lp/data
-
 Contributions are welcome, either problems in MPS format or source code
 for problem generators.  Send questions, comments, contributions to
     David M. Gay
@@ -551,12 +488,9 @@ for problem generators.  Send questions, comments, contributions to
     U.S.A.
  phone (908) 582-5623; FAX (908) 582-5857
  E-mail research!dmg or dmg@research.bell-labs.com
-
 Cross reference: Eberhard Kranich's extensive bibliography on interior-
 point methods is available from netlib.  For details, ask netlib to
-
         send index from bib
-
 Change log...
   1 June 1987:   mpc.src added.
   6 May 1988:    GREENBEA, GREENBEB, AGG, AGG2, AGG3 added.

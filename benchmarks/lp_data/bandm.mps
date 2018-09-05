@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          BANDM                                                             
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Michael Saunders.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-472-305
-
 ROWS
  N  ....1   
  E  ....3   

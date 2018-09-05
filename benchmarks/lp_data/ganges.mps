@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          GANGES                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Linus Schrage.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-1681-1309
-
 ROWS
  N  OBJ99   
  E  CONT0101

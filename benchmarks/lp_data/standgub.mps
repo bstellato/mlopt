@@ -1,22 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          STANDGUB
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-*   This problem is identical to STANDATA, execpt for the GUB markers.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-1184-361
-
 ROWS
  E  'EGROUP'
  E  'ENDX'  

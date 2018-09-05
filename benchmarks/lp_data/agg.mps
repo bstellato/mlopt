@@ -1,23 +1,5 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          AGG
-
-*   Problem:
-*   ********
-
-*   An LP with degeneracy
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-163-488
-
 ROWS
-
  L  CAP00101
  L  CAP00201
  L  CAP00301
@@ -507,9 +489,7 @@ ROWS
  E  INV00506
  E  INV00606
  N  OBJECTIV
-
 COLUMNS
-
     Y00102    MND00104            1.   CAP01401        .01773
     Y00102    CAP01501        .01775   CAP06302        .00132
     Y00102    MND00103            1.   INV00302       -.76829
@@ -1846,9 +1826,7 @@ COLUMNS
     I00605    INV00605           -1.   OBJECTIV        100.08
     I00605    INV00606            1.
     I00606    INV00606           -1.   OBJECTIV        100.08
-
 RHS
-
     AGG       CAP00101       23995.8   CAP00201         2133.
     AGG       CAP00301        6398.9   CAP00401        7998.6
     AGG       CAP00501       29328.1   CAP00601        7465.3
@@ -2065,11 +2043,4 @@ RHS
     AGG       MND00806       209979.   MXD00806       492000.
     AGG       MND00906      1849407.   MXD00906      6141396.
     AGG       MND01006       644932.   MXD01006      1486000.
-
-OBJECT BOUND
-
-*   Solution
-
-*LO SOLTN                   ???
-
 ENDATA

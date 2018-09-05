@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          SHARE1B                                                           
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Michael Saunders.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-225-117
-
 ROWS
  N  000000  
  E  000002  

@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          BRANDY                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Michael Saunders.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-249-220
-
 ROWS
  N  10000A  
  E  10001A  

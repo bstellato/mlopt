@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          BNL2                                                              
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Tomlin.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-3489-2324
-
 ROWS
  N  OBJ     
  G  CC101001

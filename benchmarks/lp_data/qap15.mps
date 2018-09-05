@@ -1,22 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          QAP15
-
-*   Problem:
-*   ********
-
-*   An LP, representing a quadratic assignment problem, 
-*   contributed by Terri Johnson.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-22275-6330
-
 ROWS
   N NOBJ
   E NX01

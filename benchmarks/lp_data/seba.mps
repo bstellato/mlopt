@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          SEBA                                                              
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Linus Schrage.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-1028-515
-
 ROWS
  N  00000000
  E  20001000

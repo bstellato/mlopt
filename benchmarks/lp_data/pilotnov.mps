@@ -1,22 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          PILOTNOV
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-*   (PILOTS)   INTEGRATED MODEL -- NOVEMBER 1979
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-2172-975
-
 ROWS
  N  OBJ     
  E  DCOL01  

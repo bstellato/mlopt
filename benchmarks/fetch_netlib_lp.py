@@ -41,3 +41,20 @@ for f in os.listdir(OUTPUT_DIR):
     os.rename(os.path.join(OUTPUT_DIR, f),
               os.path.join(OUTPUT_DIR, file_name + ".mps"))
 
+
+# Remove asterisks and empty lines in files
+for file_name in os.listdir(OUTPUT_DIR):
+    # Read file and keep only lines
+    with open(os.path.join(OUTPUT_DIR, file_name), 'r') as f:
+        data = f.read()
+        data_stripped = ""
+        # Split lines
+        for line in data.splitlines():
+            if (not line.startswith('*')) and \
+                    ("OBJECT BOUND" not in line) and \
+                    (line):
+                data_stripped += line + "\n"
+
+    # write string to file
+    with open(os.path.join(OUTPUT_DIR, file_name), 'w') as f:
+        f.write(data_stripped)

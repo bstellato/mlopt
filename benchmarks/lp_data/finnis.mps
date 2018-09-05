@@ -1,23 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          FINNIS
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Nick Gould.
-*   It "is from Mike Finnis at Harwell, a model for the selection 
-*   of alternative fuel types."
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-614-497
-
 ROWS
  N  PRICER  
  G  1BALHCO 

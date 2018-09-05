@@ -13,31 +13,30 @@ file_sizes = [stat(f).size for f in files]
 files = files[sortperm(file_sizes)]
 
 # Take only first 5 files
-#  files = [files[1]]   #  Get infeasible/unbounded problem
+files = [files[1]]   #  Get infeasible/unbounded problem
 #  files = [files[2]]   #  Very slow
 #  files = [files[3]]   # ADLITTLE
 #  files = [files[4]]   # AFIRO
-#  files = [files[5]]   # File not working
+#  files = [files[5]]   # AGG
 #  files = [files[6]]   # AGG2
 #  files = [files[7]]   # AGG3  Up to now r = 0.01
 #  files = [files[8]]   # BANDM
 #  files = [files[9]]   # BEACONFD
 #  files = [files[10]]  # BLEND
-#  files = [files[11]]  #  BNL1
-files = [files[12]]  # BNL2
+#  files = [files[11]]  # BNL1
+#  files = [files[12]]  # BNL2
 
 
-# For each file perform lerning
-#  files = ["afiro.mps"]  # TODO: remove this. Just to run only one file
 
 n_op = 10
 n_train = 1000
 n_test = 100
 n_modes = 20
 
-radius_vec = logspace(-5., 1., 20)
+radius_vec = logspace(-5., 10., 30)
 
 println("Data points")
+println(repeat("-", 60))
 println(" - Training: $(n_train)")
 println(" - Testing: $(n_test)")
 println(" - Operating points: $(n_op)")
@@ -58,6 +57,8 @@ df = DataFrame()
 df_detail = DataFrame()
 
 for f in files
+    println("File name: $(f)")
+    println(repeat("-", 60))
 
     # Update internal file name
     problem.file_name = joinpath(lp_data_dir, f)
@@ -66,10 +67,16 @@ for f in files
     # Populate problem data using nominal model
     MyModule.populate!(problem)
 
+    # Print some details
+    println(" - Variables: $(length(problem.data.c))")
+    println(" - Constraints: $(length(problem.data.l))")
+    println(" - Nonzeros: $(nnz(problem.data.A))")
+
     # Sample operation points
     theta_bar = MyModule.operation_points(problem, N=n_op)
 
-
+    # Predefine variable for visibility outside the for loop
+    enc2active_constr = Vector{Vector{Int64}}(0)
     println("Finding best perturbation radius")
     for r in radius_vec
 

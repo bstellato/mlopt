@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          AGG3                                                              
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Mauricio Resende.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-302-516
-
 ROWS
  L  CAP00101
  L  CAP00201

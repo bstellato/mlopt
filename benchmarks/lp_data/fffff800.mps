@@ -1,22 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          FFFFF800                                                          
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Reid.
-*   This problems is sometimes called POWELL.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-854-524
-
 ROWS
  G  LVPFA   
  G  LVP2A   

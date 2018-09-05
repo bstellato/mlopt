@@ -1,28 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          D6CUBE                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Hughes.
-*   Robert Hughes says, "Mike Anderson and I are working on the
-*   problem of finding the minimum cardinality of triangulations of the
-*   6-dimensional cube.  The optimal objective value of the problem I sent
-*   you provides a lower bound for the cardinalities of all triangulations
-*   which contain a certain simplex of volume 8/6! and which contains the
-*   centroid of the 6-cube in its interior.  The linear programming
-*   problem is not easily described."
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-6184-415
-
 ROWS
  N  1       
  E  2002    

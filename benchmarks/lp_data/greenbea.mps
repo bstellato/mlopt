@@ -1,22 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          GREENBEA                                                          
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Robert Fourer.
-*   This problem differs from GREENBEB only in its BOUNDS section.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-5405-2392
-
 ROWS
  E  AAG.....
  E  AAH.....

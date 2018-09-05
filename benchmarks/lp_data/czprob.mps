@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          CZPROB                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Reid.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-3523-929
-
 ROWS
  E  .PCOST  
  N  ..COST  

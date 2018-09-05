@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          D2Q06C                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Tomlin.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-5167-2171
-
 ROWS
  N  R0000   
  L  0A0G16  

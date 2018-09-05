@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          SC105                                                             
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Nick Gould.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-103-105
-
 ROWS
  N  MAXIM   
  L  ROW00001

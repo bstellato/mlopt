@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          WOODW                                                             
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Tomlin.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-8405-1098
-
 ROWS
  E  TOTAL001
  E  TOTAL002

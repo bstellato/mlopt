@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          TUFF                                                              
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Tomlin.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-587-333
-
 ROWS
  N  B...ML..
  E  BA3...BW

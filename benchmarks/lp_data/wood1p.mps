@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          WOOD1P                                                            
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Tomlin.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-2594-244
-
 ROWS
  E  TOTALL  
  E  BAL01001

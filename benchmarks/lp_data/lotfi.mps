@@ -1,28 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          LOTFI                                                             
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Vahid Lotfi.
-*   It "involves audit staff scheduling.  This problem
-*   is semi real world and we have used it in a study, the results of which
-*   are to appear in Decision Sciences (Fall 1990).  The detailed
-*   description of the problem is also in the paper.  The problem is
-*   actually an MOLP with seven objectives, the first is maximization and
-*   the other six are minimization.  The version that I am sending has the
-*   aggregated objective (i.e., z1-z2-z3-z4-z5-z6-z7)."
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-308-153
-
 ROWS
  N  1       
  E  2       

@@ -1,21 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          SHELL                                                             
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by John Reid.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-AN-1775-536
-
 ROWS
  L  3001    
  L  3002    

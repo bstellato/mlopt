@@ -1,23 +1,4 @@
-***************************
-* SET UP THE INITIAL DATA *
-***************************
-
 NAME          TRUSS
-
-*   Problem:
-*   ********
-
-*   An LP, contributed by Rudy Setiano and Michael Ferris.
-*   It is a structural engineering problem, requesting to minimize the weight
-*   of a certain structure.
-
-*   Source:
-*   The NETLIB collection of test problems.
-
-*   SIF input: (already in MPS format)
-
-*   classification LLR2-MN-8806-1000
-
 ROWS
  E  ROW10001
  E  ROW10002
