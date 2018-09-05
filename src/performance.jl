@@ -65,7 +65,7 @@ function eval_performance(theta::DataFrame,
     # Create dataframe and export it
     df = DataFrame(
                    problem = [problem_name],
-                   problem = [problem.radius],
+                   radius = [problem.radius],
                    num_var = Int[num_var],
                    num_constr = Int[num_constr],
                    num_test = Int[num_test],
