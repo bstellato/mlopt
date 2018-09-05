@@ -16,7 +16,7 @@ files = files[sortperm(file_sizes)]
 #  files = [files[1]]   # Slow
 #  files = [files[2]]   #  Very slow
 #  files = [files[3]]   # ADLITTLE
-files = [files[4]]   # AFIRO
+#  files = [files[4]]   # AFIRO
 #  files = [files[5]]   # AGG
 #  files = [files[6]]   # AGG2
 #  files = [files[7]]   # AGG3  Up to now r = 0.01
@@ -25,6 +25,7 @@ files = [files[4]]   # AFIRO
 #  files = [files[10]]  # BLEND
 #  files = [files[11]]  # BNL1
 #  files = [files[12]]  # BNL2
+files = files[3:43]
 
 
 
