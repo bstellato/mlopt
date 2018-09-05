@@ -7,6 +7,7 @@ problem = MyModule.Inventory()
 problem.T = 10
 problem.M = 3.
 problem.K = 1.
+problem.radius = 1.0
 
 # Operating point
 theta_bar = [2.;               # h
@@ -19,9 +20,8 @@ radius = 1.0
 
 N_train = 1000
 N_test = 100
-theta_train = MyModule.sample(problem, theta_bar, radius, N=N_train)
-theta_test = MyModule.sample(problem, theta_bar, radius, N=N_test)
-
+theta_train = MyModule.sample(problem, theta_bar, N=N_train)
+theta_test = MyModule.sample(problem, theta_bar, N=N_test)
 
 # Learn
 # -----

@@ -2,6 +2,9 @@
 using DataFrames
 include("../src/MyModule.jl")
 
+# Repeatability
+srand(1)
+
 lp_data_dir = joinpath("benchmarks", "lp_data")
 files = [f for f in readdir(lp_data_dir) if contains(f, "mps")]
 
@@ -10,24 +13,35 @@ file_sizes = [stat(f).size for f in files]
 files = files[sortperm(file_sizes)]
 
 # Take only first 5 files
-files = [files[3]]   # ADLITTLE
+#  files = [files[1]]   #  Get infeasible/unbounded problem
+#  files = [files[2]]   #  Very slow
+#  files = [files[3]]   # ADLITTLE
+#  files = [files[4]]   # AFIRO
 #  files = [files[5]]   # File not working
 #  files = [files[6]]   # AGG2
-#  files = [files[7]]   # AGG3 (working
+#  files = [files[7]]   # AGG3  Up to now r = 0.01
+#  files = [files[8]]   # BANDM
+#  files = [files[9]]   # BEACONFD
+#  files = [files[10]]  # BLEND
+#  files = [files[11]]  #  BNL1
+files = [files[12]]  # BNL2
 
 
 # For each file perform lerning
 #  files = ["afiro.mps"]  # TODO: remove this. Just to run only one file
 
-N_op = 10
-N_train = 1000
-N_test = 100
-radius = 0.01
+n_op = 10
+n_train = 1000
+n_test = 100
+n_modes = 20
+
+radius_vec = logspace(-5., 1., 20)
 
 println("Data points")
-println(" - Training: $(N_train)")
-println(" - Testing: $(N_test)")
-println(" - Operating points: $(N_op)")
+println(" - Training: $(n_train)")
+println(" - Testing: $(n_test)")
+println(" - Operating points: $(n_op)")
+println(" - Ideal different active constraints: $(n_modes)")
 
 # TODO: Preallocate variables for debugging
 problem = []
@@ -53,23 +67,36 @@ for f in files
     MyModule.populate!(problem)
 
     # Sample operation points
-    theta_bar = MyModule.operation_points(problem, N=N_op)
+    theta_bar = MyModule.operation_points(problem, N=n_op)
 
-    # Radius is 10% of the mean of the finite elements of theta_bar
-    #  theta_finite = [t[.!Base.isinf.(t)] for t in theta_bar]
-    #  radius = radius_frac * mean(norm.(theta_finite, 1))
 
-    # Training: Sample from operation points within Balls
-    theta_train = MyModule.sample(problem, theta_bar, radius, N=N_train)
+    println("Finding best perturbation radius")
+    for r in radius_vec
+
+        println("Radius $(r)")
+        problem.radius = r
+
+        # Training: Sample from operation points within Balls
+        theta_train = MyModule.sample(problem, theta_bar, N=n_train)
+
+        # Get active_constr for each point
+        y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(theta_train,
+                                                                                 problem))
+
+        println("Found $(length(enc2active_constr)) active constraints")
+        if length(enc2active_constr) > n_modes
+            println("Active constraints greater than $(n_modes). Stop with radius $(r)")
+            break
+        end
+
+        if r == radius_vec[end]
+            println("Could not find more than $(n_modes) active constraints. Stop with radius $(r)")
+        end
+
+    end
+
     # Testing: Sample from operation points within Balls
-    theta_test = MyModule.sample(problem, theta_bar, radius, N=N_test)
-
-    # Train
-    srand(1)
-
-    # Get active_constr for each point
-    y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(theta_train,
-                                                                             problem))
+    theta_test = MyModule.sample(problem, theta_bar, N=n_test)
 
     # Learn tree
     lnr = MyModule.tree(theta_train, y_train, export_tree=true, problem=problem)

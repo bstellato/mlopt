@@ -63,17 +63,14 @@ end
 
 
 function sample(problem::Inventory,
-                theta_bar::Vector{Float64},
-                r::Float64;
+                theta_bar::Vector{Float64};
                 N=100)
 
     # Get sampler
-    d = MvBall(length(theta_bar), r, theta_bar)
+    d = MvBall(length(theta_bar), problem.radius, theta_bar)
 
     # Sample uniform point on the ball
     X = rand(d, N)
-
-    @show size(X)
 
     # Construct and return dataframe
     d = DataFrame()

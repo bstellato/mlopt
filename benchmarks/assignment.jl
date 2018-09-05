@@ -5,15 +5,15 @@ include("../src/MyModule.jl")
 problem = MyModule.Assignment()
 problem.A = 50
 theta_dim = 50  # A
+problem.radius = 1.0
 
 # Generate training data points
 theta_bar = zeros(theta_dim)
 
 N_train = 1000
 N_test = 100
-radius = 1.
-theta_train = MyModule.sample(problem, theta_bar, radius, N=N_train)
-theta_test = MyModule.sample(problem, theta_bar, radius, N=N_test)
+theta_train = MyModule.sample(problem, theta_bar, N=N_train)
+theta_test = MyModule.sample(problem, theta_bar, N=N_test)
 
 # Learn
 # -----

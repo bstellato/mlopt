@@ -7,6 +7,7 @@ mutable struct NetlibLP <: OptimizationProblem
     # (independent from the parameters)
     file_name::String
     to_read::Bool
+    radius::Float64  # Radius for balls sampling
 
     # Empty constructor
     NetlibLP() = new()
@@ -178,10 +179,10 @@ end
 
 
 function sample(problem::NetlibLP,
-                theta_bar::Vector{Vector{Float64}},
-                r::Float64;
+                theta_bar::Vector{Vector{Float64}};
                 N=100)
 
+    r = problem.radius
     n_var = length(problem.data.c)
     n_constr = length(problem.data.l)
 

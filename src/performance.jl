@@ -75,9 +75,9 @@ function eval_performance(theta::DataFrame,
                    accuracy = [test_accuracy],
                    n_infeas = [sum(infeas .>= TOL)],
                    avg_infeas = [mean(infeas)],
-                   avg_subopt = [mean(subopt)],
+                   avg_subopt = [mean(subopt[find(infeas .<= TOL)])],  # Mean of feasible cases
                    max_infeas = [maximum(infeas)],
-                   max_subopt = [maximum(subopt)],
+                   max_subopt = [maximum(subopt[find(infeas .<= TOL)])],
                    avg_time_improvement_perc = [mean(time_comp)],
                    max_time_improvement_perc = [maximum(time_comp)],
                   )
