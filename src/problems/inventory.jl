@@ -7,6 +7,7 @@ mutable struct Inventory <: OptimizationProblem
     T::Int64  # Horizon
     M::Float64  # Max ordering capacity
     K::Float64  # Fixed ordering cost
+    radius::Float64  # Radius for sampling
 
     # Empty constructor
     Inventory() = new()
@@ -15,7 +16,8 @@ end
 
 function populate!(problem::Inventory,
                    theta::DataFrame;
-                   bin_vars::Bool=false)
+                   bin_vars::Bool=false,
+                   show_model::Bool=false)
 
     # Get data from theta
     @assert size(theta, 1) == 1  # Only one row
@@ -53,6 +55,10 @@ function populate!(problem::Inventory,
         @objective(m, Min, sum(y[i] + c * u[i] + K * v[i]  for i in 1:T))
     else
         @objective(m, Min, sum(y[i] + c * u[i] for i in 1:T))
+    end
+
+    if show_model
+        print(m)
     end
 
     # Extract problem data

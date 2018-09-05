@@ -1,17 +1,21 @@
 function tree(X::DataFrame,
               y::Vector{Int64};
+              sparse=false,
               export_tree=false,
               problem::OptimizationProblem=nothing,
               output_folder::String="output")
     @printf "Learning Classification Tree\n"
 
-    lnr = OT.OptimalTreeClassifier(max_depth = 10,
-                                   minbucket = 1,
-                                   cp = 0.001,
-                                   #  Sparse hyperplanes
-                                   #  hyperplane_config=[Dict(:sparsity => 2)],
-                                   #  fast_num_support_restarts = 10,
-                                  )
+    options = Dict(:max_depth => 10,
+                   :minbucket => 1,
+                   :cp => 0.001,
+                  )
+    if sparse
+        options[:hyperplane_config] = [Dict(:sparsity => 2)]
+        options[:fast_num_support_restarts] = 10
+    end
+
+    lnr = OT.OptimalTreeClassifier(;options...)
     OT.fit!(lnr, X, y)
 
     # Export tree
