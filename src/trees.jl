@@ -7,7 +7,10 @@ function tree(X::DataFrame,
 
     lnr = OT.OptimalTreeClassifier(max_depth = 10,
                                    minbucket = 1,
-                                   cp = 0.001
+                                   cp = 0.001,
+                                   #  Sparse hyperplanes
+                                   #  hyperplane_config=[Dict(:sparsity => 2)],
+                                   #  fast_num_support_restarts = 10,
                                   )
     OT.fit!(lnr, X, y)
 
