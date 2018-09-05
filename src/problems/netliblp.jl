@@ -18,7 +18,10 @@ function populate!(problem::NetlibLP)
 
     if problem.to_read
         # Extract nominal problem data
-        problem.data_orig = extract_problem_data(problem.file_name)
+        # and add variable bounds to avoid unboundedness
+        data = extract_problem_data(problem.file_name)
+        @add_variable_bounds data
+        problem.data_orig = data
         problem.data = copy(problem.data_orig)
         problem.to_read = false
     else
@@ -33,8 +36,11 @@ function populate!(problem::NetlibLP, theta::DataFrame)
     theta_vec = Array(theta[1, :])[:]
 
     if problem.to_read
-        # Extract nominal problem data if not defined
-        problem.data_orig = extract_problem_data(problem.file_name)
+        # Extract nominal problem data
+        # and add variable bounds to avoid unboundedness
+        data = extract_problem_data(problem.file_name)
+        @add_variable_bounds data
+        problem.data_orig = data
         problem.data = copy(problem.data_orig)
         problem.to_read = false
     else
