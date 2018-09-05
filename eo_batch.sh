@@ -10,7 +10,9 @@
 
 # Load Julia modules
 module load julia/0.6.2
+module load gurobi/8.0.1
 module load cplex/128
+module load mosek/8
 
 # Include script
 julia -e 'include("benchmarks/netliblp.jl")'

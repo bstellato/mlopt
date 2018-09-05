@@ -13,10 +13,10 @@ file_sizes = [stat(f).size for f in files]
 files = files[sortperm(file_sizes)]
 
 # Take only first 5 files
-files = [files[1]]   #  Get infeasible/unbounded problem
+#  files = [files[1]]   # Slow
 #  files = [files[2]]   #  Very slow
 #  files = [files[3]]   # ADLITTLE
-#  files = [files[4]]   # AFIRO
+files = [files[4]]   # AFIRO
 #  files = [files[5]]   # AGG
 #  files = [files[6]]   # AGG2
 #  files = [files[7]]   # AGG3  Up to now r = 0.01
@@ -33,7 +33,7 @@ n_train = 1000
 n_test = 100
 n_modes = 20
 
-radius_vec = logspace(-5., 10., 30)
+radius_vec = logspace(-7., 10., 30)
 
 println("Data points")
 println(repeat("-", 60))
