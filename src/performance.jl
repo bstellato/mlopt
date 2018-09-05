@@ -6,7 +6,7 @@ function accuracy(active_constr_pred::Vector{Vector{Int64}},
     idx_correct = zeros(Int, n_total)
     for i = 1:n_total
         if active_constr_pred[i] == active_constr_test[i]
-            idx_correct[i] == 1
+            idx_correct[i] = 1
         end
     end
 
@@ -28,6 +28,8 @@ function eval_performance(theta::DataFrame,
     active_constr_pred = MyModule.predict(theta, lnr, enc2active_constr)
 
     # Get statistics
+    num_var = length(problem.data.c)
+    num_constr = length(problem.data.l)
     num_test = size(theta, 1)
     num_train = lnr.prb_.data.features.n_samples
     n_theta = size(theta, 2)
@@ -54,11 +56,17 @@ function eval_performance(theta::DataFrame,
     end
 
     # Get problem name
-    problem_name = lowercase(split(string(typeof(problem)), ".")[end])
+    if isdefined(problem, :file_name)
+        problem_name = lowercase(split(splitdir(problem.file_name)[end], ".")[end-1])
+    else
+        problem_name = lowercase(split(string(typeof(problem)), ".")[end])
+    end
 
     # Create dataframe and export it
     df = DataFrame(
                    problem = [problem_name],
+                   num_var = Int[num_var],
+                   num_constr = Int[num_constr],
                    num_test = Int[num_test],
                    num_train = Int[num_train],
                    n_theta = Int[n_theta],

@@ -10,21 +10,24 @@ file_sizes = [stat(f).size for f in files]
 files = files[sortperm(file_sizes)]
 
 # Take only first 5 files
-#  files = files[3:5]
+files = [files[3]]   # ADLITTLE
+#  files = [files[5]]   # File not working
+#  files = [files[6]]   # AGG2
+#  files = [files[7]]   # AGG3 (working
+
 
 # For each file perform lerning
-files = ["afiro.mps"]  # TODO: remove this. Just to run only one file
+#  files = ["afiro.mps"]  # TODO: remove this. Just to run only one file
 
 N_op = 10
 N_train = 1000
 N_test = 100
+radius = 0.01
 
 println("Data points")
 println(" - Training: $(N_train)")
 println(" - Testing: $(N_test)")
 println(" - Operating points: $(N_op)")
-
-radius_frac = 0.1
 
 # TODO: Preallocate variables for debugging
 problem = []
@@ -32,7 +35,6 @@ theta_bar = []
 theta_train = []
 theta_test = []
 theta_finite = []
-radius = 1.0
 y_train = []
 
 problem = MyModule.NetlibLP()
@@ -54,8 +56,8 @@ for f in files
     theta_bar = MyModule.operation_points(problem, N=N_op)
 
     # Radius is 10% of the mean of the finite elements of theta_bar
-    theta_finite = [t[.!Base.isinf.(t)] for t in theta_bar]
-    radius = radius_frac * mean(norm.(theta_finite, 1))
+    #  theta_finite = [t[.!Base.isinf.(t)] for t in theta_bar]
+    #  radius = radius_frac * mean(norm.(theta_finite, 1))
 
     # Training: Sample from operation points within Balls
     theta_train = MyModule.sample(problem, theta_bar, radius, N=N_train)
@@ -82,7 +84,7 @@ for f in files
     df_detail = [df_detail; df_detail_f]
 
     # Write output to file
-    MyModule.write_output(df, df_detail)
+    MyModule.write_output(df, df_detail, file_name="results_netliblp")
 
 end
 

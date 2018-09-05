@@ -78,7 +78,8 @@ function operation_points(problem::NetlibLP;
     # u_theta = u + theta_u
 
     # Perturb cost
-    theta_c = [(perturb_frac * norm(c)) * rand(n_var) for i = 1:N]
+    perturb = perturb_frac * abs.(c)
+    theta_c = [perturb .* rand(n_var) for i = 1:N]
 
     # Do not perturb constraints
     theta_l = [zeros(n_constr) for _ = 1:N]
