@@ -81,9 +81,9 @@ function solve(problem::OptimizationProblem)
     _, basis_constr = MathProgBase.getbasis(m)
     basis = zeros(Int, n_constr)
     for i = 1:n_constr
-        if basis_constr[i] == :NonbasicAtLower
+        if basis_constr[i] == :NonBasicAtLower
             basis[i] = -1
-        elseif basis_constr[i] == :NonbasicAtUpper
+        elseif basis_constr[i] == :NonBasicAtUpper
             basis[i] = 1
         end
     end

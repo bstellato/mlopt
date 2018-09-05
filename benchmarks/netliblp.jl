@@ -34,7 +34,7 @@ n_train = 1000
 n_test = 100
 n_modes = 20
 
-radius_vec = logspace(-7., 10., 30)
+radius_vec = logspace(-7., 1., 30)
 
 println("Data points")
 println(repeat("-", 60))
