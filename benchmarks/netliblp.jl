@@ -25,7 +25,7 @@ files = files[sortperm(file_sizes)]
 #  files = [files[10]]  # BLEND
 #  files = [files[11]]  # BNL1
 #  files = [files[12]]  # BNL2
-files = files[3:43]
+files = files[3:end]
 
 
 

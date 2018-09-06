@@ -28,7 +28,7 @@ macro add_variable_bounds(data)
         local _A = $(esc(data)).A
         local _l = $(esc(data)).l
         local _u = $(esc(data)).u
-        local M = 1e05
+        local M = 1e06
         $(esc(data)).A = [_A; speye(size(_A, 2))]
         $(esc(data)).l = [_l; -M * ones(size(_A, 2))]
         $(esc(data)).u = [_u; M * ones(size(_A, 2))]
