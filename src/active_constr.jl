@@ -70,7 +70,7 @@ function solve(problem::OptimizationProblem)
     MathProgBase.optimize!(m)
     status = MathProgBase.status(m)
 
-    if status != :Optimal
+    if (status != :Optimal) & (status != :Stall)
         error("LP not solved to optimality. Status $(status)")
     end
 
@@ -158,10 +158,7 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
     status = MathProgBase.status(m)
 
 
-    if status != :Optimal
-        @show n_var
-        @show n_upper + n_lower
-        @show n_constr
+    if (status != :Optimal) & (status != :Stall)
         error("LP not solved to optimality. Status $(status)")
     end
 
