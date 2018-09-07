@@ -2,6 +2,14 @@
 abstract type OptimizationProblem end
 
 """
+Evaluate cost function at x
+"""
+function cost(problem::OptimizationProblem,
+              x::Vector{Float64})
+    return problem.data.c' * x
+end
+
+"""
 Data of the optimization problem in LP form
 """
 mutable struct ProblemData
