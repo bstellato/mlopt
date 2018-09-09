@@ -24,13 +24,11 @@ function eval_performance(theta::DataFrame,
     println("Performance evaluation")
     println("Compute active constraints over test set")
 
-    # TODO: Fix this. This still populates the problem for all the theta
-    # TODO: Return x, y, time etc.
     # Get active_constr for each point
-    active_constr_test = MyModule.active_constraints(theta, problem)
+    x_test, y_test, time_test, active_constr_test = solve(theta, problem)
 
-    # Predict active constraints
-    #  active_constr_pred = MyModule.predict(theta, lnr, enc2active_constr)
+    # Get predicted active constraints for all the test points
+    x_pred, y_pred, time_pred, active_constr_pred = predict_best_full(theta, k, lnr, problem, enc2active_constr)
 
     # Get statistics
     num_var = length(problem.data.c)
@@ -40,33 +38,13 @@ function eval_performance(theta::DataFrame,
     n_theta = size(theta, 2)
     n_active_sets = length(enc2active_constr)
 
-
-    # Get predicted active constraints for all the test points
-    x_pred, y_pred, time_pred, active_constr_pred = predict_best(theta, k, lnr, problem, enc2active_constr)
-
-    # TODO: Fix time lp and solve original lp
+    # Compute infeasibility and suboptimality
     infeas = [infeasibility(x, problem) for x in x_pred]
-    subopt = [suboptimality(x_pred[i], x_lp, problem) for i = 1:num_test]
-    time_comp = [(1 - time_pred[i]/time_lp)*100 for i = 1:num_test]
+    subopt = [suboptimality(x_pred[i], x_test[i], problem) for i = 1:num_test]
+    time_comp = [(1 - time_pred[i]/time_test[i])*100 for i = 1:num_test]
 
-
-    # TODO: accuracy
-    #  test_accuracy, idx_correct = accuracy(active_constr_pred, active_constr_test)
-
-    # These need an additional problem solution
-    infeas = Vector{Float64}(num_test)
-    subopt = Vector{Float64}(num_test)
-    time_comp = Vector{Float64}(num_test)
-    for i = 1:num_test
-        populate!(problem, theta[i, :])
-        x_ml, y_ml, time_ml = solve(problem, active_constr_pred[i])
-        x_lp, y_lp, time_lp = solve(problem)
-
-        # Compare time
-        infeas[i] = infeasibility(x_ml, problem)
-        subopt[i] = suboptimality(x_ml, x_lp, problem)
-        time_comp[i] = (1 - time_ml/time_lp)*100
-    end
+    # accuracy
+    test_accuracy, idx_correct = accuracy(active_constr_pred, active_constr_test)
 
     # Get problem name
     if isdefined(problem, :file_name)
@@ -75,10 +53,14 @@ function eval_performance(theta::DataFrame,
         problem_name = lowercase(split(string(typeof(problem)), ".")[end])
     end
 
+    # DEBUG
+    @show sum(infeas .>= TOL)
+
     # Create dataframe and export it
     df = DataFrame(
                    problem = [problem_name],
                    radius = [problem.radius],
+                   k = [k],
                    num_var = Int[num_var],
                    num_constr = Int[num_constr],
                    num_test = Int[num_test],
@@ -105,30 +87,6 @@ function eval_performance(theta::DataFrame,
                          )
 
     return df, df_detail
-end
-
-
-function write_output(df::DataFrame,
-                      df_detail::DataFrame,
-                      problem::OptimizationProblem;
-                     output_folder::String="output")
-    # Get problem name
-    problem_name = lowercase(split(string(typeof(problem)), ".")[end])
-    output_name = joinpath(output_folder,
-                           problem_name)
-    CSV.write("$(output_name).csv", df)
-    CSV.write("$(output_name)_detail.csv", df_detail)
-    nothing
-end
-
-function write_output(df::DataFrame,
-                      df_detail::DataFrame;
-                      file_name::String="results",
-                      output_folder::String="output")
-    output_name = joinpath(output_folder, file_name)
-    CSV.write("$(output_name).csv", df)
-    CSV.write("$(output_name)_detail.csv", df_detail)
-    nothing
 end
 
 """
@@ -166,3 +124,25 @@ function suboptimality(x::Vector{Float64},
     return (c' * x - c' * x_opt) / norm(c, Inf)
 end
 
+function write_output(df::DataFrame,
+                      df_detail::DataFrame,
+                      problem::OptimizationProblem;
+                     output_folder::String="output")
+    # Get problem name
+    problem_name = lowercase(split(string(typeof(problem)), ".")[end])
+    output_name = joinpath(output_folder,
+                           problem_name)
+    CSV.write("$(output_name).csv", df)
+    CSV.write("$(output_name)_detail.csv", df_detail)
+    nothing
+end
+
+function write_output(df::DataFrame,
+                      df_detail::DataFrame;
+                      file_name::String="results",
+                      output_folder::String="output")
+    output_name = joinpath(output_folder, file_name)
+    CSV.write("$(output_name).csv", df)
+    CSV.write("$(output_name)_detail.csv", df_detail)
+    nothing
+end

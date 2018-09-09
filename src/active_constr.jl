@@ -1,17 +1,25 @@
 # Solving and active constraints identification
 
 function active_constraints(theta::DataFrame, problem::OptimizationProblem)
+    _, _, _, active_constr = solve(theta, problem)
+    return active_constr
+end
+
+
+function solve(theta::DataFrame, problem::OptimizationProblem)
     N = size(theta, 1)
 
     # Get active_constr for each point
+    x = Vector{Vector{Float64}}(N)
+    y = Vector{Vector{Float64}}(N)
+    time = Vector{Float64}(N)
     active_constr = Vector{Vector{Int64}}(N)
-    @showprogress 1 "Computing active constraints..." for i = 1:N
+    @showprogress 1 "Solving problem for each theta..." for i = 1:N
         populate!(problem, theta[i, :])
-
-        active_constr[i] = MyModule.active_constraints(problem)
+        x[i], y[i], time[i], active_constr[i] = solve(problem)
     end
 
-    return active_constr
+    return x, y, time, active_constr
 
 end
 
@@ -89,34 +97,34 @@ function solve(problem::OptimizationProblem)
 
 end
 
-"""
-    active_constr(problem)
-
-Solve optimization problem and get vector of active constraints where each element is:
-
-  - -1: if the lower bound is active
-  - +1: if the upper bound is active
-  -  0: if the constraint is inactive
-"""
-function active_constraints(problem::OptimizationProblem)
-
-    _, y, _, active_constr = solve(problem)
-
-
-    #  n_constr = length(problem.data.l)
-    #  active_constr = zeros(Int64, n_constr)
-    #  for i = 1:n_constr
-    #      if y[i] >= TOL
-    #          active_constr[i] = 1
-    #      elseif y[i] <= -TOL
-    #          active_constr[i] = -1
-    #      end
-    #  end
-
-    # Active constr
-    return active_constr
-
-end
+#  """
+#      active_constr(problem)
+#
+#  Solve optimization problem and get vector of active constraints where each element is:
+#
+#    - -1: if the lower bound is active
+#    - +1: if the upper bound is active
+#    -  0: if the constraint is inactive
+#  """
+#  function active_constraints(problem::OptimizationProblem)
+#
+#      x, y, time, active_constr = solve(problem)
+#
+#
+#      #  n_constr = length(problem.data.l)
+#      #  active_constr = zeros(Int64, n_constr)
+#      #  for i = 1:n_constr
+#      #      if y[i] >= TOL
+#      #          active_constr[i] = 1
+#      #      elseif y[i] <= -TOL
+#      #          active_constr[i] = -1
+#      #      end
+#      #  end
+#
+#      # Active constr
+#      return x, y, time, active_constr
+#
+#  end
 
 """
     solve(problem, active_constr)

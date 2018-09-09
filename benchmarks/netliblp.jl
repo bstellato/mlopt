@@ -43,7 +43,7 @@ println(" - Testing: $(n_test)")
 println(" - Operating points: $(n_op)")
 println(" - Ideal different active constraints: $(n_modes)")
 
-# TODO: Preallocate variables for debugging
+# TODO: Remove preallocated variables for debugging
 problem = []
 theta_bar = []
 theta_train = []

@@ -66,25 +66,29 @@ function predict_best_full(X::DataFrame,
 	n_points = size(X, 1)
 
     # Predict probabilities for each point
-    proba = OT.predict_proba(X)
+    proba = OT.predict_proba(lnr, X)
 
 	# Get data to return for each point
     active_constr = Vector{Vector{Int64}}(n_points)
 	x = Vector{Vector{Float64}}(n_points)
 	y = Vector{Vector{Float64}}(n_points)
-	time = Vector{Vector{Float64}}(n_points)
+	time = Vector{Float64}(n_points)
 
     # Pick k best classes for each point
 	for i = 1:n_points  # Iterate over all the points
 
-        # TODO: Do we need to populate the problem data ?
+        # Do we need to populate the problem data ?
         populate!(problem, X[i, :])
 
+        @show proba
+
         # Get probabilities row
-        p = Array(proba[i, :])'
+        p = Array(proba[i, :])'[:]
 
 		# Get k largest ones
-		classes = sort(p, rev=true)[1:k]
+		classes = sortperm(p, rev=true)[1:k]
+
+        @show classes
 
 		# Decode all the classes
 		active_constr_classes = [enc2active_constr[classes[j]] for j in 1:k]
@@ -92,7 +96,7 @@ function predict_best_full(X::DataFrame,
 		# Get x, y, time for each one of them and store best one
 		x_temp = Vector{Vector{Float64}}(k)
 		y_temp = Vector{Vector{Float64}}(k)
-		time_temp = Vector{Vector{Float64}}(k)
+		time_temp = Vector{Float64}(k)
 		infeas_temp = Vector{Float64}(k)
         cost_temp = Vector{Float64}(k)
 
@@ -100,7 +104,8 @@ function predict_best_full(X::DataFrame,
 		for j = 1:k
 
             # Solve problem
-            x_temp[j], y_temp[j], time_temp[j] = solve(problem, active_constr_classes[j])
+            x_temp[j], y_temp[j], time_temp[j] = solve(problem,
+                                                       active_constr_classes[j])
 
 			# Compute infeasibility
 			infeas_temp[j] = infeasibility(x_temp[j], problem)
@@ -110,8 +115,10 @@ function predict_best_full(X::DataFrame,
 
 		end
 
+        # DEBUG: Show fist 10 points
         idx_filter = find(infeas_temp .<= TOL)
-        if any(idx_filter)
+        @show idx_filter
+        if length(idx_filter) > 0
             # Case 1: Feasible points
             # -> Get solution with minimum cost between
             # feasible ones
@@ -121,6 +128,14 @@ function predict_best_full(X::DataFrame,
             # -> Get solution with minimum infeasibility
             idx_pick = indmin(infeas_temp)
         end
+        @show idx_pick
+
+        #  if i in 1:10
+        #      @show infeas_temp
+        #      @show cost_temp
+        #      @show time_temp
+        #      @show idx_pick
+        #  end
 
 		# Store value we are interested in
         x[i], y[i] = x_temp[idx_pick], y_temp[idx_pick]

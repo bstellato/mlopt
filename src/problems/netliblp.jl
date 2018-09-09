@@ -196,7 +196,7 @@ function sample(problem::NetlibLP,
     n_op = length(theta_bar)  # Numer of operation points
     n_sample_per_op = floor(Int, N / n_op)   # Number of samples per operation point
 
-    # TODO: change this
+    # TODO: change this. This is only to get thetas that are not set to 0.
     idx_sampling = find(abs.(theta_bar[1]) .> TOL)
     n_sampling = length(idx_sampling)
 
