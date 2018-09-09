@@ -17,15 +17,20 @@ end
 function eval_performance(theta::DataFrame,
                           lnr::OT.OptimalTreeClassifier,
                           problem::OptimizationProblem,
-                          enc2active_constr::Vector{Vector{Int64}})
+                          enc2active_constr::Vector{Vector{Int64}};
+                          k::Int64=1   # k best predicted values
+                         )
 
     println("Performance evaluation")
     println("Compute active constraints over test set")
+
+    # TODO: Fix this. This still populates the problem for all the theta
+    # TODO: Return x, y, time etc.
     # Get active_constr for each point
     active_constr_test = MyModule.active_constraints(theta, problem)
 
     # Predict active constraints
-    active_constr_pred = MyModule.predict(theta, lnr, enc2active_constr)
+    #  active_constr_pred = MyModule.predict(theta, lnr, enc2active_constr)
 
     # Get statistics
     num_var = length(problem.data.c)
@@ -35,10 +40,18 @@ function eval_performance(theta::DataFrame,
     n_theta = size(theta, 2)
     n_active_sets = length(enc2active_constr)
 
-    # accuracy
-    test_accuracy, idx_correct = accuracy(active_constr_pred, active_constr_test)
 
-    # TODO: Add radius?
+    # Get predicted active constraints for all the test points
+    x_pred, y_pred, time_pred, active_constr_pred = predict_best(theta, k, lnr, problem, enc2active_constr)
+
+    # TODO: Fix time lp and solve original lp
+    infeas = [infeasibility(x, problem) for x in x_pred]
+    subopt = [suboptimality(x_pred[i], x_lp, problem) for i = 1:num_test]
+    time_comp = [(1 - time_pred[i]/time_lp)*100 for i = 1:num_test]
+
+
+    # TODO: accuracy
+    #  test_accuracy, idx_correct = accuracy(active_constr_pred, active_constr_test)
 
     # These need an additional problem solution
     infeas = Vector{Float64}(num_test)
