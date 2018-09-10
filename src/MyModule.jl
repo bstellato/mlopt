@@ -35,7 +35,7 @@ READ_SOLVER = GurobiSolver(OutputFlag=0)
 BUILD_SOLVER = OSQPMathProgBaseInterface.OSQPSolver(verbose=false)
 
 include("types.jl")  # Functions for solving and identifying active constraints
-include("active_constr.jl")  # Functions for solving and identifying active constraints
+include("strategy.jl")  # Functions for solving and identifying strategies
 include("learner.jl")    # Learn and predict active sets
 include("performance.jl")    # Functions for analyzing performance of the method
 include("utils.jl")    # Functions for analyzing performance of the method
