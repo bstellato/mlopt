@@ -39,9 +39,16 @@ function eval_performance(theta::DataFrame,
     n_active_sets = length(enc2active_constr)
 
     # Compute infeasibility and suboptimality
-    infeas = [infeasibility(x, problem) for x in x_pred]
-    subopt = [suboptimality(x_pred[i], x_test[i], problem) for i = 1:num_test]
-    time_comp = [(1 - time_pred[i]/time_test[i])*100 for i = 1:num_test]
+    # Need to update the problem!!!
+    infeas = Vector{Float64}(num_test)
+    subopt   = Vector{Float64}(num_test)
+    time_comp = Vector{Float64}(num_test)
+    for i = 1:num_test
+        populate!(problem, theta[i, :])
+        infeas[i] = infeasibility(x_pred[i], problem)
+        subopt[i] = suboptimality(x_pred[i], x_test[i], problem)
+        time_comp[i] = (1 - time_pred[i]/time_test[i])*100
+    end
 
     # accuracy
     test_accuracy, idx_correct = accuracy(active_constr_pred, active_constr_test)

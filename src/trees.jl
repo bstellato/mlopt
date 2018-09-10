@@ -80,8 +80,6 @@ function predict_best_full(X::DataFrame,
         # Do we need to populate the problem data ?
         populate!(problem, X[i, :])
 
-        @show proba
-
         # Get probabilities row
         p = Array(proba[i, :])'[:]
 
@@ -116,13 +114,14 @@ function predict_best_full(X::DataFrame,
 		end
 
         # DEBUG: Show fist 10 points
+        @show infeas_temp
         idx_filter = find(infeas_temp .<= TOL)
         @show idx_filter
         if length(idx_filter) > 0
             # Case 1: Feasible points
             # -> Get solution with minimum cost between
             # feasible ones
-            idx_pick = indmin(cost_temp[idx_filter])
+            idx_pick = idx_filter[indmin(cost_temp[idx_filter])]
         else
             # Case 2: No feasible points
             # -> Get solution with minimum infeasibility

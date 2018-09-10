@@ -19,7 +19,7 @@ theta_bar = [2.;               # h
 radius = 1.0
 
 N_train = 1000
-N_test = 5
+N_test = 100
 theta_train = MyModule.sample(problem, theta_bar, N=N_train)
 theta_test = MyModule.sample(problem, theta_bar, N=N_test)
 
@@ -37,7 +37,7 @@ lnr = MyModule.tree(theta_train, y_train, sparse=false, export_tree=true, proble
 # Test
 # ------
 # Evaluate performance
-df, df_detail = MyModule.eval_performance(theta_test, lnr, problem, enc2active_constr; k = 1)
+df, df_detail = MyModule.eval_performance(theta_test, lnr, problem, enc2active_constr; k = 3)
 
 # Store results
 MyModule.write_output(df, df_detail, problem)
