@@ -1,7 +1,7 @@
 # Solving and active constraints identification
-
 function active_constraints(theta::DataFrame, problem::OptimizationProblem)
-    _, _, _, active_constr = solve(theta, problem)
+    #  _, _, _, active_constr = solve(theta, problem)
+    _, _, active_constr = solve(theta, problem)
     return active_constr
 end
 
@@ -11,15 +11,17 @@ function solve(theta::DataFrame, problem::OptimizationProblem)
 
     # Get active_constr for each point
     x = Vector{Vector{Float64}}(N)
-    y = Vector{Vector{Float64}}(N)
+    #  y = Vector{Vector{Float64}}(N)
     time = Vector{Float64}(N)
     active_constr = Vector{Vector{Int64}}(N)
     @showprogress 1 "Solving problem for each theta..." for i = 1:N
         populate!(problem, theta[i, :])
-        x[i], y[i], time[i], active_constr[i] = solve(problem)
+        #  x[i], y[i], time[i], active_constr[i] = solve(problem)
+        x[i], time[i], active_constr[i] = solve(problem)
     end
 
-    return x, y, time, active_constr
+    #  return x, y, time, active_constr
+    return x, time, active_constr
 
 end
 
@@ -44,7 +46,7 @@ function encode(active_constr::Vector{Vector{Int64}})
         # Get which active_constr is the current one
         y[i] = 0
         for j = 1:n_active_constr
-            if active_constr[i] == unique_active_constr[j]  # Compare vectors. (Expensive?)
+            if active_constr[i] == unique_active_constr[j]  # Compare vectors (Expensive?)
                 y[i] = j
                 break
             end
@@ -63,6 +65,7 @@ Solve linear program and return primal variables `x` and dual variables `y`
 function solve(problem::OptimizationProblem)
 
     c, l, A, u = problem.data.c, problem.data.l, problem.data.A, problem.data.u
+    int_idx = problem.data.int_idx
 
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
@@ -72,9 +75,16 @@ function solve(problem::OptimizationProblem)
     n_var = length(c)
     n_constr = length(l)
 
+    var_types = [if i in int_idx
+                     :Int
+                 else
+                     :Cont
+                 end for i in 1:n_var]
+
     # Solve directly with MathProgBase
     m = MathProgBase.LinearQuadraticModel(SOLVER)
     MathProgBase.loadproblem!(m, A, -Inf * ones(n_var), Inf * ones(n_var), c, l, u, :Min)
+    setvartype!(m, var_types)
     MathProgBase.optimize!(m)
     status = MathProgBase.status(m)
 
@@ -93,7 +103,8 @@ function solve(problem::OptimizationProblem)
         end
     end
 
-    return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m), MathProgBase.getsolvetime(m), basis
+    #  return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m), MathProgBase.getsolvetime(m), basis
+    return MathProgBase.getsolution(m), MathProgBase.getsolvetime(m), basis
 
 end
 
@@ -127,25 +138,35 @@ end
 #  end
 
 """
-    solve(problem, active_constr)
+    solve(problem, strategy)
 
-Solve simplified problem using the `active_constr` vector
-specifying which constraints are active according to function
-`get_active_constr`.
+Solve simplified problem using a predefined strategy describing
+which integer variables are fixed and which constraints are active.
 """
-function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
+function solve(problem::OptimizationProblem, strategy::Strategy)
 
+    # Unpack problem data
     c, l, A, u = problem.data.c, problem.data.l, problem.data.A, problem.data.u
+    int_idx = problem.data.int_idx
 
+    # Unpack strategy
+    int_vars, active_constr = strategy.int_vars
+    active_constr = strategy.active_constr
 
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
     @assert size(A, 2) == length(c)
+    @assert maximum(int_idx) <= length(l)   # Check if vector of integers is within length
+    @assert minimum(int_idx) >= 1
     @assert !any(l .> u)
     n_var = length(c)
     n_constr = length(u)
 
-    # Solve using Basis
+    # 1) Fix integer variables
+    A_red = [speye(n_var)[int_idx, :]]
+    b_red = int_vars
+
+    # 2) Use active constraints
     active_constr_upper = find(active_constr .== 1)
     n_upper = length(active_constr_upper)
     active_constr_lower = find(active_constr .== -1)
@@ -154,8 +175,8 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
     u_upper = u[active_constr_upper]
     A_lower = A[active_constr_lower, :]
     l_lower = l[active_constr_lower]
-    A_red = [A_lower; A_upper]
-    bound_red = [l_lower; u_upper]
+    A_red = [A_red; A_lower; A_upper]
+    bound_red = [bound_red; l_lower; u_upper]
 
     # Solve directly with MathProgBase
     m = MathProgBase.LinearQuadraticModel(SOLVER)
@@ -170,13 +191,15 @@ function solve(problem::OptimizationProblem, active_constr::Vector{Int64})
         error("LP not solved to optimality. Status $(status)")
     end
 
-    #  x = getvalue(x)
     x = MathProgBase.getsolution(m)
-    y = zeros(n_constr)
-    y_temp = -MathProgBase.getconstrduals(m)
-    y[active_constr_lower] = y_temp[1:n_lower]
-    y[active_constr_upper] = y_temp[n_lower+1:end]
-    return x, y, MathProgBase.getsolvetime(m)
+    return x, MathProgBase.getsolvetime(m)
+
+    # Do not return dual variables in general
+    #  y = zeros(n_constr)
+    #  y_temp = -MathProgBase.getconstrduals(m)
+    #  y[active_constr_lower] = y_temp[1:n_lower]
+    #  y[active_constr_upper] = y_temp[n_lower+1:end]
+    #  return x, y, MathProgBase.getsolvetime(m)
 
     # Solve ONLY a single linear system (does not always work because it can be non square)
     #  # Find x

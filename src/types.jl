@@ -61,3 +61,9 @@ function Base.copy(data::ProblemData)
     data_dest.int_idx = copy(data.int_idx)
     return data_dest
 end
+
+
+mutable struct Strategy
+    active_constraints::Vector{Vector{Int64}}
+    int_vars::Vector{Vector{Int64}}
+end
