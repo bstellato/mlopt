@@ -27,34 +27,34 @@ end
 
 
 """
-    encode(active_constr)
+    encode(strategy)
 
-Map vector of active constraints vectors to numbers
+Map vector of strategies to numbers
 """
-function encode(active_constr::Vector{Vector{Int64}})
+function encode(strategy::Vector{Strategy})
 
-    @printf "Encoding active constraints\n"
-    N = length(active_constr)
-    @printf "Getting unique set of active constraints\n"
-    unique_active_constr = unique(active_constr)
-    n_active_constr = length(unique_active_constr)  # Number of active constr vectors
-    @printf "Found %d unique active constraints\n" n_active_constr
+    @printf "Encoding strategies\n"
+    N = length(strategy)
+    @printf "Getting unique set of strategies\n"
+    unique_strategy = unique(strategy)
+    n_strategy = length(unique_strategy)  # Number of active constr vectors
+    @printf "Found %d unique active constraints\n" n_strategy
 
-    # Map active_constr to number
+    # Map strategy to number
     y = Vector{Int64}(N)
     for i = 1:N
-        # Get which active_constr is the current one
+        # Get which strategy is the current one
         y[i] = 0
-        for j = 1:n_active_constr
-            if active_constr[i] == unique_active_constr[j]  # Compare vectors (Expensive?)
+        for j = 1:n_strategy
+            if strategy[i] == unique_strategy[j]  # Compare vectors (Expensive?)
                 y[i] = j
                 break
             end
         end
-        (y[i] == 0) && (error("Found no matching active_constr"))
+        (y[i] == 0) && (error("Found no matching strategy"))
     end
     @printf "Encoding done.\n"
-    return y, unique_active_constr
+    return y, unique_strategy
 end
 
 """

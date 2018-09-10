@@ -42,6 +42,8 @@ function predict(X::DataFrame,
     # Predict active_constr
     y = OT.predict(lnr, X)
 
+    # TODO: Fix encoding!
+
     # Convert encoding to actual active_constr
     active_constr = [enc2active_constr[y[i]] for i in 1:length(y)]
 
