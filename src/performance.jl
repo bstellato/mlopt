@@ -61,7 +61,7 @@ function eval_performance(theta::DataFrame,
     end
 
     # DEBUG
-    @show sum(infeas .>= TOL)
+    #  @show sum(infeas .>= TOL)
 
     # Create dataframe and export it
     df = DataFrame(

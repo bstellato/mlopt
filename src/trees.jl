@@ -86,8 +86,6 @@ function predict_best_full(X::DataFrame,
 		# Get k largest ones
 		classes = sortperm(p, rev=true)[1:k]
 
-        @show classes
-
 		# Decode all the classes
 		active_constr_classes = [enc2active_constr[classes[j]] for j in 1:k]
 
@@ -113,10 +111,7 @@ function predict_best_full(X::DataFrame,
 
 		end
 
-        # DEBUG: Show fist 10 points
-        @show infeas_temp
         idx_filter = find(infeas_temp .<= TOL)
-        @show idx_filter
         if length(idx_filter) > 0
             # Case 1: Feasible points
             # -> Get solution with minimum cost between
@@ -127,7 +122,6 @@ function predict_best_full(X::DataFrame,
             # -> Get solution with minimum infeasibility
             idx_pick = indmin(infeas_temp)
         end
-        @show idx_pick
 
         #  if i in 1:10
         #      @show infeas_temp
