@@ -64,6 +64,14 @@ end
 
 
 mutable struct Strategy
-    active_constraints::Vector{Vector{Int64}}
-    int_vars::Vector{Vector{Int64}}
+    int_vars::Vector{Int64}
+    active_constraints::Vector{Int64}
 end
+function Strategy(active_constraints::Vector{Int64})
+    Strategy(active_constraints, Int64[])
+end
+
+
+
+
+

@@ -1,8 +1,8 @@
 # Solving and active constraints identification
-function active_constraints(theta::DataFrame, problem::OptimizationProblem)
+function Strategy(theta::DataFrame, problem::OptimizationProblem)
     #  _, _, _, active_constr = solve(theta, problem)
-    _, _, active_constr = solve(theta, problem)
-    return active_constr
+    _, _, strategy = solve(theta, problem)
+    return strategy
 end
 
 
@@ -13,15 +13,15 @@ function solve(theta::DataFrame, problem::OptimizationProblem)
     x = Vector{Vector{Float64}}(N)
     #  y = Vector{Vector{Float64}}(N)
     time = Vector{Float64}(N)
-    active_constr = Vector{Vector{Int64}}(N)
+    strategy = Vector{Strategy}(N)
     @showprogress 1 "Solving problem for each theta..." for i = 1:N
         populate!(problem, theta[i, :])
         #  x[i], y[i], time[i], active_constr[i] = solve(problem)
-        x[i], time[i], active_constr[i] = solve(problem)
+        x[i], time[i], strategy[i] = solve(problem)
     end
 
     #  return x, y, time, active_constr
-    return x, time, active_constr
+    return x, time, strategy
 
 end
 
@@ -92,6 +92,9 @@ function solve(problem::OptimizationProblem)
         error("LP not solved to optimality. Status $(status)")
     end
 
+    # Get strategy
+    # Get integer variables
+    x_int = MathProgBase.getsolution(m)[idx_int]
     # Get active constraints
     _, basis_constr = MathProgBase.getbasis(m)
     basis = zeros(Int, n_constr)
@@ -103,8 +106,10 @@ function solve(problem::OptimizationProblem)
         end
     end
 
+
     #  return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m), MathProgBase.getsolvetime(m), basis
-    return MathProgBase.getsolution(m), MathProgBase.getsolvetime(m), basis
+    return MathProgBase.getsolution(m), MathProgBase.getsolvetime(m), Strategy(int_vars,
+                                                                               basis)
 
 end
 
@@ -150,8 +155,7 @@ function solve(problem::OptimizationProblem, strategy::Strategy)
     int_idx = problem.data.int_idx
 
     # Unpack strategy
-    int_vars, active_constr = strategy.int_vars
-    active_constr = strategy.active_constr
+    int_vars, active_constr = strategy.int_vars, strategy.active_constr
 
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
@@ -163,7 +167,7 @@ function solve(problem::OptimizationProblem, strategy::Strategy)
     n_constr = length(u)
 
     # 1) Fix integer variables
-    A_red = [speye(n_var)[int_idx, :]]
+    A_red = speye(n_var)[int_idx, :]
     b_red = int_vars
 
     # 2) Use active constraints
@@ -185,7 +189,6 @@ function solve(problem::OptimizationProblem, strategy::Strategy)
                               c, bound_red, bound_red, :Min)
     MathProgBase.optimize!(m)
     status = MathProgBase.status(m)
-
 
     if (status != :Optimal) & (status != :Stall)
         error("LP not solved to optimality. Status $(status)")
