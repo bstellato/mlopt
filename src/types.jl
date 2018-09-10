@@ -1,4 +1,3 @@
-
 abstract type OptimizationProblem end
 
 """
@@ -10,6 +9,11 @@ function cost(problem::OptimizationProblem,
 end
 
 """
+Is the problem mixed-integer?
+"""
+is_mip(p::OptimizationProblem) = length(p.data.int_idx) > 0
+
+"""
 Data of the optimization problem in LP form
 """
 mutable struct ProblemData
@@ -17,15 +21,19 @@ mutable struct ProblemData
     l::Vector{Float64}
     A::SparseMatrixCSC
     u::Vector{Float64}
+    int_idx::Vector{Int64}  # Indeces of integer variables
     ProblemData() = new()
 end
 
-function ProblemData(c::Vector{Float64}, l::Vector{Float64}, A::SparseMatrixCSC, u::Vector{Float64})
+function ProblemData(c::Vector{Float64},
+                     l::Vector{Float64}, A::SparseMatrixCSC, u::Vector{Float64};
+                     int_idx::Vector{Int64}=Int64[])
     d = ProblemData()
     d.c = c
     d.l = l
     d.A = A
     d.u = u
+    d.int_idx = int_idx
     return d
 end
 
@@ -41,6 +49,7 @@ function Base.copy!(data_dest::ProblemData,
     copy!(data_dest.l, data.l)
     copy!(data_dest.A, data.A)
     copy!(data_dest.u, data.u)
+    copy!(data_dest.int_idx, data.int_idx)
 end
 
 function Base.copy(data::ProblemData)
@@ -49,5 +58,6 @@ function Base.copy(data::ProblemData)
     data_dest.l = copy(data.l)
     data_dest.A = copy(data.A)
     data_dest.u = copy(data.u)
+    data_dest.int_idx = copy(data.int_idx)
     return data_dest
 end

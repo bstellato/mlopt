@@ -1,5 +1,6 @@
 populate!(::OptimizationProblem) = error("custom OptimizationProblem objects must define a `populate!` method")
 
+
 """
     @remove_unbounded_constraints A l u
 
@@ -18,10 +19,11 @@ macro remove_unbounded_constraints(A, l, u)
     end
 end
 
+
 """
     @add_variable_bounds A l u
 
-Add variable bounds
+Add variable bounds.
 """
 macro add_variable_bounds(data)
     return quote
@@ -38,7 +40,7 @@ end
 """
     extract_problem_data(m)
 
-Extract problem data from JuMP model
+Extract problem data from JuMP model.
 """
 function extract_problem_data(m::JuMP.Model)
     # Build internal model
@@ -48,6 +50,7 @@ function extract_problem_data(m::JuMP.Model)
     return extract_problem_data(m.internalModel)
 
 end
+
 
 function extract_problem_data(m::MathProgBase.AbstractLinearQuadraticModel)
     c = MathProgBase.getobj(m)
@@ -62,7 +65,11 @@ function extract_problem_data(m::MathProgBase.AbstractLinearQuadraticModel)
     # Remove indices where both bounds are infinity
     MyModule.@remove_unbounded_constraints A l u
 
-    return ProblemData(c, l, A, u)
+    # Get which variables are integer
+    var_types = MathProgBase.getvartype(m)
+    idx_int = find(var_types .!= :Cont)
+
+    return ProblemData(c, l, A, u; idx_int = idx_int)
 end
 
 
