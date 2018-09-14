@@ -37,6 +37,7 @@ macro add_variable_bounds(data)
     end
 end
 
+
 """
     extract_problem_data(m)
 
@@ -67,9 +68,9 @@ function extract_problem_data(m::MathProgBase.AbstractLinearQuadraticModel)
 
     # Get which variables are integer
     var_types = MathProgBase.getvartype(m)
-    idx_int = find(var_types .!= :Cont)
+    int_idx = find(var_types .!= :Cont)
 
-    return ProblemData(c, l, A, u; idx_int = idx_int)
+    return ProblemData(c, l, A, u; int_idx = int_idx)
 end
 
 
@@ -101,7 +102,7 @@ a uniform spatial distribution.
 In order to have a uniform distributions over the sphere we multiply the vectors
 by f(r): f(r)*r is distributed with density proportional to r^n on [0,1].
 """
-function Distributions._rand!{T<:Real}(s::MvBall, x::AbstractVector{T})
+function Distributions._rand!(s::MvBall, x::AbstractVector{T}) where {T<:Real}
     n, r, center = s.n, s.r, s.center
     x_sample = randn(n)
     s2 = norm(x_sample)^2

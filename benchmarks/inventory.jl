@@ -18,7 +18,7 @@ theta_bar = [2.;               # h
             ]
 radius = 1.0
 
-N_train = 1000
+N_train = 5000
 N_test = 100
 theta_train = MyModule.sample(problem, theta_bar, N=N_train)
 theta_test = MyModule.sample(problem, theta_bar, N=N_test)
@@ -27,8 +27,8 @@ theta_test = MyModule.sample(problem, theta_bar, N=N_test)
 # -----
 srand(1)
 
-# Get active_constr for each point
-y_train, enc2active_constr = MyModule.encode(MyModule.active_constraints(theta_train, problem))
+# Get strategy for each point
+y_train, enc2strategy = MyModule.encode(MyModule.strategies(theta_train, problem))
 
 # Learn tree
 lnr = MyModule.tree(theta_train, y_train, sparse=false, export_tree=true, problem=problem)
@@ -37,7 +37,7 @@ lnr = MyModule.tree(theta_train, y_train, sparse=false, export_tree=true, proble
 # Test
 # ------
 # Evaluate performance
-df, df_detail = MyModule.eval_performance(theta_test, lnr, problem, enc2active_constr; k = 3)
+df, df_detail = MyModule.eval_performance(theta_test, lnr, problem, enc2strategy; k = 3)
 
 # Store results
 MyModule.write_output(df, df_detail, problem)

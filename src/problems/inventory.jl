@@ -16,7 +16,7 @@ end
 
 function populate!(problem::Inventory,
                    theta::DataFrame;
-                   bin_vars::Bool=false,
+                   bin_vars::Bool=true,
                    show_model::Bool=false)
 
     # Get data from theta
@@ -87,8 +87,5 @@ function sample(problem::Inventory,
     [d[Symbol("d$i")] = X[4+i, :] for i in 1:problem.T]
 
     return d
-
-
-
 end
 

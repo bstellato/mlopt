@@ -17,7 +17,8 @@ using Plots
 # Mathematical programming and solvers
 using JuMP
 using MathProgBase
-using CPLEX   # For solving problems
+#  using GLPKMathProgInterface
+#  using CPLEX   # For solving problems
 using OSQP    # For creating problem structure from JuMP
 using Gurobi  # For reading problems from files
 using Clp  # For reading problems from files
@@ -32,7 +33,10 @@ SOLVER= MosekSolver(QUIET=1)
 #  SOLVER = GurobiSolver(OutputFlag=0)
 READ_SOLVER = GurobiSolver(OutputFlag=0)
 #  READ_SOLVER = ClpSolver()
-BUILD_SOLVER = OSQPMathProgBaseInterface.OSQPSolver(verbose=false)
+#  BUILD_SOLVER = OSQPMathProgBaseInterface.OSQPSolver(verbose=false)
+BUILD_SOLVER= MosekSolver(QUIET=1)
+#  BUILD_SOLVER = ClpSolver()
+
 
 include("types.jl")  # Functions for solving and identifying active constraints
 include("strategy.jl")  # Functions for solving and identifying strategies

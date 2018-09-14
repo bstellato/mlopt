@@ -73,7 +73,7 @@ end
 
 
 function Base.unique(strategy::Vector{Strategy})
-    n_int_var = length(strategy[1].int_var)
+    n_int_var = length(strategy[1].int_vars)
 
     # Construct vector of vectors
     strategy_vecs = [[s.int_vars; s.active_constraints] for s in strategy]
@@ -82,7 +82,7 @@ function Base.unique(strategy::Vector{Strategy})
     return [Strategy(s[1:n_int_var], s[n_int_var+1:end]) for s in unique(strategy_vecs)]
 end
 
-==(s1::Strategy, s2::Strategy) = (s1.int_vars == s2.int_vars) & (s1.active_constraints == s2.active_constraints)
+Base.:(==)(s1::Strategy, s2::Strategy) = ((s1.int_vars == s2.int_vars) & (s1.active_constraints == s2.active_constraints))
 
 
 

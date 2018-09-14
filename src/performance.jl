@@ -1,11 +1,11 @@
 # Functions to analyze the performance
 
-function accuracy(active_constr_pred::Vector{Vector{Int64}},
-                  active_constr_test::Vector{Vector{Int64}})
-    n_total = length(active_constr_pred)
+function accuracy(strategy_pred::Vector{Strategy},
+                  strategy_test::Vector{Strategy})
+    n_total = length(strategy_pred)
     idx_correct = zeros(Int, n_total)
     for i = 1:n_total
-        if active_constr_pred[i] == active_constr_test[i]
+        if strategy_pred[i] == strategy_test[i]
             idx_correct[i] = 1
         end
     end
@@ -17,18 +17,19 @@ end
 function eval_performance(theta::DataFrame,
                           lnr::OT.OptimalTreeClassifier,
                           problem::OptimizationProblem,
-                          enc2active_constr::Vector{Vector{Int64}};
+                          enc2strategy::Vector{Strategy};
                           k::Int64=1   # k best predicted values
                          )
 
     println("Performance evaluation")
     println("Compute active constraints over test set")
 
-    # Get active_constr for each point
-    x_test, y_test, time_test, active_constr_test = solve(theta, problem)
+    # Get strategy for each point
+    x_test, time_test, strategy_test = solve(theta, problem)
 
-    # Get predicted active constraints for all the test points
-    x_pred, y_pred, time_pred, active_constr_pred = predict_best_full(theta, k, lnr, problem, enc2active_constr)
+    # Get predicted strategy for all the test points
+    x_pred, time_pred, strategy_pred = predict_best_full(theta, k, lnr,
+                                                         problem, enc2strategy)
 
     # Get statistics
     num_var = length(problem.data.c)
@@ -36,7 +37,7 @@ function eval_performance(theta::DataFrame,
     num_test = size(theta, 1)
     num_train = lnr.prb_.data.features.n_samples
     n_theta = size(theta, 2)
-    n_active_sets = length(enc2active_constr)
+    n_active_sets = length(enc2strategy)
 
     # Compute infeasibility and suboptimality
     # Need to update the problem!!!
@@ -51,7 +52,7 @@ function eval_performance(theta::DataFrame,
     end
 
     # accuracy
-    test_accuracy, idx_correct = accuracy(active_constr_pred, active_constr_test)
+    test_accuracy, idx_correct = accuracy(strategy_pred, strategy_test)
 
     # Get problem name
     if isdefined(problem, :file_name)
@@ -59,9 +60,6 @@ function eval_performance(theta::DataFrame,
     else
         problem_name = lowercase(split(string(typeof(problem)), ".")[end])
     end
-
-    # DEBUG
-    #  @show sum(infeas .>= TOL)
 
     # Create dataframe and export it
     df = DataFrame(

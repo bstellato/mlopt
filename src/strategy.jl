@@ -1,26 +1,17 @@
-# Solving and active constraints identification
-function Strategy(theta::DataFrame, problem::OptimizationProblem)
-    #  _, _, _, active_constr = solve(theta, problem)
-    _, _, strategy = solve(theta, problem)
-    return strategy
-end
-
+strategies(theta::DataFrame, problem::OptimizationProblem) = solve(theta, problem)[end]
 
 function solve(theta::DataFrame, problem::OptimizationProblem)
     N = size(theta, 1)
 
-    # Get active_constr for each point
+    # Get strategy for each point
     x = Vector{Vector{Float64}}(N)
-    #  y = Vector{Vector{Float64}}(N)
     time = Vector{Float64}(N)
     strategy = Vector{Strategy}(N)
     @showprogress 1 "Solving problem for each theta..." for i = 1:N
         populate!(problem, theta[i, :])
-        #  x[i], y[i], time[i], active_constr[i] = solve(problem)
         x[i], time[i], strategy[i] = solve(problem)
     end
 
-    #  return x, y, time, active_constr
     return x, time, strategy
 
 end
@@ -38,7 +29,7 @@ function encode(strategy::Vector{Strategy})
     @printf "Getting unique set of strategies\n"
     unique_strategy = unique(strategy)
     n_strategy = length(unique_strategy)  # Number of active constr vectors
-    @printf "Found %d unique active constraints\n" n_strategy
+    @printf "Found %d unique strategies\n" n_strategy
 
     # Map strategy to number
     y = Vector{Int64}(N)
@@ -84,17 +75,29 @@ function solve(problem::OptimizationProblem)
     # Solve directly with MathProgBase
     m = MathProgBase.LinearQuadraticModel(SOLVER)
     MathProgBase.loadproblem!(m, A, -Inf * ones(n_var), Inf * ones(n_var), c, l, u, :Min)
-    setvartype!(m, var_types)
+    MathProgBase.setvartype!(m, var_types)   # Set integer variables
     MathProgBase.optimize!(m)
     status = MathProgBase.status(m)
+    ((status != :Optimal) & (status != :Stall)) && error("Problem not solved to optimality. Status $(status)")
 
-    if (status != :Optimal) & (status != :Stall)
-        error("LP not solved to optimality. Status $(status)")
-    end
+    # Get solution, time and integer variables
+    x_opt = MathProgBase.getsolution(m)
+    time = MathProgBase.getsolvetime(m)
+    x_int = round.(Int64, x_opt[int_idx])
 
-    # Get strategy
-    # Get integer variables
-    x_int = MathProgBase.getsolution(m)[idx_int]
+    # Solve LP restriction to get basis
+    A_lp = [A; speye(n_var)[int_idx, :]]
+    u_lp = [u; x_int]
+    l_lp = [l; x_int]
+
+    # Solve directly with MathProgBase
+    m = MathProgBase.LinearQuadraticModel(SOLVER)
+    MathProgBase.loadproblem!(m, A_lp, -Inf * ones(n_var), Inf * ones(n_var),
+                              c, l_lp, u_lp, :Min)
+    MathProgBase.optimize!(m)
+    status = MathProgBase.status(m)
+    ((status != :Optimal) & (status != :Stall)) && error("Restricted continuous problem not solved to optimality. Status $(status)")
+
     # Get active constraints
     _, basis_constr = MathProgBase.getbasis(m)
     basis = zeros(Int, n_constr)
@@ -106,41 +109,10 @@ function solve(problem::OptimizationProblem)
         end
     end
 
-
-    #  return MathProgBase.getsolution(m), -MathProgBase.getconstrduals(m), MathProgBase.getsolvetime(m), basis
-    return MathProgBase.getsolution(m), MathProgBase.getsolvetime(m), Strategy(int_vars,
-                                                                               basis)
+    return x_opt, time, Strategy(x_int, basis)
 
 end
 
-#  """
-#      active_constr(problem)
-#
-#  Solve optimization problem and get vector of active constraints where each element is:
-#
-#    - -1: if the lower bound is active
-#    - +1: if the upper bound is active
-#    -  0: if the constraint is inactive
-#  """
-#  function active_constraints(problem::OptimizationProblem)
-#
-#      x, y, time, active_constr = solve(problem)
-#
-#
-#      #  n_constr = length(problem.data.l)
-#      #  active_constr = zeros(Int64, n_constr)
-#      #  for i = 1:n_constr
-#      #      if y[i] >= TOL
-#      #          active_constr[i] = 1
-#      #      elseif y[i] <= -TOL
-#      #          active_constr[i] = -1
-#      #      end
-#      #  end
-#
-#      # Active constr
-#      return x, y, time, active_constr
-#
-#  end
 
 """
     solve(problem, strategy)
@@ -155,20 +127,22 @@ function solve(problem::OptimizationProblem, strategy::Strategy)
     int_idx = problem.data.int_idx
 
     # Unpack strategy
-    int_vars, active_constr = strategy.int_vars, strategy.active_constr
+    int_vars, active_constr = strategy.int_vars, strategy.active_constraints
 
     @assert length(l) == length(u)
     @assert size(A, 1) == length(l)
     @assert size(A, 2) == length(c)
-    @assert maximum(int_idx) <= length(l)   # Check if vector of integers is within length
-    @assert minimum(int_idx) >= 1
+    if length(int_idx) > 0
+        @assert maximum(int_idx) <= length(l)   # int vector within length
+        @assert minimum(int_idx) >= 1
+    end
     @assert !any(l .> u)
     n_var = length(c)
     n_constr = length(u)
 
     # 1) Fix integer variables
     A_red = speye(n_var)[int_idx, :]
-    b_red = int_vars
+    bound_red = int_vars
 
     # 2) Use active constraints
     active_constr_upper = find(active_constr .== 1)
@@ -191,7 +165,7 @@ function solve(problem::OptimizationProblem, strategy::Strategy)
     status = MathProgBase.status(m)
 
     if (status != :Optimal) & (status != :Stall)
-        error("LP not solved to optimality. Status $(status)")
+        error("Problem not solved to optimality. Status $(status)")
     end
 
     x = MathProgBase.getsolution(m)
