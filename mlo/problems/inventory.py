@@ -1,5 +1,6 @@
 from .problem import OptimizationProblem
 from .utils import cvxpy2data
+from .sampling import uniform_sphere_sample
 import cvxpy as cvx
 import pandas as pd
 
@@ -18,7 +19,7 @@ class Inventory(OptimizationProblem):
         u = cvx.Variable(T)
         y = cvx.Variable(T+1)  # Auxiliary y = max(h * x, - p * x)
         if bin_vars:
-            v = cvx.Variable(T, boolean=True)
+            v = cvx.Variable(T, integer=True)
 
         # Define parameters
         x0 = cvx.Parameter(nonneg=True)
@@ -39,6 +40,7 @@ class Inventory(OptimizationProblem):
         constraints += [u >= 0]
         if bin_vars:
             constraints += [u <= M * v]
+            constraints += [0 <= v, v <= 1]  # Binary variables
         else:
             constraints += [u <= M]
 
@@ -58,23 +60,20 @@ class Inventory(OptimizationProblem):
         Populate problem using parameter theta.
         """
 
-        # Assert there is only one row
-        assert len(theta) == 1
-
         # Get parameters from dataframe
-        self.params['h'].value = theta["h"][0]
-        self.params['p'].value = theta["p"][0]
-        self.params['c'].value = theta["c"][0]
-        self.params['x0'].value = theta["x0"][0]
+        self.params['h'].value = theta["h"]
+        self.params['p'].value = theta["p"]
+        self.params['c'].value = theta["c"]
+        self.params['x0'].value = theta["x0"]
         self.params['d'].value = theta.iloc[:, 4:].values.T.flatten()
 
         # Get new problem data
         self.data = cvxpy2data(self.problem)
 
-    def sample(self, theta_var, N=100):
+    def sample(self, theta_bar, N=100):
 
-        # TODO: Define multivariate ball sampling
-        X = []
+        # Sample points from multivariate ball
+        X = uniform_sphere_sample(theta_bar, self.radius, N=N)
 
         df = pd.DataFrame({'h': X[0, :],
                            'p': X[1, :],
@@ -82,5 +81,3 @@ class Inventory(OptimizationProblem):
                            'x0': X[3, :]})
         for i in range(self.T):
             df['d%d' % i] = X[3 + i, :]
-
-

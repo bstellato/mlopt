@@ -73,7 +73,10 @@ def solve_parametric_problems(theta, problem):
 
     for i in tqdm(range(n)):
         # Populate problem
+        problem.populate(theta[i, :])
+
         # Solve
+        problem.solve()
 
 
 
