@@ -1,18 +1,14 @@
 # Define strategy
 import numpy as np
-import tqdm
 
 
 class Strategy:
     """
     Solving strategy
 
-    Parameters
-    ----------
-    int_vars: numpy array
-        Value of the integer variables
-    active_constraints: set
-        Set of active constraints
+    Args
+        int_vars (numpy array): Value of the integer variables.
+        active_constraints (numpy array): Set of active constraints.
     """
 
     def __init__(self, int_vars, active_constraints=set()):
@@ -23,9 +19,8 @@ class Strategy:
         """Overrides the default equality implementation"""
         if isinstance(other, Strategy):
             same_int_vars = np.array_equal(self.int_vars, other.int_vars)
-            same_active_constraints = (
-                self.active_constraints == other.active_constraints
-            )
+            same_active_constraints = np.array_equal(self.active_constraints,
+                                                     other.active_constraints)
             return same_int_vars + same_active_constraints
         return False
 
@@ -39,7 +34,7 @@ def unique_strategies(strategies):
     strategy_vecs = np.unique(
         np.array(
             [
-                np.concatenate((s.int_vars, np.array(s.active_constraints)))
+                np.concatenate((s.int_vars, s.active_constraints))
                 for s in strategies
             ]
         ),
@@ -50,39 +45,34 @@ def unique_strategies(strategies):
     return [Strategy(s[:n_int_var], s[n_int_var:]) for s in strategy_vecs]
 
 
-def solve_parametric_problems(theta, problem):
+def encode_strategies(strategies):
     """
-    Solve parametric problems
+    Encode strategies
 
-    Args:
-        theta (DataFrame): parameter values
-        problem (Optimizationproblem): optimization problem to solve
 
-    Returns:
-        x (numpy array list): solutions
-        time (float list): computation times
-        strategy (Strategy list): strategies
+    Args
+        strategies (Strategies array): Array of strategies to be encoded.
+
+
+    Returns
+        numpy array: Encodings for each strategy in strategies.
+        Strategies array: Array of unique strategies.
     """
-    n = len(theta)  # Number of points
-    n_var = len(problem.data.c)  # Number of variables
+    print("Encoding strategies")
+    N = len(strategies)
 
-    # Preallocate solutions
-    x = []
-    time = []
-    strategy = []
+    print("Getting unique set of strategies")
+    unique = unique_strategies(strategies)
+    n_unique_strategies = len(unique)
+    print("Found %d unique strategies" % n_unique_strategies)
 
-    for i in tqdm(range(n)):
-        # Populate problem
-        problem.populate(theta[i, :])
+    # Map strategies to number
+    y = -1 * np.ones(N)
+    for i in range(N):
+        for j in range(n_unique_strategies):
+            if unique[j] == strategies[j]:
+                y[i] = j
+                break
+        assert y[i] != -1, "Strategy not found"
 
-        # Solve
-        problem.solve()
-
-
-
-
-
-
-
-
-
+    return y, unique
