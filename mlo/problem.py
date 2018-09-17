@@ -1,6 +1,6 @@
 # Define optimization problem
 import numpy as np
-from .. import constants as con
+from . import constants as con
 
 
 class ProblemData:

@@ -1,43 +1,20 @@
 import numpy as np
-import scipy.sparse as spa
-from cvxopt.base import matrix, spmatrix
-from cvxopt.modeling import op
+import scipy.io as spio
 from mlo.problem import ProblemData
 
 
-def read_mps(filepath):
-    # Read problem from file path
-    mat_form = op().fromfile(filepath)._inmatrixform(format='sparse')
-    assert mat_form
-    lp, _, _ = mat_form
+def read_mat(filepath):
+    # Load file
+    m = spio.loadmat(filepath)
 
-    # Get variables
-    x = lp.variables()[0]
-
-    # Cost
-    c = lp.objective._linear._coeff[x]
-
-    # Inequalities
-    inequalities = lp._inequalities
-    G = inequalities[0]._f._linear._coeff[x]
-    h = -inequalities[0]._f._constant
-
-    # Equalities
-    equalities = lp._equalities
-    A, b = None, None
-    if equalities:
-        A = equalities[0]._f._linear._coeff[x]
-        b = -equalities[0]._f._constant
+    # Convert matrices
+    c = m['c'].T.flatten().astype(float)
+    A = m['A'].astype(float).tocsc()
+    l = m['l'].T.flatten().astype(float)
+    u = m['u'].T.flatten().astype(float)
+    if len(m['int_idx']) > 0:
+        int_idx = m['int_idx'].T.flatten().astype(int)
     else:
-        A = spmatrix(0.0, [], [],  (0, len(x)))  # CRITICAL
-        b = matrix(0.0, (0, 1))
-
-    c = np.array(c).flatten()
-    G = np.array(G)
-    h = np.array(h).flatten()
-    A = np.array(A)
-    b = np.array(b).flatten()
-
-    int_idx =
+        int_idx = np.array([])
 
     return ProblemData(c, l, A, u, int_idx)
