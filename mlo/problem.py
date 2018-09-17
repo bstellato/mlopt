@@ -17,7 +17,7 @@ class ProblemData:
         """
         n_con = len(self.l)
         eq = np.where(self.u - self.l) <= con.TOL
-        ineq = set(range(n_con)) - set(eq)
+        ineq = np.array(set(range(n_con)) - set(eq))
         return eq, ineq
 
 

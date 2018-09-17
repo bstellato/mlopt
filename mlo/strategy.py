@@ -1,5 +1,6 @@
 # Define strategy
 import numpy as np
+import tqdm
 
 
 class Strategy:
@@ -47,3 +48,38 @@ def unique_strategies(strategies):
 
     # Get unique vectors
     return [Strategy(s[:n_int_var], s[n_int_var:]) for s in strategy_vecs]
+
+
+def solve_parametric_problems(theta, problem):
+    """
+    Solve parametric problems
+
+    Args:
+        theta (DataFrame): parameter values
+        problem (Optimizationproblem): optimization problem to solve
+
+    Returns:
+        x (numpy array list): solutions
+        time (float list): computation times
+        strategy (Strategy list): strategies
+    """
+    n = len(theta)  # Number of points
+    n_var = len(problem.data.c)  # Number of variables
+
+    # Preallocate solutions
+    x = []
+    time = []
+    strategy = []
+
+    for i in tqdm(range(n)):
+        # Populate problem
+        # Solve
+
+
+
+
+
+
+
+
+

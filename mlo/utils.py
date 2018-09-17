@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.io as spio
+import cvxpy as cvx
+import scipy.sparse as spa
 from mlo.problem import ProblemData
 
 
@@ -18,3 +20,15 @@ def read_mat(filepath):
         int_idx = np.array([])
 
     return ProblemData(c, l, A, u, int_idx)
+
+
+def cvxpy2data(problem):
+    data = problem.get_problem_data(cvx.OSQP)  # Get problem data
+    int_idx = data['bool_vars_idx']
+    c = data['q']
+    A = spa.vstack([data['A'], data['F']]).tocsc()
+    u = np.concatenate((data['b'], data['g']))
+    l = np.concatenate([data['b'], -np.inf*np.ones(data['g'].shape)])
+
+    return ProblemData(c, l, A, u, int_idx)
+
