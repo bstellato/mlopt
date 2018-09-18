@@ -7,6 +7,7 @@ import pandas as pd
 
 class Inventory(OptimizationProblem):
     def __init__(self, T, M, K, radius, bin_vars=False):
+        self.name = "inventory"
         self.T = T  # Horizon
         self.M = M  # Maximum ordering capacity
         self.K = K  # Fixed ordering cost
