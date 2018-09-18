@@ -30,23 +30,29 @@ def eval_performance(theta, lnr, problem, enc2strategy, k=1):
     """
     Evaluate predictor performance
 
-    Args:
-        theta (DataFrame): Data to predict.
-        lnr (Learner): Learner.
-        problem (OptimizationProblem): Optimization problem.
-        enc2strategy (Strategy list): Mapping between encoding to the strategy.
-        k (int, optional): Best k predicted values to pick. Defaults to 0.
+    Parameters
+    ----------
+    theta : DataFrame
+        Data to predict.
+    lnr : Learner
+        Learner.
+    problem : OptimizationProblem
+        Optimization problem.
+    enc2strategy : Strategy list
+        Mapping between encoding to the strategy.
+    k : int, optional
+        Best k predicted values to pick. Defaults to 0.
     """
 
     print("Performance evaluation")
     print("Compute active constraints over test set")
 
     # Get strategy for each point
-    x_test, time_test, strategy_test = solve(theta, problem)
+    x_test, time_test, strategy_test = problem.solve(theta)
 
     # Get predicted strategy for each point
-    x_pred, time_pred, strategy_pred = predict_best(theta, k, lnr, problem,
-            enc2strategy)
+    x_pred, time_pred, strategy_pred = predict_best(theta, k, lnr,
+                                                    problem, enc2strategy)
 
     # TODO: Fix rest
 

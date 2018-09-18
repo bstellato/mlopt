@@ -4,6 +4,7 @@ import scipy.sparse as spa
 from . import constants as con
 from solvers.solvers import SOLVER_MAP
 from .strategy import Strategy
+from .constants import TOL
 import tqdm
 
 
@@ -24,10 +25,43 @@ class ProblemData(object):
         ineq = np.array(set(range(n_con)) - set(eq))
         return eq, ineq
 
+    def cost(self, x):
+        """Return cost function value"""
+        return self.c.dot(x)
+
 
 class OptimizationProblem(object):
     def is_mip(self):
         return len(self.data) > 0
+
+    def infeasibility(self, x):
+        """
+        Compute infeasibility for vector x
+        """
+        l, A, u = self.data.l, self.data.A, self.data.u
+
+        norm_A = [spa.linalg.norm(A[i, :]) for i in range(A.shape[0])]
+
+        upper = np.maximum(A.dot(x) - u, 0.)
+        lower = np.maximum(l - A.dot(x), 0.)
+
+        # Normalize nonzero ones
+        for i in range(len(upper)):
+            if upper[i] >= TOL:
+                upper[i] /= np.maximum(norm_A[i], np.abs(u[i]))
+        for i in range(len(lower)):
+            if lower[i] >= TOL:
+                lower[i] /= np.maximum(norm_A[i], np.abs(l[i]))
+
+        return np.linalg.norm(upper + lower)
+
+    def suboptimality(self, x, x_opt):
+        """
+        Compute suboptimality for vector x
+        """
+        c = self.data.c
+        return (self.data.cost(x) - self.data.cost(x.opt)) \
+            / np.linalg.norm(c, np.inf)
 
     def cost(self, x):
         return np.dot(self.data.c, x)
@@ -117,9 +151,7 @@ class OptimizationProblem(object):
 
         # 2) Use active constraints
         active_constraints_upper = np.where(active_constr == 1)
-        #  n_upper = len(active_constraints_upper)
         active_constraints_lower = np.where(active_constr == -1)
-        #  n_lower = len(active_constraints_lower)
         A_upper = A[active_constraints_upper, :]
         u_upper = u[active_constraints_upper]
         A_lower = A[active_constraints_lower, :]
