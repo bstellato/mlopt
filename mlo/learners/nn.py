@@ -3,6 +3,9 @@ from .learner import Learner
 # TensorFlow and tf.keras
 import tensorflow as tf
 
+# Utils
+import tqdm
+
 
 class NN(Learner):
 
@@ -40,6 +43,10 @@ class NN(Learner):
 
     def train(self, X, y):
         n_train = len(X)
+        if n_train < 100:
+            # For small dataset use same batch size
+            # as complete set of points.
+            self.batch_size = n_train
 
         # Define neural network
         # tf Graph Input
@@ -64,34 +71,40 @@ class NN(Learner):
             # Run the initializer
             sess.run(init)
 
-            # TODO: Fix batch/epochs business!
-            # TODO: Continue from here
-            #  # Training cycle
-            #  for epoch in range(self.training_epochs):
-            #      avg_cost = 0.
-            #      total_batch = int(mnist.train.num_examples/batch_size)
-            #      # Loop over all batches
-            #      for i in range(total_batch):
-            #          batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-            #          # Run optimization op (backprop) and cost op (to get loss value)
-            #          _, c = sess.run([minimize_step, cost], feed_dict={x: batch_xs,
-            #              y: batch_ys})
-            #          # Compute average loss
-            #          avg_cost += c / total_batch
-            #      # Display logs per epoch step
-            #      if (epoch+1) % display_step == 0:
-            #          print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
-            #
-            #  print("Optimization Finished!")
-            #
-            #  # Test model
-            #  correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-            #  # Calculate accuracy
-            #  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-            #  print("Accuracy:", accuracy.eval({x: mnist.test.images, y: mnist.test.labels}))
-            #
-            #
+            # TODO: Continue from here!
+            # TODO: Fix next batch: use DataSet class
+            # Training cycle
+            for epoch in tqdm(range(self.training_epochs)):
+                avg_cost = 0.
+                total_batch = int(n_train/self.batch_size)
 
+                # Loop over all batches
+                for i in range(total_batch):
+                    batch_xs, batch_ys = mnist.train.next_batch(batch_size)
+                    # Run optimization op (backprop) and cost op (to get loss value)
+                    _, cost_value = sess.run([minimize_step, cost],
+                                              feed_dict={x: batch_xs,
+                                                         y: batch_ys})
+                    # Compute average loss
+                    avg_cost += cost_value / total_batch
+                # Display logs per epoch step
+                if (epoch+1) % self.display_step == 0:
+                    print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
+
+            print("Optimization Finished!")
+
+
+    def predict(self, X):
+
+        # Predict using internal model with data X
+        # Test model
+        correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+        # Calculate accuracy
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        print("Accuracy:", accuracy.eval({x: mnist.test.images, y: mnist.test.labels}))
+
+
+#
 
 
 
