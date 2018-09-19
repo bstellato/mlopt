@@ -1,6 +1,6 @@
 from .learner import Learner
 
-# TensorFlow and tf.keras
+#  import pandas as pd
 import tensorflow as tf
 
 # Utils
@@ -11,7 +11,7 @@ class NN(Learner):
 
     def __init__(self, n_layers, n_classes,
                  learning_rate=0.01,
-                 training_epochs=25,
+                 training_epochs=50,
                  batch_size=100,
                  display_step=1):
 
@@ -41,26 +41,36 @@ class NN(Learner):
         out = tf.nn.softmax(tf.matmul(layer, weights['out']) + biases['out'])
         return out
 
-    def train(self, X, y):
-        n_train = len(X)
-        if n_train < 100:
-            # For small dataset use same batch size
-            # as complete set of points.
-            self.batch_size = n_train
+    def train(self, X_train, y_train):
+        n_train = len(X_train)
+
+        # Create dataset from input data
+        ds = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+
+        # Repeat dataset for each epoch
+        ds.repeat(self.training_epochs)
+
+        # Create dataset batch iterator
+        iterator = ds.batch(self.batch_size).make_one_shot_iterator()
+        next_batch = iterator.get_next()
+
+        #  if n_train < 100:
+        #      # For small dataset use same batch size
+        #      # as complete set of points.
+        #      self.batch_size = n_train
 
         # Define neural network
-        # tf Graph Input
-        x = tf.placeholder("float", [None, self.n_layers[0]])
-        y = tf.placeholder("float", [None, self.n_classes])
+        self.x = tf.placeholder("float", [None, self.n_layers[0]])
+        self.y = tf.placeholder("float", [None, self.n_classes])
 
         # Construct model
-        y_pred = self.neural_network(x, self.weights, self.biases)
+        self.y_pred = self.neural_network(self.x, self.weights, self.biases)
 
         # Define loss and optimizer
-        cost = tf.reduce_mean(-tf.reduce_sum(y*tf.log(y_pred),
-                                             reduction_indices=1))
+        self.cost = tf.reduce_mean(-tf.reduce_sum(y_train*tf.log(self.y_pred),
+                                                  reduction_indices=1))
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-        minimize_step = optimizer.minimize(cost)
+        minimize_step = optimizer.minimize(self.cost)
 
         # Initialize the variables (i.e. assign their default value)
         init = tf.global_variables_initializer()
@@ -71,41 +81,44 @@ class NN(Learner):
             # Run the initializer
             sess.run(init)
 
-            # TODO: Continue from here!
-            # TODO: Fix next batch: use DataSet class
             # Training cycle
             for epoch in tqdm(range(self.training_epochs)):
+
                 avg_cost = 0.
                 total_batch = int(n_train/self.batch_size)
 
                 # Loop over all batches
                 for i in range(total_batch):
-                    batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-                    # Run optimization op (backprop) and cost op (to get loss value)
-                    _, cost_value = sess.run([minimize_step, cost],
-                                              feed_dict={x: batch_xs,
-                                                         y: batch_ys})
+
+                    batch_x, batch_y = sess.run(next_batch)
+
+                    # Run optimization (backprop) and cost (loss value)
+                    _, cost_value = sess.run([minimize_step, self.cost],
+                                             feed_dict={self.x: batch_x,
+                                                        self.y: batch_y})
                     # Compute average loss
                     avg_cost += cost_value / total_batch
+
                 # Display logs per epoch step
                 if (epoch+1) % self.display_step == 0:
-                    print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
+                    print("Epoch:", '%04d' % (epoch+1),
+                          "cost=", "{:.9f}".format(avg_cost))
 
             print("Optimization Finished!")
 
+    def predict(self, X_pred):
 
-    def predict(self, X):
+        with tf.Session():
 
-        # Predict using internal model with data X
-        # Test model
-        correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-        # Calculate accuracy
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        print("Accuracy:", accuracy.eval({x: mnist.test.images, y: mnist.test.labels}))
+            max_y_pred = tf.argmax(self.y_pred, 1)
 
+            return max_y_pred.eval({self.x: X_pred})
 
-#
-
-
-
-
+        #  # Predict using internal model with data X
+        #  # Test model
+        #  correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+        #  # Calculate accuracy
+        #  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        #  print("Accuracy:", accuracy.eval({x: mnist.test.images,
+        #                                    y: mnist.test.labels}))
+        #
