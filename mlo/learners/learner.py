@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from ..constants import TOL
 import numpy as np
 
@@ -22,11 +22,11 @@ class Learner(ABC):
     def n_train(self, value):
         self._n_train = value
 
-    @ABC.abstractmethod
+    @abstractmethod
     def train(self, X, y):
         """Learn predictor form data"""
 
-    @ABC.abstractmethod
+    @abstractmethod
     def predict(self, X):
         """Predict strategy from data"""
 

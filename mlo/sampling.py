@@ -15,6 +15,21 @@ def uniform_sphere_sample(center, radius, N=100):
     vectors by f(radius): f(radius)*radius is distributed with density
     proportional to radius^n on
     [0,1].
+
+    Parameters
+    ----------
+    center : numpy array
+        Center of the sphere.
+    radius : float
+        Radius of the sphere.
+    N : int, optional
+        Number of samples. Default 100.
+
+    Returns
+    -------
+    numpy array :
+        Array of points with dimension m x n. n is the number of points and
+        m the dimension.
     """
     n_dim = len(center)
     x = np.random.normal(size=(N, n_dim))

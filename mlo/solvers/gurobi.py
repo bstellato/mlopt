@@ -160,7 +160,7 @@ class GUROBISolver(object):
 
     def active_constraints(self, model):
 
-        active_constr = np.zeros(model.NumConstrs)
+        active_constr = np.zeros(model.NumConstrs, dtype=int)
         basis = model.getAttr(grb.AttrConstClass.CBasis)
 
         for i in range(model.NumConstrs):

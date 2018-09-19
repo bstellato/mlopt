@@ -1,11 +1,11 @@
-from .problem import OptimizationProblem
-from .utils import cvxpy2data
-from .sampling import uniform_sphere_sample
 import cvxpy as cvx
 import pandas as pd
+import mlo
+import importlib
+importlib.reload(mlo)
 
 
-class Inventory(OptimizationProblem):
+class Inventory(mlo.OptimizationProblem):
     def __init__(self, T, M, K, radius, bin_vars=False):
         self.name = "inventory"
         self.T = T  # Horizon
@@ -46,7 +46,7 @@ class Inventory(OptimizationProblem):
             constraints += [u <= M]
 
         # Objective
-        cost = cvx.sum_entries(y) + cvx.sum_entries(c * u)
+        cost = cvx.sum(y) + cvx.sum(c * u)
         if bin_vars:
             cost += cvx.sum_entries(K * v)
 
@@ -54,7 +54,7 @@ class Inventory(OptimizationProblem):
         self.problem = cvx.Problem(cvx.Minimize(cost), constraints)
 
         # Get problem data
-        self.data = cvxpy2data(self.problem)
+        #  self.data = cvxpy2data(self.problem)
 
     def populate(self, theta):
         """
@@ -66,19 +66,21 @@ class Inventory(OptimizationProblem):
         self.params['p'].value = theta["p"]
         self.params['c'].value = theta["c"]
         self.params['x0'].value = theta["x0"]
-        self.params['d'].value = theta.iloc[:, 4:].values.T.flatten()
+        self.params['d'].value = theta.iloc[4:].values
 
         # Get new problem data
-        self.data = cvxpy2data(self.problem)
+        self.data = mlo.cvxpy2data(self.problem)
 
     def sample(self, theta_bar, N=100):
 
         # Sample points from multivariate ball
-        X = uniform_sphere_sample(theta_bar, self.radius, N=N)
+        X = mlo.uniform_sphere_sample(theta_bar, self.radius, N=N)
 
-        df = pd.DataFrame({'h': X[0, :],
-                           'p': X[1, :],
-                           'c': X[2, :],
-                           'x0': X[3, :]})
+        df = pd.DataFrame({'h': X[:, 0],
+                           'p': X[:, 1],
+                           'c': X[:, 2],
+                           'x0': X[:, 3]})
         for i in range(self.T):
-            df['d%d' % i] = X[3 + i, :]
+            df['d%d' % i] = X[:, 3 + i]
+
+        return df

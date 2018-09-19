@@ -202,16 +202,16 @@ class MOSEKSolver(object):
             "Basic solution not available for Mosek"
 
         num_constr = task.getnumcon()
-        keys_constr = np.zeros(num_constr)
+        keys_constr = [mosek.stakey.unk] * num_constr
         task.getskc(mosek.soltype.bas, keys_constr)
 
-        active_constr = np.zeros(num_constr)
+        active_constr = np.zeros(num_constr, dtype=int)
         for i in range(num_constr):
             if keys_constr[i] == mosek.stakey.low:
                 active_constr[i] = -1
-            elif keys_constr[i] == mosek.stakey.up:
+            elif keys_constr[i] == mosek.stakey.upr:
                 active_constr[i] = 1
-            elif keys_constr[i] == mosek.stakey.fx:
+            elif keys_constr[i] == mosek.stakey.fix:
                 active_constr[i] = 1  # Either of them is active
 
         return active_constr

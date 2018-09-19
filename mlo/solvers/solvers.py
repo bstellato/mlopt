@@ -1,6 +1,6 @@
-from solvers.gurobi import GUROBISolver
-from solvers.mosek import MOSEKSolver
-from solvers.osqp import OSQPSolver
+from .gurobi import GUROBISolver
+from .mosek import MOSEKSolver
+from .osqp import OSQPSolver
 
 GUROBI = 'GUROBI'
 OSQP = 'OSQP'
@@ -9,3 +9,5 @@ MOSEK = 'MOSEK'
 SOLVER_MAP = {OSQP: OSQPSolver,
               GUROBI: GUROBISolver,
               MOSEK: MOSEKSolver}
+
+DEFAULT_SOLVER = MOSEK

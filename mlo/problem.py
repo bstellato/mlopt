@@ -2,10 +2,11 @@
 import numpy as np
 import scipy.sparse as spa
 from . import constants as con
-from solvers.solvers import SOLVER_MAP
+from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
+from .solvers.statuses import SOLUTION_PRESENT
 from .strategy import Strategy
 from .constants import TOL
-import tqdm
+from tqdm import tqdm
 
 
 class ProblemData(object):
@@ -32,7 +33,8 @@ class ProblemData(object):
 
 class OptimizationProblem(object):
     def is_mip(self):
-        return len(self.data) > 0
+        """Check if problem has integer variables."""
+        return len(self.data.int_idx) > 0
 
     def infeasibility(self, x):
         """
@@ -60,15 +62,21 @@ class OptimizationProblem(object):
         Compute suboptimality for vector x
         """
         c = self.data.c
-        return (self.data.cost(x) - self.data.cost(x.opt)) \
-            / np.linalg.norm(c, np.inf)
+        return (self.data.cost(x) - self.data.cost(x.opt)) / np.linalg.norm(c, np.inf)
 
     def cost(self, x):
         return self.data.cost(x)
 
-    def solve(self, solver, settings={}):
+    def solve(self, solver=DEFAULT_SOLVER, settings={}):
         """
         Solve optimization problem
+
+        Parameters
+        ----------
+        solver : string, optional
+            Solver to be used. Default Mosek.
+        settings : dict, optional
+            Solver settings. Default empty.
 
         Returns
         -------
@@ -81,16 +89,34 @@ class OptimizationProblem(object):
         """
         s = SOLVER_MAP[solver](settings)
         results = s.solve(self)
+
+        # DEBUG CHECK OTHER SOLVER
+        #  s = SOLVER_MAP['GUROBI'](settings)
+        #  res_gurobi = s.solve(self)
+        #  assert np.linalg.norm(self.cost(results.x) - self.cost(res_gurobi.x)) <= 1e-05
+
+        if results.status not in SOLUTION_PRESENT:
+            import cvxpy as cvx
+            x = cvx.Variable(len(self.data.c))
+            problem = cvx.Problem(cvx.Minimize(self.data.c * x),
+                                  [self.data.A * x <= self.data.u,
+                                   self.data.A * x >= self.data.l])
+            problem.solve(cvx.GUROBI, verbose=True)
+            import ipdb; ipdb.set_trace()
+            raise ValueError('Problem not solved. Status %s' % results.status)
+
         x_opt = results.x
         time = results.run_time
-        x_int = results.x[self.data.int_idx]
+        x_int = np.array([], dtype=int)
+        if self.is_mip():
+            x_int = results.x[self.data.int_idx]
 
         # Get strategy
         strategy = Strategy(x_int, results.active_constraints)
 
         return x_opt, time, strategy
 
-    def solve_parametric(self, theta):
+    def solve_parametric(self, theta, solver=DEFAULT_SOLVER, settings={}):
         """
         Solve parametric problems
 
@@ -100,6 +126,10 @@ class OptimizationProblem(object):
             parameter values
         problem : Optimizationproblem
             optimization problem to solve
+        solver : string, optional
+            Solver to be used. Default Mosek.
+        settings : dict, optional
+            Solver settings. Default empty.
 
         Returns
         -------
@@ -117,13 +147,14 @@ class OptimizationProblem(object):
         time = [None for i in range(n)]
         strategy = [None for i in range(n)]
 
-        for i in tqdm(range(n)):
-            self.populate(theta[i, :])
-            x[i], time[i], strategy[i] = self.solve()
+        for i in tqdm(range(n), desc="Solving for all theta..."):
+            self.populate(theta.iloc[i, :])
+            x[i], time[i], strategy[i] = self.solve(solver, settings)
 
         return x, time, strategy
 
-    def solve_with_strategy(self, strategy, solver, settings={}):
+    def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
+                            settings={}):
         """
         Solve problem using strategy
 
@@ -131,8 +162,10 @@ class OptimizationProblem(object):
         ----------
         strategy : Strategy
             Strategy to be used.
-        solver : string
-            Solver to use as defined in solvers.py
+        solver : string, optional
+            Solver to be used. Default Mosek.
+        settings : dict, optional
+            Solver settings. Default empty.
 
         Returns
         -------

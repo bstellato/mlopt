@@ -12,8 +12,8 @@ class Strategy:
     """
 
     def __init__(self, int_vars, active_constraints):
-        self.int_vars
-        self.active_constraints
+        self.int_vars = int_vars
+        self.active_constraints = active_constraints
 
     def __eq__(self, other):
         """Overrides the default equality implementation"""
