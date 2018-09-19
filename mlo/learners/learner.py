@@ -21,13 +21,15 @@ class Learner(ABC):
         self._n_train = value
 
     @ABC.abstractmethod
-    def learn(X, y):
+    def train(self, X, y):
         """Learn predictor form data"""
 
     @ABC.abstractmethod
-    def predict(X):
+    def predict(self, X):
         """Predict strategy from data"""
 
     # TODO: Add enc2strategy as an attribute
 
-    def predict_best(X, k)
+    #  def predict_best(X, k)
+
+
