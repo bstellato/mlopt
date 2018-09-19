@@ -8,14 +8,19 @@ def accuracy(strategy_pred,
     """
     Accuracy comparison between predicted and test strategies
 
-    Args:
-        strategy_pred (Strategy list): List of predicted strategies.
-        strategy_pred (Strategy list): List of test strategies.
+    Parameters
+    ----------
+    strategy_pred : Strategy list
+        List of predicted strategies.
+    strategy_pred : Strategy list
+        List of test strategies.
 
-    Returns:
-        float: Fraction of correct over total strategies compared.
-        numpy array: Boolean vector indicating which strategy is correct.
-
+    Returns
+    -------
+    float:
+        Fraction of correct over total strategies compared.
+    numpy array:
+        Boolean vector indicating which strategy is correct.
     """
     assert len(strategy_pred) == len(strategy_test)
     n_total = len(strategy_pred)
@@ -27,7 +32,7 @@ def accuracy(strategy_pred,
     return np.sum(idx_correct) / n_total, idx_correct
 
 
-def eval_performance(theta, lnr, problem, enc2strategy, k=1):
+def eval_performance(theta, learner, problem, enc2strategy, k=1):
     """
     Evaluate predictor performance
 
@@ -35,7 +40,7 @@ def eval_performance(theta, lnr, problem, enc2strategy, k=1):
     ----------
     theta : DataFrame
         Data to predict.
-    lnr : Learner
+    learner : Learner
         Learner.
     problem : OptimizationProblem
         Optimization problem.
@@ -52,13 +57,16 @@ def eval_performance(theta, lnr, problem, enc2strategy, k=1):
     x_test, time_test, strategy_test = problem.solve(theta)
 
     # Get predicted strategy for each point
-    x_pred, time_pred, strategy_pred = predict_best(theta, k, lnr,
-                                                    problem, enc2strategy)
+    x_pred, time_pred, strategy_pred = learner.predict_best_points(theta, k,
+                                                                   learner,
+                                                                   problem,
+                                                                   enc2strategy
+                                                                   )
 
     num_var = len(problem.data.c)
     num_constr = len(problem.data.l)
     num_test = len(theta)
-    num_train = lnr.n_train    # Number of training samples from learner
+    num_train = learner.n_train    # Number of training samples from learner
     n_theta = theta.shape[1]   # Parameters dimension
     n_active_sets = len(enc2strategy)  # Number of active sets
 
@@ -105,3 +113,22 @@ def eval_performance(theta, lnr, problem, enc2strategy, k=1):
         })
 
     return df, df_detail
+
+
+def store(results,
+          file_name):
+    """
+    Store results as csv files
+
+    Parameters
+    ----------
+    results : array_like
+        Results to be stored.
+    file_name : string
+        File name.
+    """
+    for i in range(len(results)):
+        results[i].to_csv(file_name + '%d.csv' % i)
+
+
+

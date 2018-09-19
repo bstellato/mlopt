@@ -1,4 +1,5 @@
 from .learner import Learner
+import numpy as np
 
 #  import pandas as pd
 import tensorflow as tf
@@ -7,7 +8,7 @@ import tensorflow as tf
 import tqdm
 
 
-class NN(Learner):
+class NeuralNet(Learner):
 
     def __init__(self, n_layers, n_classes,
                  learning_rate=0.01,
@@ -106,13 +107,24 @@ class NN(Learner):
 
             print("Optimization Finished!")
 
+            # TODO: Save model!
+            #  saver.save(sess, )
+
     def predict(self, X_pred):
 
+        return self.predict_best(X_pred, k=1)
+
+    def predict_best(self, X_pred, k=1):
+
         with tf.Session():
+            # Evaluate probabilities
+            proba = self.y_pred.eval({self.x: X_pred})
 
-            max_y_pred = tf.argmax(self.y_pred, 1)
+        # Sort probabilities
+        idx_probs = np.argsort(proba)[::-1]
 
-            return max_y_pred.eval({self.x: X_pred})
+        # Get best k indices
+        return idx_probs[:k]
 
         #  # Predict using internal model with data X
         #  # Test model

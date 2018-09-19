@@ -11,7 +11,7 @@ class Strategy:
         active_constraints (numpy array): Set of active constraints.
     """
 
-    def __init__(self, int_vars, active_constraints=set()):
+    def __init__(self, int_vars, active_constraints):
         self.int_vars
         self.active_constraints
 
@@ -50,13 +50,17 @@ def encode_strategies(strategies):
     Encode strategies
 
 
-    Args
-        strategies (Strategies array): Array of strategies to be encoded.
-
+    Parameters
+    ----------
+    strategies : Strategies array
+        Array of strategies to be encoded.
 
     Returns
-        numpy array: Encodings for each strategy in strategies.
-        Strategies array: Array of unique strategies.
+    -------
+    numpy array
+        Encodings for each strategy in strategies.
+    Strategies array
+        Array of unique strategies.
     """
     print("Encoding strategies")
     N = len(strategies)

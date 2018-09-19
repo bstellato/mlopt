@@ -64,7 +64,7 @@ class OptimizationProblem(object):
             / np.linalg.norm(c, np.inf)
 
     def cost(self, x):
-        return np.dot(self.data.c, x)
+        return self.data.cost(x)
 
     def solve(self, solver, settings={}):
         """
@@ -94,14 +94,21 @@ class OptimizationProblem(object):
         """
         Solve parametric problems
 
-        Args:
-            theta (DataFrame): parameter values
-            problem (Optimizationproblem): optimization problem to solve
+        Parameters
+        ----------
+        theta : DataFrame
+            parameter values
+        problem : Optimizationproblem
+            optimization problem to solve
 
-        Returns:
-            x (numpy array list): solutions
-            time (float list): computation times
-            strategy (Strategy list): strategies
+        Returns
+        -------
+        x : numpy array list
+            solutions
+        time : float list
+            computation times
+        strategy : Strategy list
+            strategies
         """
         n = len(theta)  # Number of points
 
