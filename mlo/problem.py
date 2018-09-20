@@ -118,13 +118,15 @@ class OptimizationProblem(object):
         #      print(x_cvxpy)
         #      print(results.x)
         #
+
+        n_constr = len(self.data.u)  # Number of constraints
         if results.status not in SOLUTION_PRESENT:
-            import cvxpy as cvx
-            x = cvx.Variable(len(self.data.c))
-            problem = cvx.Problem(cvx.Minimize(self.data.c * x),
-                                  [self.data.A * x <= self.data.u,
-                                   self.data.A * x >= self.data.l])
-            problem.solve(cvx.GUROBI, verbose=True)
+            #  import cvxpy as cvx
+            #  x = cvx.Variable(len(self.data.c))
+            #  problem = cvx.Problem(cvx.Minimize(self.data.c * x),
+            #                        [self.data.A * x <= self.data.u,
+            #                         self.data.A * x >= self.data.l])
+            #  problem.solve(cvx.GUROBI, verbose=True)
             raise ValueError('Problem not solved. Status %s' % results.status)
 
         x_opt = results.x
@@ -146,16 +148,84 @@ class OptimizationProblem(object):
 
             # Solve and get active constraints
             results_cont = SOLVER_MAP[solver](settings).solve(data_cont)
-            active_constraints = results_cont.active_constraints
-
+            # Get only active constraints of the original problem (ignore x_int
+            # fixing)
+            active_constraints = results_cont.active_constraints[:n_constr]
         else:
             # Continuous problem. Get active constraints directly
             active_constraints = results.active_constraints
+
+        import ipdb; ipdb.set_trace()
 
         # Get strategy
         strategy = Strategy(x_int, active_constraints)
 
         return x_opt, time, strategy
+
+    def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
+                            settings={}):
+        """
+        Solve problem using strategy
+
+        Parameters
+        ----------
+        strategy : Strategy
+            Strategy to be used.
+        solver : string, optional
+            Solver to be used. Default Mosek.
+        settings : dict, optional
+            Solver settings. Default empty.
+
+        Returns
+        -------
+        numpy array
+            Solution.
+        float
+            Time.
+        """
+
+        c, l, A, u, int_idx = self.data.c, self.data.l, self.data.A, self.data.u, self.data.int_idx
+        int_vars, active_constr = strategy.int_vars, strategy.active_constraints
+
+        if self.is_mip():
+            assert np.max(int_vars) <= len(self.data.l)
+            assert np.min(int_vars) >= 0
+
+        n_var = len(c)
+
+        # Create equivalent problem
+        A_red = spa.csc_matrix((0, n_var))
+        bound_red = np.array([])
+
+        # 1) Use active constraints
+        active_constraints_upper = np.where(active_constr == 1)[0]
+        active_constraints_lower = np.where(active_constr == -1)[0]
+        if len(active_constraints_upper) > 0:
+            A_upper = A[active_constraints_upper, :]
+            u_upper = u[active_constraints_upper]
+            A_red = spa.vstack([A_red, A_upper])
+            bound_red = np.concatenate((bound_red, u_upper))
+
+        if len(active_constraints_lower) > 0:
+            A_lower = A[active_constraints_lower, :]
+            l_lower = l[active_constraints_lower]
+            A_red = spa.vstack([A_red, A_lower])
+            bound_red = np.concatenate((bound_red, l_lower))
+
+        # 2) If integer program, fix integer variable
+        if self.is_mip():
+            A_red = spa.vstack([A_red,
+                                spa.eye(n_var, format='csc')[int_idx, :]])
+            bound_red = np.concatenate((bound_red, int_vars))
+
+        # 3) Create problem
+        problem = OptimizationProblem()
+        problem.data = ProblemData(c, bound_red, A_red, bound_red)
+
+        # Solve problem
+        x, time, _ = problem.solve(solver=solver, settings=settings)
+
+        return x, time
 
     def solve_parametric(self, theta, solver=DEFAULT_SOLVER, settings={}):
         """
@@ -193,62 +263,3 @@ class OptimizationProblem(object):
             x[i], time[i], strategy[i] = self.solve(solver, settings)
 
         return x, time, strategy
-
-    def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
-                            settings={}):
-        """
-        Solve problem using strategy
-
-        Parameters
-        ----------
-        strategy : Strategy
-            Strategy to be used.
-        solver : string, optional
-            Solver to be used. Default Mosek.
-        settings : dict, optional
-            Solver settings. Default empty.
-
-        Returns
-        -------
-        numpy array
-            Solution.
-        float
-            Time.
-        """
-
-        c, l, A, u = self.data.c, self.data.l, self.data.A, self.data.u
-        int_idx, active_constr = strategy.int_vars, strategy.active_constraints
-
-        if self.is_mip():
-            assert np.max(strategy.int_vars) <= len(self.data.l)
-            assert np.min(strategy.int_vars) >= 0
-
-        n_var = len(c)
-
-        # Create equivalent problem
-        A_red = spa.csc_matrix((0, n_var))
-        bound_red = np.array([])
-
-        # 1) If integer program, fix integer variable
-        if self.is_mip():
-            A_red = spa.vstack([A_red, spa.eye(n_var)[int_idx, :]])
-            bound_red = np.vstack([bound_red, int_idx])
-
-        # 2) Use active constraints
-        active_constraints_upper = np.where(active_constr == 1)
-        active_constraints_lower = np.where(active_constr == -1)
-        A_upper = A[active_constraints_upper, :]
-        u_upper = u[active_constraints_upper]
-        A_lower = A[active_constraints_lower, :]
-        l_lower = l[active_constraints_lower]
-        A_red = spa.vstack([A_red, A_lower, A_upper])
-        bound_red = np.vstack([bound_red, l_lower, u_upper])
-
-        # 3) Create problem
-        problem = OptimizationProblem()
-        problem.data = ProblemData(c, bound_red, A_red, bound_red)
-
-        # Solve problem
-        x, time, _ = problem.solve(solver=solver, settings=settings)
-
-        return x, time
