@@ -30,11 +30,16 @@ class ProblemData(object):
         """Return cost function value"""
         return self.c.dot(x)
 
-
-class OptimizationProblem(object):
     def is_mip(self):
         """Check if problem has integer variables."""
-        return len(self.data.int_idx) > 0
+        return len(self.int_idx) > 0
+
+
+class OptimizationProblem(object):
+
+    def is_mip(self):
+        """Check if problem has integer variables."""
+        return self.data.is_mip()
 
     def infeasibility(self, x):
         """
@@ -87,13 +92,27 @@ class OptimizationProblem(object):
         strategy
             Strategy.
         """
-        s = SOLVER_MAP[solver](settings)
-        results = s.solve(self)
+        results = SOLVER_MAP[solver](settings).solve(self.data)
 
         # DEBUG CHECK OTHER SOLVER
-        #  s = SOLVER_MAP['GUROBI'](settings)
-        #  res_gurobi = s.solve(self)
-        #  assert np.linalg.norm(self.cost(results.x) - self.cost(res_gurobi.x)) <= 1e-05
+        #  res_gurobi = SOLVER_MAP['GUROBI'](settings).solve(self.data)
+        #  assert np.linalg.norm(self.cost(results.x) -
+        #                        self.cost(res_gurobi.x)) <= 1e-05
+
+        # DEBUG Solve with CVXPY
+        self.problem.solve()
+        if not self.is_mip():
+            x_cvxpy = np.concatenate((self.vars['y'].value,
+                                      self.vars['u'].value,
+                                      self.vars['x'].value))
+        else:
+            x_cvxpy = np.concatenate((self.vars['y'].value,
+                                      self.vars['u'].value,
+                                      self.vars['v'].value,
+                                      self.vars['x'].value))
+
+        #  import ipdb; ipdb.set_trace()
+        assert np.linalg.norm(x_cvxpy - results.x) <= TOL
 
         if results.status not in SOLUTION_PRESENT:
             import cvxpy as cvx
@@ -102,7 +121,6 @@ class OptimizationProblem(object):
                                   [self.data.A * x <= self.data.u,
                                    self.data.A * x >= self.data.l])
             problem.solve(cvx.GUROBI, verbose=True)
-            import ipdb; ipdb.set_trace()
             raise ValueError('Problem not solved. Status %s' % results.status)
 
         x_opt = results.x
@@ -111,8 +129,27 @@ class OptimizationProblem(object):
         if self.is_mip():
             x_int = results.x[self.data.int_idx]
 
+            # If mixed-integer, solve continuous restriction and get basis
+            # Create continuous restriction
+            c_cont = self.data.c
+            n_var = len(c_cont)
+            A_cont = spa.vstack([self.data.A,
+                                 spa.eye(n_var,
+                                         format='csc')[self.data.int_idx, :]])
+            u_cont = np.concatenate((self.data.u, x_int))
+            l_cont = np.concatenate((self.data.l, x_int))
+            data_cont = ProblemData(c_cont, l_cont, A_cont, u_cont)
+
+            # Solve and get active constraints
+            results_cont = SOLVER_MAP[solver](settings).solve(data_cont)
+            active_constraints = results_cont.active_constraints
+
+        else:
+            # Continuous problem. Get active constraints directly
+            active_constraints = results.active_constraints
+
         # Get strategy
-        strategy = Strategy(x_int, results.active_constraints)
+        strategy = Strategy(x_int, active_constraints)
 
         return x_opt, time, strategy
 
@@ -185,9 +222,13 @@ class OptimizationProblem(object):
         n_var = len(c)
 
         # Create equivalent problem
-        # 1) Fix integer variables
-        A_red = spa.eye(n_var)[int_idx, :]
-        bound_red = int_idx
+        A_red = spa.csc_matrix((0, n_var))
+        bound_red = np.array([])
+
+        # 1) If integer program, fix integer variable
+        if self.is_mip():
+            A_red = spa.vstack([A_red, spa.eye(n_var)[int_idx, :]])
+            bound_red = np.vstack([bound_red, int_idx])
 
         # 2) Use active constraints
         active_constraints_upper = np.where(active_constr == 1)

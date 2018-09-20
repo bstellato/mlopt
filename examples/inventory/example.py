@@ -25,16 +25,16 @@ theta_bar = np.array([
 theta_bar = np.concatenate((theta_bar, 2. * np.ones(T)))
 
 # Define problem
-problem = Inventory(T, M, K, radius)
+problem = Inventory(T, M, K, radius, bin_vars=True)
 
 # Training and testing data
-n_train = 100
+n_train = 200
 n_test = 10
 theta_train = problem.sample(theta_bar, N=n_train)
 theta_test = problem.sample(theta_bar, N=n_test)
 
 # Encode training strategies
-_, _, strategies = problem.solve_parametric(theta_train)
+x_train, _, strategies = problem.solve_parametric(theta_train)
 y_train, enc2strategy = mlo.encode_strategies(strategies)
 
 #  # Training

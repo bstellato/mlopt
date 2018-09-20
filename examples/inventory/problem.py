@@ -19,8 +19,12 @@ class Inventory(mlo.OptimizationProblem):
         x = cvx.Variable(T+1)
         u = cvx.Variable(T)
         y = cvx.Variable(T+1)  # Auxiliary y = max(h * x, - p * x)
+        self.vars = {'x': x,
+                     'u': u,
+                     'y': y}
         if bin_vars:
             v = cvx.Variable(T, integer=True)
+            self.vars['v'] = v
 
         # Define parameters
         x0 = cvx.Parameter(nonneg=True)
@@ -48,7 +52,7 @@ class Inventory(mlo.OptimizationProblem):
         # Objective
         cost = cvx.sum(y) + cvx.sum(c * u)
         if bin_vars:
-            cost += cvx.sum_entries(K * v)
+            cost += cvx.sum(K * v)
 
         # Define problem
         self.problem = cvx.Problem(cvx.Minimize(cost), constraints)

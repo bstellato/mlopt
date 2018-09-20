@@ -35,7 +35,7 @@ class OSQPSolver(object):
 
         assert (not problem.is_mip()), "OSQP does not support integer variables."
 
-        p = problem.data
+        p = problem
         settings = self._settings.copy()
 
         # Setup OSQP

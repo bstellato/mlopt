@@ -41,7 +41,7 @@ class MOSEKSolver(object):
         Returns:
             Results structure
         '''
-        p = problem.data
+        p = problem
 
         # Get problem dimensions
         m, n = p.A.shape
@@ -183,10 +183,11 @@ class MOSEKSolver(object):
                 task.gety(soltype, y)
                 # it appears signs are inverted
                 y = -y
+                # get active constraints
+                active_cons = self.active_constraints(task)
             else:
                 y = None
-            # get active constraints
-            active_cons = self.active_constraints(task)
+                active_cons = np.array([])
 
             return Results(status, objval, x, y,
                            cputime, total_iter, active_cons)

@@ -4,11 +4,14 @@ import numpy as np
 
 class Strategy:
     """
-    Solving strategy
+    Solving strategy.
 
-    Args
-        int_vars (numpy array): Value of the integer variables.
-        active_constraints (numpy array): Set of active constraints.
+    Parameters
+    ----------
+    int_vars : numpy array
+        Value of the integer variables.
+    active_constraints : numpy array
+        Set of active constraints.
     """
 
     def __init__(self, int_vars, active_constraints):
@@ -26,6 +29,19 @@ class Strategy:
 
 
 def unique_strategies(strategies):
+    """
+    Extract unique strategies from array of strategies.
+
+    Parameters
+    ----------
+    strategies : Strategy array
+        Strategies to be processed.
+
+    Returns
+    -------
+    Strategy array :
+        Unique strategies.
+    """
     n_int_var = len(strategies[0].int_vars)
 
     # Construct vector of vectors and get unique elements

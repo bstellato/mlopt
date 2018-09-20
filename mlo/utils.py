@@ -25,7 +25,8 @@ def read_mat(filepath):
 
 def cvxpy2data(problem):
 
-    data = problem.get_problem_data(cvx.OSQP)[0]  # Get problem data
+    #  data = problem.get_problem_data(cvx.OSQP)[0]  # Get problem data
+    data = problem.get_problem_data(cvx.CPLEX)[0]  # Get problem data
     int_idx = data['int_vars_idx']
     c = data[s.Q]
     A = spa.vstack([data[s.A], data[s.F]]).tocsc()

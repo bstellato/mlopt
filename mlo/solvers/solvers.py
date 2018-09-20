@@ -10,4 +10,4 @@ SOLVER_MAP = {OSQP: OSQPSolver,
               GUROBI: GUROBISolver,
               MOSEK: MOSEKSolver}
 
-DEFAULT_SOLVER = MOSEK
+DEFAULT_SOLVER = GUROBI

@@ -1,4 +1,4 @@
-import gurobipy as grb
+import gurobi as grb
 import numpy as np
 from . import statuses as s
 from .results import Results
@@ -41,7 +41,7 @@ class GUROBISolver(object):
         Returns:
             Results structure
         '''
-        p = problem.data
+        p = problem
 
         if p.A is not None:
             # Convert Matrices in CSR format
@@ -72,7 +72,7 @@ class GUROBISolver(object):
         # Set integer variables
         if problem.is_mip():
             for i in p.int_idx:
-                x[i].vtype = grb.INTEGER
+                x[i].vtype = grb.GRB.INTEGER
 
         # Add inequality constraints: iterate over the rows of A
         # adding each row into the model
@@ -146,11 +146,12 @@ class GUROBISolver(object):
             if not problem.is_mip():
                 constrs = model.getConstrs()
                 y = -np.array([constrs[i].Pi for i in range(m)])
+                # Get active constraints
+                active_cons = self.active_constraints(model)
             else:
                 y = None
+                active_cons = np.array([])
 
-            # Get active constraints
-            active_cons = self.active_constraints(model)
 
             return Results(status, objval, x, y,
                            run_time, niter, active_cons)
@@ -164,8 +165,10 @@ class GUROBISolver(object):
         basis = model.getAttr(grb.AttrConstClass.CBasis)
 
         for i in range(model.NumConstrs):
-            if basis[i] == -1:
-                active_constr[i] = 1  # Only upper bounds
+            if basis[i] == grb.GRB.NONBASIC_UPPER:
+                active_constr[i] = 1
+            elif basis[i] == grb.GRB.NONBASIC_LOWER:
+                active_constr[i] = -1
 
         return active_constr
 
