@@ -10,19 +10,19 @@ importlib.reload(mlo)
 
 #  def run_inventory():
 # Generate data
-T = 10
+T = 2
 M = 4.
-K = 1.
-radius = 2.0
+K = 10.
+radius = 3.0
 
 # Operating point
 theta_bar = np.array([
-    2.,  # h
-    2.,  # p
-    5.,  # c
-    2.,  # x_0
+    4.,  # h
+    6.,  # p
+    3.5,  # c
+    5.,  # x_0
     ])
-theta_bar = np.concatenate((theta_bar, 2. * np.ones(T)))
+theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
 
 # Define problem
 problem = Inventory(T, M, K, radius, bin_vars=True)

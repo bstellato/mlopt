@@ -100,20 +100,24 @@ class OptimizationProblem(object):
         #                        self.cost(res_gurobi.x)) <= 1e-05
 
         # DEBUG Solve with CVXPY
-        self.problem.solve()
-        if not self.is_mip():
-            x_cvxpy = np.concatenate((self.vars['y'].value,
-                                      self.vars['u'].value,
-                                      self.vars['x'].value))
-        else:
-            x_cvxpy = np.concatenate((self.vars['y'].value,
-                                      self.vars['u'].value,
-                                      self.vars['v'].value,
-                                      self.vars['x'].value))
-
-        #  import ipdb; ipdb.set_trace()
-        assert np.linalg.norm(x_cvxpy - results.x) <= TOL
-
+        #  self.problem.solve()
+        #  if not self.is_mip():
+        #      x_cvxpy = np.concatenate((self.vars['y'].value,
+        #                                self.vars['u'].value,
+        #                                self.vars['x'].value))
+        #  else:
+        #      x_cvxpy = np.concatenate((self.vars['y'].value,
+        #                                self.vars['u'].value,
+        #                                self.vars['v'].value,
+        #                                self.vars['x'].value))
+        #
+        #  #  import ipdb; ipdb.set_trace()
+        #  if np.linalg.norm(x_cvxpy - results.x) > TOL:
+        #      print("Solutions are different of %.2e" % np.linalg.norm(x_cvxpy -
+        #          results.x))
+        #      print(x_cvxpy)
+        #      print(results.x)
+        #
         if results.status not in SOLUTION_PRESENT:
             import cvxpy as cvx
             x = cvx.Variable(len(self.data.c))

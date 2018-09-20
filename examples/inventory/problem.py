@@ -13,9 +13,7 @@ class Inventory(mlo.OptimizationProblem):
         self.K = K  # Fixed ordering cost
         self.radius = radius  # Radius for sampling
 
-        #
         # Define model in cvxpy
-        #
         x = cvx.Variable(T+1)
         u = cvx.Variable(T)
         y = cvx.Variable(T+1)  # Auxiliary y = max(h * x, - p * x)
@@ -37,9 +35,8 @@ class Inventory(mlo.OptimizationProblem):
 
         # Constaints
         constraints = []
-        constraints += [x == x0]
-        constraints += [y >= h * x]
-        constraints += [y >= -p * x]
+        constraints += [x[0] == x0]
+        constraints += [y >= h * x, y >= -p * x]
         for t in range(T):
             constraints += [x[t+1] == x[t] + u[t] - d[t]]
         constraints += [u >= 0]
@@ -50,9 +47,9 @@ class Inventory(mlo.OptimizationProblem):
             constraints += [u <= M]
 
         # Objective
-        cost = cvx.sum(y) + cvx.sum(c * u)
+        cost = cvx.sum(y) + c * cvx.sum(u)
         if bin_vars:
-            cost += cvx.sum(K * v)
+            cost += K * cvx.sum(v)
 
         # Define problem
         self.problem = cvx.Problem(cvx.Minimize(cost), constraints)
@@ -71,6 +68,9 @@ class Inventory(mlo.OptimizationProblem):
         self.params['c'].value = theta["c"]
         self.params['x0'].value = theta["x0"]
         self.params['d'].value = theta.iloc[4:].values
+
+        # Solve to populate data
+        #  self.problem.solve()
 
         # Get new problem data
         self.data = mlo.cvxpy2data(self.problem)
