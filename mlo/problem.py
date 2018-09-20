@@ -155,8 +155,6 @@ class OptimizationProblem(object):
             # Continuous problem. Get active constraints directly
             active_constraints = results.active_constraints
 
-        import ipdb; ipdb.set_trace()
-
         # Get strategy
         strategy = Strategy(x_int, active_constraints)
 
