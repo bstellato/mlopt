@@ -15,15 +15,13 @@ class NeuralNet(Learner):
                  n_layers,
                  n_classes,
                  learning_rate=0.01,
-                 training_epochs=50,
-                 batch_size=10,
-                 display_step=1):
+                 training_epochs=100,
+                 batch_size=100):
 
         # Assign settings
         self.learning_rate = learning_rate
         self.training_epochs = training_epochs
         self.batch_size = batch_size
-        self.display_step = display_step
         self.n_input = n_input
         self.n_classes = n_classes
         self.n_layers = n_layers
@@ -81,8 +79,6 @@ class NeuralNet(Learner):
         self.logits = self.neural_network(self.x, self.weights, self.biases)
 
         # Define loss and optimizer
-        #  self.cost = tf.reduce_mean(-tf.reduce_sum(y_train*tf.log(self.y_pred),
-        #                                            reduction_indices=1))
         self.cost = tf.losses.sparse_softmax_cross_entropy(self.y,
                                                            self.logits)
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
@@ -99,38 +95,31 @@ class NeuralNet(Learner):
 
             # Training cycle
             #  for epoch in tqdm(range(self.training_epochs)):
-            for epoch in trange(self.training_epochs,
-                                desc="Training neural net"):
+            with trange(self.training_epochs, desc="Training neural net") as t:
+                for epoch in t:
 
-                avg_cost = 0.
-                total_batch = int(self.n_train/self.batch_size)
+                    avg_cost = 0.
+                    total_batch = int(self.n_train/self.batch_size)
 
-                # Loop over all batches
-                for i in range(total_batch):
-                    #  print("Batch %d/%d, epoch %d/%d" % (i, total_batch, epoch,
-                    #                                      self.training_epochs))
+                    # Loop over all batches
+                    for i in range(total_batch):
+                        try:
+                            batch_x, batch_y = sess.run(next_batch)
+                        except tf.errors.OutOfRangeError:
+                            break
 
-                    try:
-                        batch_x, batch_y = sess.run(next_batch)
-                    except tf.errors.OutOfRangeError:
-                        break
+                        # Reshape batch size
+                        batch_y = np.reshape(batch_y, (-1, 1))
 
-                    # Reshape batch size
-                    batch_y = np.reshape(batch_y, (-1, 1))
+                        # Run optimization (backprop) and cost (loss value)
+                        _, cost_value = sess.run([minimize_step, self.cost],
+                                                 feed_dict={self.x: batch_x,
+                                                            self.y: batch_y})
+                        # Compute average loss
+                        avg_cost += cost_value / total_batch
 
-                    # Run optimization (backprop) and cost (loss value)
-                    _, cost_value = sess.run([minimize_step, self.cost],
-                                             feed_dict={self.x: batch_x,
-                                                        self.y: batch_y})
-                    # Compute average loss
-                    avg_cost += cost_value / total_batch
-
-                # Display logs per epoch step
-                if (epoch+1) % self.display_step == 0:
-                    tqdm.write("Epoch: %04d, cost: %.9f" % (epoch + 1,
-                                                            avg_cost))
-
-            print("Optimization Finished!")
+                    # Display logs per epoch step
+                    t.set_description("Training neural net (epoch %i, cost %.2e)" % (epoch, avg_cost))
 
             # TODO: Save model!
             #  saver.save(sess, )

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from ..constants import TOL
 import numpy as np
+from tqdm import tqdm
 
 
 class Learner(ABC):
@@ -30,7 +31,8 @@ class Learner(ABC):
     def predict(self, X):
         """Predict strategy from data"""
 
-    def predict_best_points(self, X, problem, k, enc2strategy):
+    def predict_best_points(self, X, problem, k, enc2strategy,
+                            message="Predict active constraints"):
         """
         Predict best points by picking the best values when solving the problem
         """
@@ -41,7 +43,7 @@ class Learner(ABC):
         x = []
         time = []
 
-        for i in range(n_points):
+        for i in tqdm(range(n_points), desc=message):
 
             # Predict best k classes
             classes = self.predict_best(X.iloc[i, :], k=k)

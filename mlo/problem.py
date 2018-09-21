@@ -1,4 +1,3 @@
-# Define optimization problem
 import numpy as np
 import scipy.sparse as spa
 import scipy.sparse.linalg as spla
@@ -233,7 +232,9 @@ class OptimizationProblem(object):
 
         return x, time
 
-    def solve_parametric(self, theta, solver=DEFAULT_SOLVER, settings={}):
+    def solve_parametric(self, theta,
+                         solver=DEFAULT_SOLVER, settings={},
+                         message="Solving for all theta"):
         """
         Solve parametric problems
 
@@ -264,7 +265,7 @@ class OptimizationProblem(object):
         time = [None for i in range(n)]
         strategy = [None for i in range(n)]
 
-        for i in tqdm(range(n), desc="Solving for all theta..."):
+        for i in tqdm(range(n), desc=message):
             self.populate(theta.iloc[i, :])
             x[i], time[i], strategy[i] = self.solve(solver, settings)
 

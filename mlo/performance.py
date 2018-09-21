@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from .constants import TOL
 
 
@@ -50,14 +51,15 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
     """
 
     print("Performance evaluation")
-    print("Compute active constraints over test set")
-
     # Get strategy for each point
-    x_test, time_test, strategy_test = problem.solve_parametric(theta)
+    x_test, time_test, strategy_test = \
+        problem.solve_parametric(theta, message="Compute active " +
+                                                "constraints for test set")
 
     # Get predicted strategy for each point
     x_pred, time_pred, strategy_pred = learner.predict_best_points(
-        theta, problem, k, enc2strategy
+        theta, problem, k, enc2strategy,
+        message="Predict active constraints for test set"
     )
 
     num_var = len(problem.data.c)
@@ -133,5 +135,5 @@ def store(results, file_name):
     file_name : string
         File name.
     """
-    for i in range(len(results)):
+    for i in tqdm(range(len(results)), desc="Exporting results"):
         results[i].to_csv(file_name + "%d.csv" % i)

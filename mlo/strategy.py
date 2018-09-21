@@ -78,13 +78,12 @@ def encode_strategies(strategies):
     Strategies array
         Array of unique strategies.
     """
-    print("Encoding strategies")
+    print("Encoding strategies...", endl='')
     N = len(strategies)
 
-    print("Getting unique set of strategies")
     unique = unique_strategies(strategies)
     n_unique_strategies = len(unique)
-    print("Found %d unique strategies" % n_unique_strategies)
+    print("Found %d unique strategies." % n_unique_strategies)
 
     # Map strategies to number
     y = -1 * np.ones(N, dtype='int')
