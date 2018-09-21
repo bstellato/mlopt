@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 # Utils
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 
 class NeuralNet(Learner):
@@ -99,7 +99,8 @@ class NeuralNet(Learner):
 
             # Training cycle
             #  for epoch in tqdm(range(self.training_epochs)):
-            for epoch in range(self.training_epochs):
+            for epoch in trange(self.training_epochs,
+                                desc="Training neural net"):
 
                 avg_cost = 0.
                 total_batch = int(self.n_train/self.batch_size)
@@ -126,8 +127,8 @@ class NeuralNet(Learner):
 
                 # Display logs per epoch step
                 if (epoch+1) % self.display_step == 0:
-                    print("Epoch:", '%04d' % (epoch+1),
-                          "cost=", "{:.9f}".format(avg_cost))
+                    tqdm.write("Epoch: %04d, cost: %.9f" % (epoch + 1,
+                                                            avg_cost))
 
             print("Optimization Finished!")
 
