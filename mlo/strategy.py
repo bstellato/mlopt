@@ -24,7 +24,7 @@ class Strategy:
             same_int_vars = np.array_equal(self.int_vars, other.int_vars)
             same_active_constraints = np.array_equal(self.active_constraints,
                                                      other.active_constraints)
-            return same_int_vars + same_active_constraints
+            return same_int_vars and same_active_constraints
         return False
 
 
@@ -87,10 +87,10 @@ def encode_strategies(strategies):
     print("Found %d unique strategies" % n_unique_strategies)
 
     # Map strategies to number
-    y = -1 * np.ones(N)
+    y = -1 * np.ones(N, dtype='int')
     for i in range(N):
         for j in range(n_unique_strategies):
-            if unique[j] == strategies[j]:
+            if unique[j] == strategies[i]:
                 y[i] = j
                 break
         assert y[i] != -1, "Strategy not found"

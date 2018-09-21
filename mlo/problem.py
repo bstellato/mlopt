@@ -47,7 +47,9 @@ class OptimizationProblem(object):
         """
         l, A, u = self.data.l, self.data.A, self.data.u
 
-        norm_A = [spa.linalg.norm(A[i, :]) for i in range(A.shape[0])]
+        norm_A = [np.linalg.norm(A[i, :]) for i in range(A.shape[0])]
+
+        # NB Fix this!
 
         upper = np.maximum(A.dot(x) - u, 0.)
         lower = np.maximum(l - A.dot(x), 0.)
@@ -133,7 +135,7 @@ class OptimizationProblem(object):
         time = results.run_time
         x_int = np.array([], dtype=int)
         if self.is_mip():
-            x_int = results.x[self.data.int_idx]
+            x_int = np.round(results.x[self.data.int_idx])
 
             # If mixed-integer, solve continuous restriction and get basis
             # Create continuous restriction
@@ -148,6 +150,8 @@ class OptimizationProblem(object):
 
             # Solve and get active constraints
             results_cont = SOLVER_MAP[solver](settings).solve(data_cont)
+            if results_cont.status not in SOLUTION_PRESENT:
+                raise ValueError('Continuous restriction problem not solved. Status %s' % results_cont.status)
             # Get only active constraints of the original problem (ignore x_int
             # fixing)
             active_constraints = results_cont.active_constraints[:n_constr]

@@ -34,16 +34,17 @@ theta_train = problem.sample(theta_bar, N=n_train)
 theta_test = problem.sample(theta_bar, N=n_test)
 
 # Encode training strategies
-x_train, _, strategies = problem.solve_parametric(theta_train)
+_, _, strategies = problem.solve_parametric(theta_train)
 y_train, enc2strategy = mlo.encode_strategies(strategies)
 
-#  # Training
-#  n_layers = 2
-#  n_classes = len(enc2strategy)
-#  learner = NeuralNet(n_layers, n_classes)
-#  learner.train(theta_train, y_train)
-#
-#  # Testing
-#  results = eval_performance(theta_test, learner, problem,
-#                             enc2strategy, k=3)
-#  store(results)
+# Training
+n_input = len(theta_bar)
+n_layers = [10, 10, 10]
+n_classes = len(enc2strategy)
+learner = mlo.NeuralNet(n_input, n_layers, n_classes)
+learner.train(theta_train, y_train)
+
+#  Testing
+results = mlo.eval_performance(theta_test, learner, problem,
+                               enc2strategy, k=3)
+mlo.store(results)
