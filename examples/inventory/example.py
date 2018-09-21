@@ -10,6 +10,7 @@ importlib.reload(mlo)
 
 #  def run_inventory():
 # Generate data
+np.random.seed(1)
 T = 2
 M = 4.
 K = 10.
@@ -47,4 +48,4 @@ learner.train(theta_train, y_train)
 #  Testing
 results = mlo.eval_performance(theta_test, learner, problem,
                                enc2strategy, k=3)
-mlo.store(results)
+mlo.store(results, 'examples/output/inventory')

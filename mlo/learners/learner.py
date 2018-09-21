@@ -69,25 +69,27 @@ class Learner(ABC):
                 # Compute cost
                 cost_temp.append(problem.cost(x_temp[-1]))
 
-                # Pick best class between k ones
-                idx_filter = np.where(infeas_temp <= TOL)
-                if len(idx_filter) > 0:
-                    # Case 1: Feasible points
-                    # -> Get solution with minimum cost
-                    #    between feasible ones
-                    idx_pick = idx_filter[np.argmin(cost_temp[idx_filter])]
-                else:
-                    # Case 2: No feasible points
-                    # -> Get solution with minimum infeasibility
-                    idx_pick = np.argmin(infeas_temp)
+            # Pick best class between k ones
+            infeas_temp = np.array(infeas_temp)
+            cost_temp = np.array(cost_temp)
+            idx_filter = np.where(infeas_temp <= TOL)[0]
+            if len(idx_filter) > 0:
+                # Case 1: Feasible points
+                # -> Get solution with minimum cost
+                #    between feasible ones
+                idx_pick = idx_filter[np.argmin(cost_temp[idx_filter])]
+            else:
+                # Case 2: No feasible points
+                # -> Get solution with minimum infeasibility
+                idx_pick = np.argmin(infeas_temp)
 
-                # Store values we are interested in
-                x.append(x_temp[idx_pick])
-                time.append(np.sum(time_temp))
-                strategy.append(strategy_classes[idx_pick])
+            # Store values we are interested in
+            x.append(x_temp[idx_pick])
+            time.append(np.sum(time_temp))
+            strategy.append(strategy_classes[idx_pick])
 
-            # Return x, time and strategy for all the points
-            return x, time, strategy
+        # Return x, time and strategy for all the points
+        return x, time, strategy
 
 
 

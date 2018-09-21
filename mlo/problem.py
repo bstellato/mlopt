@@ -1,6 +1,7 @@
 # Define optimization problem
 import numpy as np
 import scipy.sparse as spa
+import scipy.sparse.linalg as spla
 from . import constants as con
 from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
 from .solvers.statuses import SOLUTION_PRESENT
@@ -47,9 +48,7 @@ class OptimizationProblem(object):
         """
         l, A, u = self.data.l, self.data.A, self.data.u
 
-        norm_A = [np.linalg.norm(A[i, :]) for i in range(A.shape[0])]
-
-        # NB Fix this!
+        norm_A = [spla.norm(A[i, :], np.inf) for i in range(A.shape[0])]
 
         upper = np.maximum(A.dot(x) - u, 0.)
         lower = np.maximum(l - A.dot(x), 0.)
@@ -69,7 +68,8 @@ class OptimizationProblem(object):
         Compute suboptimality for vector x
         """
         c = self.data.c
-        return (self.data.cost(x) - self.data.cost(x.opt)) / np.linalg.norm(c, np.inf)
+        return (self.data.cost(x) - self.data.cost(x_opt)) / \
+            np.linalg.norm(c, np.inf)
 
     def cost(self, x):
         return self.data.cost(x)
@@ -151,7 +151,8 @@ class OptimizationProblem(object):
             # Solve and get active constraints
             results_cont = SOLVER_MAP[solver](settings).solve(data_cont)
             if results_cont.status not in SOLUTION_PRESENT:
-                raise ValueError('Continuous restriction problem not solved. Status %s' % results_cont.status)
+                raise ValueError('Continuous restriction problem not ' +
+                                 'solved. Status %s' % results_cont.status)
             # Get only active constraints of the original problem (ignore x_int
             # fixing)
             active_constraints = results_cont.active_constraints[:n_constr]
@@ -186,14 +187,17 @@ class OptimizationProblem(object):
             Time.
         """
 
-        c, l, A, u, int_idx = self.data.c, self.data.l, self.data.A, self.data.u, self.data.int_idx
-        int_vars, active_constr = strategy.int_vars, strategy.active_constraints
+        c = self.data.c
+        l, A, u = self.data.l, self.data.A, self.data.u
+        int_idx = self.data.int_idx
+        int_vars = strategy.int_vars
+        active_constr = strategy.active_constraints
 
         if self.is_mip():
             assert np.max(int_vars) <= len(self.data.l)
             assert np.min(int_vars) >= 0
 
-        n_var = len(c)
+        n_var = c.size
 
         # Create equivalent problem
         A_red = spa.csc_matrix((0, n_var))

@@ -78,6 +78,11 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
         subopt.append(problem.suboptimality(x_pred[i], x_test[i]))
         time_comp.append((1 - time_pred[i]) / time_test[i])
 
+    # Convert to array
+    infeas = np.array(infeas)
+    subopt = np.array(subopt)
+    time_comp = np.array(time_comp)
+
     # accuracy
     test_accuracy, idx_correct = accuracy(strategy_pred, strategy_test)
 
@@ -94,20 +99,20 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
             "n_theta": [n_theta],
             "n_corect": [np.sum(idx_correct)],
             "n_active_sets": [n_active_sets],
-            "accuracy": [accuracy],
+            "accuracy": [test_accuracy],
             "n_infeas": [np.sum(infeas >= TOL)],
             "avg_infeas": [np.mean(infeas)],
-            "avg_subopt": [np.mean(subopt[np.where(infeas <= TOL)])],
+            "avg_subopt": [np.mean(subopt[np.where(infeas <= TOL)[0]])],
             "max_infeas": [np.max(infeas)],
             "max_subopt": [np.max(subopt)],
             "avg_time_improv": [np.mean(time_comp)],
-            "max_time_improv": [np.maximum(time_comp)],
+            "max_time_improv": [np.max(time_comp)],
         }
     )
     df_detail = pd.DataFrame(
         {
             "problem": [problem.name] * num_test,
-            "correct": [idx_correct],
+            "correct": idx_correct,
             "infeas": infeas,
             "subopt": subopt,
             "time_improvement": time_comp,

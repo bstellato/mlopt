@@ -55,7 +55,7 @@ class NeuralNet(Learner):
         return out
 
     def train(self, X_train, y_train):
-        n_train = len(X_train)
+        self.n_train = len(X_train)
 
         # Create dataset from input data
         ds = tf.data.Dataset.from_tensor_slices((X_train, y_train))
@@ -102,7 +102,7 @@ class NeuralNet(Learner):
             for epoch in range(self.training_epochs):
 
                 avg_cost = 0.
-                total_batch = int(n_train/self.batch_size)
+                total_batch = int(self.n_train/self.batch_size)
 
                 # Loop over all batches
                 for i in range(total_batch):

@@ -1,0 +1,2 @@
+,problem,radius,k,num_var,num_constr,num_test,num_train,n_theta,n_corect,n_active_sets,accuracy,n_infeas,avg_infeas,avg_subopt,max_infeas,max_subopt,avg_time_improv,max_time_improv
+0,inventory,3.0,3,10,17,10,200,6,5.0,6,0.5,0,0.0,0.02439373999813583,0.0,0.24393739998135827,462.7077446510822,701.260665885896
