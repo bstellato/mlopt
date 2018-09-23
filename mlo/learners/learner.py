@@ -31,6 +31,14 @@ class Learner(ABC):
     def predict(self, X):
         """Predict strategy from data"""
 
+    @abstractmethod
+    def __enter__(self):
+        """Enter for context manager"""
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Exit for context manager"""
+
     def predict_best_points(self, X, problem, k, enc2strategy,
                             message="Predict active constraints"):
         """
@@ -43,16 +51,16 @@ class Learner(ABC):
         x = []
         time = []
 
-        for i in tqdm(range(n_points), desc=message):
+        # Predict best classes for all the points
+        classes = self.predict_best(X, k=k)
 
-            # Predict best k classes
-            classes = self.predict_best(X.iloc[i, :], k=k)
+        for i in tqdm(range(n_points), desc=message):
 
             # Populate problem
             problem.populate(X.iloc[i, :])
 
             # Encode strategies
-            strategy_classes = [enc2strategy[classes[j]] for j in range(k)]
+            strategy_classes = [enc2strategy[classes[i, j]] for j in range(k)]
 
             # For each k classes get x, y, time and store the best one
             x_temp = []

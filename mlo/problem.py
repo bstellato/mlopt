@@ -1,3 +1,5 @@
+from multiprocessing import Pool, cpu_count
+from itertools import repeat
 import numpy as np
 import scipy.sparse as spa
 import scipy.sparse.linalg as spla
@@ -37,6 +39,10 @@ class ProblemData(object):
 
 class OptimizationProblem(object):
 
+    def cost(self, x):
+        """Compute cost function value"""
+        return self.data.cost(x)
+
     def is_mip(self):
         """Check if problem has integer variables."""
         return self.data.is_mip()
@@ -67,11 +73,8 @@ class OptimizationProblem(object):
         Compute suboptimality for vector x
         """
         c = self.data.c
-        return (self.data.cost(x) - self.data.cost(x_opt)) / \
+        return (self.cost(x) - self.cost(x_opt)) / \
             np.linalg.norm(c, np.inf)
-
-    def cost(self, x):
-        return self.data.cost(x)
 
     def solve(self, solver=DEFAULT_SOLVER, settings={}):
         """
@@ -232,22 +235,36 @@ class OptimizationProblem(object):
 
         return x, time
 
+    def _populate_and_solve(self, args):
+        """Single function to populate the problem with
+           theta and solve it with the solver. Useful for
+           multiprocessing."""
+        theta, solver, settings = args
+        self.populate(theta)
+        results = self.solve(solver, settings)
+        #  self.pbar.update()
+        return results
+
     def solve_parametric(self, theta,
                          solver=DEFAULT_SOLVER, settings={},
-                         message="Solving for all theta"):
+                         message="Solving for all theta",
+                         parallel=False  # Solve problems in parallel
+                         ):
         """
-        Solve parametric problems
+        Solve parametric problems for each value of theta.
 
         Parameters
         ----------
         theta : DataFrame
-            parameter values
+            Parameter values.
         problem : Optimizationproblem
-            optimization problem to solve
+            Optimization problem to solve.
         solver : string, optional
             Solver to be used. Default Mosek.
         settings : dict, optional
             Solver settings. Default empty.
+        parallel : bool, optional
+            Solve problems in parallel. Default True.
 
         Returns
         -------
@@ -260,13 +277,35 @@ class OptimizationProblem(object):
         """
         n = len(theta)  # Number of points
 
-        # Preallocate solutions
-        x = [None for i in range(n)]
-        time = [None for i in range(n)]
-        strategy = [None for i in range(n)]
+        if parallel:
+            print("Solving for all theta (parallel %i processors)..." %
+                  cpu_count())
+            #  self.pbar = tqdm(total=n, desc=message + " (parallel)")
+            #  with tqdm(total=n, desc=message + " (parallel)") as self.pbar:
+            with Pool(processes=min(n, cpu_count())) as pool:
+                # Solve in parallel
+                results = \
+                    pool.map(self._populate_and_solve,
+                             zip([theta.iloc[i, :] for i in range(n)],
+                                 repeat(solver),
+                                 repeat(settings)))
+                # Solve in parallel and print tqdm progress bar
+                #  results = list(tqdm(pool.imap(self._populate_and_solve,
+                #                                zip([theta.iloc[i, :]
+                #                                     for i in range(n)],
+                #                                    repeat(solver),
+                #                                    repeat(settings))),
+                #                      total=n))
+        else:
+            # Preallocate solutions
+            results = []
+            for i in tqdm(range(n), desc=message + " (serial)"):
+                results.append(self._populate_and_solve((theta.iloc[i, :],
+                                                         solver, settings)))
 
-        for i in tqdm(range(n), desc=message):
-            self.populate(theta.iloc[i, :])
-            x[i], time[i], strategy[i] = self.solve(solver, settings)
+        # Reorganize results
+        x = [results[i][0] for i in range(n)]
+        time = [results[i][1] for i in range(n)]
+        strategy = [results[i][2] for i in range(n)]
 
         return x, time, strategy

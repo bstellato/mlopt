@@ -11,7 +11,7 @@ importlib.reload(mlo)
 #  def run_inventory():
 # Generate data
 np.random.seed(1)
-T = 2
+T = 10
 M = 4.
 K = 10.
 radius = 3.0
@@ -26,7 +26,7 @@ theta_bar = np.array([
 theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
 
 # Define problem
-problem = Inventory(T, M, K, radius, bin_vars=False)
+problem = Inventory(T, M, K, radius, bin_vars=True)
 
 # Training and testing data
 n_train = 2000
@@ -45,10 +45,10 @@ y_train, enc2strategy = mlo.encode_strategies(strategies)
 n_input = len(theta_bar)
 n_layers = [15, 15]
 n_classes = len(enc2strategy)
-learner = mlo.NeuralNet(n_input, n_layers, n_classes)
-learner.train(theta_train, y_train)
+with mlo.NeuralNet(n_input, n_layers, n_classes) as learner:
+    learner.train(theta_train, y_train)
 
-#  Testing
-results = mlo.eval_performance(theta_test, learner, problem,
-                               enc2strategy, k=3)
-mlo.store(results, 'examples/output/inventory')
+    #  Testing
+    results = mlo.eval_performance(theta_test, learner, problem,
+                                   enc2strategy, k=1)
+    mlo.store(results, 'examples/output/inventory')

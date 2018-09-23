@@ -52,13 +52,14 @@ def unique_strategies(strategies):
             [
                 np.concatenate((s.int_vars, s.active_constraints))
                 for s in strategies
-            ]
-        ),
+            ],
+            dtype=int),
         axis=0,
     )
 
     # Get unique vectors
-    return [Strategy(s[:n_int_var], s[n_int_var:]) for s in strategy_vecs]
+    return [Strategy(s[:n_int_var].astype(int), s[n_int_var:].astype(int))
+            for s in strategy_vecs]
 
 
 def encode_strategies(strategies):
@@ -78,12 +79,13 @@ def encode_strategies(strategies):
     Strategies array
         Array of unique strategies.
     """
-    print("Encoding strategies...", endl='')
+    print("Encoding strategies")
     N = len(strategies)
 
+    print("Getting unique set of strategies")
     unique = unique_strategies(strategies)
     n_unique_strategies = len(unique)
-    print("Found %d unique strategies." % n_unique_strategies)
+    print("Found %d unique strategies" % n_unique_strategies)
 
     # Map strategies to number
     y = -1 * np.ones(N, dtype='int')

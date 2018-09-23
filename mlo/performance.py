@@ -24,7 +24,7 @@ def accuracy(strategy_pred, strategy_test):
     """
     assert len(strategy_pred) == len(strategy_test)
     n_total = len(strategy_pred)
-    idx_correct = np.zeros(n_total)
+    idx_correct = np.zeros(n_total, dtype=int)
     for i in range(n_total):
         if strategy_pred[i] == strategy_test[i]:
             idx_correct[i] = 1
@@ -78,7 +78,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
         problem.populate(theta.iloc[i, :])
         infeas.append(problem.infeasibility(x_pred[i]))
         subopt.append(problem.suboptimality(x_pred[i], x_test[i]))
-        time_comp.append((1 - time_pred[i]) / time_test[i])
+        time_comp.append(1 - time_pred[i] / time_test[i])
 
     # Convert to array
     infeas = np.array(infeas)
