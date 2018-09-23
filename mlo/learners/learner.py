@@ -57,7 +57,7 @@ class Learner(ABC):
         for i in tqdm(range(n_points), desc=message):
 
             # Populate problem
-            problem.populate(X.iloc[i, :])
+            data = problem.populate(X.iloc[i, :])
 
             # Encode strategies
             strategy_classes = [enc2strategy[classes[i, j]] for j in range(k)]
@@ -69,15 +69,15 @@ class Learner(ABC):
             cost_temp = []
 
             for j in range(k):
-                sol = problem.solve_with_strategy(strategy_classes[j])
+                sol = problem.solve_with_strategy(data, strategy_classes[j])
                 x_temp.append(sol[0])
                 time_temp.append(sol[1])
 
                 # Compute infeasibility
-                infeas_temp.append(problem.infeasibility(x_temp[-1]))
+                infeas_temp.append(problem.infeasibility(data, x_temp[-1]))
 
                 # Compute cost
-                cost_temp.append(problem.cost(x_temp[-1]))
+                cost_temp.append(problem.cost(data, x_temp[-1]))
 
             # Pick best class between k ones
             infeas_temp = np.array(infeas_temp)

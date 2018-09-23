@@ -69,11 +69,8 @@ class Inventory(mlo.OptimizationProblem):
         self.params['x0'].value = theta["x0"]
         self.params['d'].value = theta.iloc[4:].values
 
-        # Solve to populate data
-        #  self.problem.solve()
-
         # Get new problem data
-        self.data = mlo.cvxpy2data(self.problem)
+        return mlo.cvxpy2data(self.problem)
 
     def sample(self, theta_bar, N=100):
 

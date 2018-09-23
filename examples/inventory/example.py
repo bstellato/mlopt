@@ -11,7 +11,7 @@ importlib.reload(mlo)
 #  def run_inventory():
 # Generate data
 np.random.seed(1)
-T = 10
+T = 2
 M = 4.
 K = 10.
 radius = 3.0
@@ -29,8 +29,8 @@ theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
 problem = Inventory(T, M, K, radius, bin_vars=True)
 
 # Training and testing data
-n_train = 2000
-n_test = 100
+n_train = 200
+n_test = 10
 theta_train = problem.sample(theta_bar, N=n_train)
 theta_test = problem.sample(theta_bar, N=n_test)
 

@@ -8,6 +8,7 @@ class NeuralNet(Learner):
 
     def __enter__(self):
         """Enter for context manager"""
+        tf.set_random_seed(1)  # Random seed for reproducibility
         self.sess = tf.Session()  # Initialize tf session
         return self
 

@@ -26,22 +26,26 @@ class OSQPSolver(object):
         '''
         Solve problem
 
-        Args:
-            problem (OptimizationProblem): problem to be solved
+        Parameters
+        ----------
+        problem : dict
+            Data of the problem to be solved.
 
-        Returns:
-            Results structure
+        Returns
+        -------
+        Results structure
+            Optimization results
         '''
 
-        assert (not problem.is_mip()), "OSQP does not support integer variables."
+        assert (len(problem['int_idx']) == 0), "OSQP does not support integer variables."
 
         p = problem
         settings = self._settings.copy()
 
         # Setup OSQP
         m = osqp.OSQP()
-        m.setup(q=p.c, A=p.A, l=p.l,
-                u=p.u, **settings)
+        m.setup(q=p['c'], A=p['A'], l=p['l'],
+                u=p['u'], **settings)
 
         # Solve
         results = m.solve()

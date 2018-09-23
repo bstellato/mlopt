@@ -35,24 +35,28 @@ class GUROBISolver(object):
         '''
         Solve problem
 
-        Args:
-            problem (OptimizationProblem): problem to be solved
+        Parameters
+        ----------
+        problem : dict
+            Data of the problem to be solved.
 
-        Returns:
-            Results structure
+        Returns
+        -------
+        Results structure
+            Optimization results
         '''
         p = problem
 
-        if p.A is not None:
+        if p['A'] is not None:
             # Convert Matrices in CSR format
-            p.A = p.A.tocsr()
+            p['A'] = p['A'].tocsr()
 
         # Get problem dimensions
-        m, n = p.A.shape
+        m, n = p['A'].shape
 
         # Adjust infinity values in bounds
-        u = np.copy(p.u)
-        l = np.copy(p.l)
+        u = np.copy(p['u'])
+        l = np.copy(p['l'])
 
         for i in range(m):
             if u[i] >= INFINITY:
@@ -70,19 +74,19 @@ class GUROBISolver(object):
         x = model.getVars()
 
         # Set integer variables
-        if problem.is_mip():
-            for i in p.int_idx:
+        if len(p['int_idx']):
+            for i in p['int_idx']:
                 x[i].vtype = grb.GRB.INTEGER
 
         # Add inequality constraints: iterate over the rows of A
         # adding each row into the model
         range_constrs_map = []
-        if p.A is not None:
+        if p['A'] is not None:
             for i in range(m):
-                start = p.A.indptr[i]
-                end = p.A.indptr[i+1]
-                variables = [x[j] for j in p.A.indices[start:end]]  # nnz
-                coeff = p.A.data[start:end]
+                start = p['A'].indptr[i]
+                end = p['A'].indptr[i+1]
+                variables = [x[j] for j in p['A'].indices[start:end]]  # nnz
+                coeff = p['A'].data[start:end]
                 expr = grb.LinExpr(coeff, variables)
                 if (np.abs(l[i] - u[i]) < TOL):
                     model.addConstr(expr, grb.GRB.EQUAL, u[i])
@@ -97,7 +101,7 @@ class GUROBISolver(object):
                     range_constrs_map.append(i)
 
         # Define objective
-        obj = grb.LinExpr(p.c, x)  # Linear part of the objective
+        obj = grb.LinExpr(p['c'], x)  # Linear part of the objective
         #  if p.P is not None:
         #      if p.P.count_nonzero():  # If there are any nonzero elms in P
         #          for i in range(p.P.nnz):
@@ -146,7 +150,7 @@ class GUROBISolver(object):
             x = np.array([x[i].X for i in range(n)])
 
             # Get dual variables  (Gurobi uses swapped signs (-1))
-            if not problem.is_mip():
+            if len(p['int_idx']) == 0:
                 constrs = model.getConstrs()
                 y = -np.array([constrs[i].Pi for i in range(m)])
 

@@ -35,16 +35,20 @@ class MOSEKSolver(object):
         '''
         Solve problem
 
-        Args:
-            problem (OptimizationProblem): problem to be solved
+        Parameters
+        ----------
+        problem : dict
+            Data of the problem to be solved.
 
-        Returns:
-            Results structure
+        Returns
+        -------
+        Results structure
+            Optimization results
         '''
         p = problem
 
         # Get problem dimensions
-        m, n = p.A.shape
+        m, n = p['A'].shape
 
         '''
         Load problem
@@ -77,17 +81,17 @@ class MOSEKSolver(object):
 
         # Add linear cost by iterating over all variables
         for j in range(n):
-            task.putcj(j, p.c[j])
+            task.putcj(j, p['c'][j])
             task.putvarbound(j, mosek.boundkey.fr, -np.inf, np.inf)
 
         # Add binary variables
-        if problem.is_mip():
-            task.putvartypelist(p.int_idx,
-                                [mosek.variabletype.type_int] * len(p.int_idx))
+        if len(p['int_idx']) > 0:
+            task.putvartypelist(p['int_idx'],
+                                [mosek.variabletype.type_int] * len(p['int_idx']))
 
         # Add constraints
-        if p.A is not None:
-            row_A, col_A, el_A = spa.find(p.A)
+        if p['A'] is not None:
+            row_A, col_A, el_A = spa.find(p['A'])
             task.putaijlist(row_A, col_A, el_A)
 
             # Create constraint bounds
@@ -97,8 +101,8 @@ class MOSEKSolver(object):
 
             for j in range(m):
                 # Get bounds and keys
-                u_temp = p.u[j] if p.u[j] < INFINITY else np.inf
-                l_temp = p.l[j] if p.l[j] > -INFINITY else -np.inf
+                u_temp = p['u'][j] if p['u'][j] < INFINITY else np.inf
+                l_temp = p['l'][j] if p['l'][j] > -INFINITY else -np.inf
 
                 # Divide 5 cases
                 if (np.abs(l_temp - u_temp) < TOL):
@@ -178,7 +182,7 @@ class MOSEKSolver(object):
             # get obj value
             objval = task.getprimalobj(soltype)
             # get dual
-            if not problem.is_mip():
+            if len(p['int_idx']) == 0:
                 y = np.zeros(task.getnumcon())
                 task.gety(soltype, y)
                 # it appears signs are inverted

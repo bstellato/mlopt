@@ -62,8 +62,6 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
         message="Predict active constraints for test set"
     )
 
-    num_var = len(problem.data.c)
-    num_constr = len(problem.data.l)
     num_test = len(theta)
     num_train = learner.n_train  # Number of training samples from learner
     n_theta = theta.shape[1]  # Parameters dimension
@@ -75,9 +73,9 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
     subopt = []
     time_comp = []
     for i in range(num_test):
-        problem.populate(theta.iloc[i, :])
-        infeas.append(problem.infeasibility(x_pred[i]))
-        subopt.append(problem.suboptimality(x_pred[i], x_test[i]))
+        data = problem.populate(theta.iloc[i, :])
+        infeas.append(problem.infeasibility(data, x_pred[i]))
+        subopt.append(problem.suboptimality(data, x_pred[i], x_test[i]))
         time_comp.append(1 - time_pred[i] / time_test[i])
 
     # Convert to array
@@ -85,8 +83,14 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
     subopt = np.array(subopt)
     time_comp = np.array(time_comp)
 
+    # Get number of variables and constraints from one of the problems
+    num_var = len(data['c'])
+    num_constr = len(data['l'])
+
     # accuracy
     test_accuracy, idx_correct = accuracy(strategy_pred, strategy_test)
+
+    import ipdb; ipdb.set_trace()
 
     # Create dataframes to return
     df = pd.DataFrame(
