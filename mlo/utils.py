@@ -7,7 +7,10 @@ import scipy.sparse as spa
 
 def problem_data(c, l, A, u, int_idx=None):
     """Create problem data dictionary"""
-    data = {'c': c, 'l': l, 'A': A, 'u': u}
+    data = {'c': c,
+            'l': l,
+            'A': A,
+            'u': u}
     if int_idx is not None:
         data['int_idx'] = int_idx
     else:

@@ -52,10 +52,7 @@ class Inventory(mlo.OptimizationProblem):
             cost += K * cvx.sum(v)
 
         # Define problem
-        self.problem = cvx.Problem(cvx.Minimize(cost), constraints)
-
-        # Get problem data
-        #  self.data = cvxpy2data(self.problem)
+        self.cvxpy_problem = cvx.Problem(cvx.Minimize(cost), constraints)
 
     def populate(self, theta):
         """
@@ -70,7 +67,7 @@ class Inventory(mlo.OptimizationProblem):
         self.params['d'].value = theta.iloc[4:].values
 
         # Get new problem data
-        return mlo.cvxpy2data(self.problem)
+        self.data = mlo.cvxpy2data(self.cvxpy_problem)
 
     def sample(self, theta_bar, N=100):
 

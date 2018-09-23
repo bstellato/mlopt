@@ -14,28 +14,28 @@ from tqdm import tqdm
 
 class OptimizationProblem(object):
 
-    def cost(self, data, x):
+    def cost(self, x):
         """Compute cost function value"""
-        return data['c'].dot(x)
+        return self.data['c'].dot(x)
 
-    def is_mip(self, data):
+    def is_mip(self):
         """Check if problem has integer variables."""
-        return len(data['int_idx']) > 0
+        return len(self.data['int_idx']) > 0
 
-    def eq_ineq(self, data):
+    def eq_ineq(self):
         """
         Return equality and inequality constraints
         """
-        n_con = len(data['l'])
-        eq = np.where(data['u'] - data['l']) <= con.TOL
+        n_con = len(self.data['l'])
+        eq = np.where(self.data['u'] - self.data['l']) <= con.TOL
         ineq = np.array(set(range(n_con)) - set(eq))
         return eq, ineq
 
-    def infeasibility(self, data, x):
+    def infeasibility(self, x):
         """
         Compute infeasibility for vector x
         """
-        l, A, u = data['l'], data['A'], data['u']
+        l, A, u = self.data['l'], self.data['A'], self.data['u']
 
         norm_A = [spla.norm(A[i, :], np.inf) for i in range(A.shape[0])]
 
@@ -52,22 +52,20 @@ class OptimizationProblem(object):
 
         return np.linalg.norm(upper + lower)
 
-    def suboptimality(self, data, x, x_opt):
+    def suboptimality(self, x, x_opt):
         """
         Compute suboptimality for vector x
         """
-        c = data['c']
-        return (self.cost(data, x) - self.cost(data, x_opt)) / \
+        c = self.data['c']
+        return (self.cost(x) - self.cost(x_opt)) / \
             np.linalg.norm(c, np.inf)
 
-    def solve(self, data, solver=DEFAULT_SOLVER, settings={}):
+    def solve(self, solver=DEFAULT_SOLVER, settings={}):
         """
         Solve optimization problem
 
         Parameters
         ----------
-        data : dict
-            Problem data.
         solver : string, optional
             Solver to be used. Default Mosek.
         settings : dict, optional
@@ -82,7 +80,7 @@ class OptimizationProblem(object):
         strategy
             Strategy.
         """
-        results = SOLVER_MAP[solver](settings).solve(data)
+        results = SOLVER_MAP[solver](settings).solve(self.data)
 
         # DEBUG CHECK OTHER SOLVER
         #  res_gurobi = SOLVER_MAP['GUROBI'](settings).solve(self.data)
@@ -109,7 +107,7 @@ class OptimizationProblem(object):
         #      print(results.x)
         #
 
-        n_constr = len(data['u'])  # Number of constraints
+        n_constr = len(self.data['u'])  # Number of constraints
         if results.status not in SOLUTION_PRESENT:
             #  import cvxpy as cvx
             #  x = cvx.Variable(len(self.data.c))
@@ -122,18 +120,18 @@ class OptimizationProblem(object):
         x_opt = results.x
         time = results.run_time
         x_int = np.array([], dtype=int)
-        if self.is_mip(data):
-            x_int = np.round(results.x[data['int_idx']]).astype(int)
+        if self.is_mip():
+            x_int = np.round(results.x[self.data['int_idx']]).astype(int)
 
             # If mixed-integer, solve continuous restriction and get basis
             # Create continuous restriction
-            c_cont = data['c']
+            c_cont = self.data['c']
             n_var = len(c_cont)
-            A_cont = spa.vstack([data['A'],
+            A_cont = spa.vstack([self.data['A'],
                                  spa.eye(n_var,
-                                         format='csc')[data['int_idx'], :]])
-            u_cont = np.concatenate((data['u'], x_int))
-            l_cont = np.concatenate((data['l'], x_int))
+                                         format='csc')[self.data['int_idx'], :]])
+            u_cont = np.concatenate((self.data['u'], x_int))
+            l_cont = np.concatenate((self.data['l'], x_int))
             data_cont = problem_data(c_cont, l_cont, A_cont, u_cont)
 
             # Solve and get active constraints
@@ -153,15 +151,13 @@ class OptimizationProblem(object):
 
         return x_opt, time, strategy
 
-    def solve_with_strategy(self, data, strategy, solver=DEFAULT_SOLVER,
+    def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
                             settings={}):
         """
         Solve problem using strategy
 
         Parameters
         ----------
-        data : dict
-            Problem data.
         strategy : Strategy
             Strategy to be used.
         solver : string, optional
@@ -177,14 +173,14 @@ class OptimizationProblem(object):
             Time.
         """
 
-        c = data['c']
-        l, A, u = data['l'], data['A'], data['u']
-        int_idx = data['int_idx']
+        c = self.data['c']
+        l, A, u = self.data['l'], self.data['A'], self.data['u']
+        int_idx = self.data['int_idx']
         int_vars = strategy.int_vars
         active_constr = strategy.active_constraints
 
-        if self.is_mip(data):
-            assert np.max(int_vars) <= len(data['l'])
+        if self.is_mip():
+            assert np.max(int_vars) <= len(self.data['l'])
             assert np.min(int_vars) >= 0
 
         n_var = c.size
@@ -199,26 +195,27 @@ class OptimizationProblem(object):
         if len(active_constraints_upper) > 0:
             A_upper = A[active_constraints_upper, :]
             u_upper = u[active_constraints_upper]
-            A_red = spa.vstack([A_red, A_upper])
+            A_red = spa.vstack([A_red, A_upper]).tocsc()
             bound_red = np.concatenate((bound_red, u_upper))
 
         if len(active_constraints_lower) > 0:
             A_lower = A[active_constraints_lower, :]
             l_lower = l[active_constraints_lower]
-            A_red = spa.vstack([A_red, A_lower])
+            A_red = spa.vstack([A_red, A_lower]).tocsc()
             bound_red = np.concatenate((bound_red, l_lower))
 
         # 2) If integer program, fix integer variable
-        if self.is_mip(data):
+        if self.is_mip():
             A_red = spa.vstack([A_red,
                                 spa.eye(n_var, format='csc')[int_idx, :]])
             bound_red = np.concatenate((bound_red, int_vars))
 
         # 3) Create problem data
-        data = problem_data(c, bound_red, A_red, bound_red)
+        problem_red = OptimizationProblem()
+        problem_red.data = problem_data(c, bound_red, A_red, bound_red)
 
-        # Solve problem
-        x, time, _ = self.solve(data, solver=solver, settings=settings)
+        # Solve reduced problem
+        x, time, _ = problem_red.solve(solver=solver, settings=settings)
 
         return x, time
 
@@ -227,14 +224,14 @@ class OptimizationProblem(object):
            theta and solve it with the solver. Useful for
            multiprocessing."""
         theta, solver, settings = args
-        data = self.populate(theta)
-        results = self.solve(data, solver, settings)
+        self.populate(theta)
+        results = self.solve(solver, settings)
         return results
 
     def solve_parametric(self, theta,
                          solver=DEFAULT_SOLVER, settings={},
                          message="Solving for all theta",
-                         parallel=True  # Solve problems in parallel
+                         parallel=False  # Solve problems in parallel
                          ):
         """
         Solve parametric problems for each value of theta.

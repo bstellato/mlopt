@@ -16,14 +16,14 @@ class TestStrategy(unittest.TestCase):
         A = spa.csc_matrix([[2., 1.],
                             [0.5, -1.]])
         int_idx = np.array([0])
-        data = problem_data(c, l, A, u, int_idx)
         problem = OptimizationProblem()
+        problem.data = problem_data(c, l, A, u, int_idx)
 
         # Solve and compute strategy
-        x_opt, time, strategy = problem.solve(data)
+        x_opt, time, strategy = problem.solve()
 
         # Solve just with strategy
-        x_new, time_new = problem.solve_with_strategy(data, strategy)
+        x_new, time_new = problem.solve_with_strategy(strategy)
 
         # Verify both solutions are equal
         npt.assert_almost_equal(x_opt, x_new)

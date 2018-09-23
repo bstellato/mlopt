@@ -33,11 +33,13 @@ class NeuralNet(Learner):
 
     def neural_network(self, x):
 
+        n_layers = (self.n_classes + self.n_input) / 2
+
         # Fully connected layer (in tf contrib folder for now)
-        layer1 = tf.layers.dense(x, 50, activation=tf.nn.relu)
+        layer1 = tf.layers.dense(x, n_layers, activation=tf.nn.relu)
 
         # Second layer
-        layer2 = tf.layers.dense(layer1, 50, activation=tf.nn.relu)
+        layer2 = tf.layers.dense(layer1, n_layers, activation=tf.nn.relu)
 
         # Second layer
         layer3 = tf.layers.dense(layer2, self.n_classes)
@@ -100,6 +102,10 @@ class NeuralNet(Learner):
                         batch_x, batch_y = self.sess.run(next_batch)
                     except tf.errors.OutOfRangeError:
                         break
+
+                    #  t.write("Epoch %i/%i, batch %i/%i" % (epoch,
+                    #                                        self.training_epochs,
+                    #                                        i, total_batch))
 
                     # Run optimization (backprop) and cost (loss value)
                     _, cost_value = self.sess.run([minimize_step, self.cost],
