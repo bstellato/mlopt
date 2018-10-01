@@ -39,7 +39,6 @@ def uniform_sphere_sample(center, radius, N=100):
     p = center + np.multiply(x, frtiled)
     return p
 
-
 # Debug: plot points
 #  from matplotlib import pyplot as plt
 #  fig1 = plt.figure(1)
