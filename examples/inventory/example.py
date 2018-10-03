@@ -29,8 +29,8 @@ theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
 problem = Inventory(T, M, K, radius, bin_vars=True)
 
 # Training and testing data
-n_train = 5000
-n_test = 100
+n_train = 500
+n_test = 10
 theta_train = problem.sample(theta_bar, N=n_train)
 theta_test = problem.sample(theta_bar, N=n_test)
 

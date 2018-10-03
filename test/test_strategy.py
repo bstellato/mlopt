@@ -11,10 +11,11 @@ class TestStrategy(unittest.TestCase):
 
         # Define problem
         c = np.ones(2)
-        l = np.array([-100., -2.])
-        u = np.array([5., 100.])
+        l = np.array([10., -100., -2.])
+        u = np.array([10., 5., 100.])
         A = spa.csc_matrix([[2., 1.],
-                            [0.5, -1.]])
+                            [0.5, -1.],
+                            [0., 1.]])
         int_idx = np.array([0])
         problem = OptimizationProblem()
         problem.data = problem_data(c, l, A, u, int_idx)

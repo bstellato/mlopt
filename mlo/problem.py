@@ -114,7 +114,7 @@ class OptimizationProblem(object):
             #  problem = cvx.Problem(cvx.Minimize(self.data.c * x),
             #                        [self.data.A * x <= self.data.u,
             #                         self.data.A * x >= self.data.l])
-            #  problem.solve(cvx.GUROBI, verbose=True)
+            #  problem.solve(cvx.MOSEK, verbose=True)
             raise ValueError('Problem not solved. Status %s' % results.status)
 
         x_opt = results.x

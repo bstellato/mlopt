@@ -80,7 +80,6 @@ class GUROBISolver(object):
 
         # Add inequality constraints: iterate over the rows of A
         # adding each row into the model
-        range_constrs_map = []
         if p['A'] is not None:
             for i in range(m):
                 start = p['A'].indptr[i]
@@ -88,17 +87,18 @@ class GUROBISolver(object):
                 variables = [x[j] for j in p['A'].indices[start:end]]  # nnz
                 coeff = p['A'].data[start:end]
                 expr = grb.LinExpr(coeff, variables)
-                if (np.abs(l[i] - u[i]) < TOL):
-                    model.addConstr(expr, grb.GRB.EQUAL, u[i])
-                elif (l[i] == -grb.GRB.INFINITY) & (u[i] == grb.GRB.INFINITY):
-                    # Dummy constraint that is always satisfied.
-                    # Gurobi crashes if both constraints in addRange function
-                    # are infinite.
-                    model.addConstr(0.*expr, grb.GRB.LESS_EQUAL, 10.)
-                else:
-                    model.addRange(expr, lower=l[i], upper=u[i])
-                    # Add map to retrieve active constraints
-                    range_constrs_map.append(i)
+                #  if (np.abs(l[i] - u[i]) < TOL):
+                #      model.addConstr(expr, grb.GRB.EQUAL, u[i])
+                #  elif (l[i] == -grb.GRB.INFINITY) & (u[i] == grb.GRB.INFINITY):
+                #      # Dummy constraint that is always satisfied.
+                #      # Gurobi crashes if both constraints in addRange function
+                #      # are infinite.
+                #      model.addConstr(0.*expr, grb.GRB.LESS_EQUAL, 10.)
+                #  else:
+                    #  model.addRange(expr, lower=l[i], upper=u[i])
+                    #  # Add map to retrieve active constraints
+                    #  range_constrs_map.append(i)
+                model.addRange(expr, lower=l[i], upper=u[i])
 
         # Define objective
         obj = grb.LinExpr(p['c'], x)  # Linear part of the objective
@@ -131,7 +131,7 @@ class GUROBISolver(object):
             if self._settings['verbose']:
                 print("Error in GUROBI solution\n")
             run_time = model.Runtime
-            return Results(s.SOLVER_ERROR, None, None, None, run_time, None)
+            return Results(s.SOLVER_ERROR, None, None, None, run_time, None, None)
 
         # Get status
         status = self.STATUS_MAP.get(model.Status, s.SOLVER_ERROR)
@@ -156,7 +156,7 @@ class GUROBISolver(object):
 
                 print(m)
                 # Get active constraints
-                active_cons = self.active_constraints(model, range_constrs_map)
+                active_cons = self.active_constraints(model)
             else:
                 y = None
                 active_cons = np.array([])
@@ -169,26 +169,31 @@ class GUROBISolver(object):
 
     def active_constraints(self, model, range_constr_map):
 
-        print(model.NumConstrs)
-        n_var = model.NumVars - len(range_constr_map)
+        #  print(model.NumConstrs)
+        #  n_var = model.NumVars - len(range_constr_map)
         n_constr = model.NumConstrs
         active_constr = np.zeros(model.NumConstrs, dtype=int)
 
-        cbasis = model.getAttr(grb.AttrConstClass.CBasis)
+        #  cbasis = model.getAttr(grb.AttrConstClass.CBasis)
         vbasis = model.getAttr(grb.AttrConstClass.VBasis)
 
         for i in range(n_constr):
 
-            if i not in range_constr_map:
-                # If Equality constraint (not range constraint)
-                if cbasis[i] == -1:  # Active
-                    active_constr[i] = 1
-            else:
-                # If Range constraint, look at additional variable
-                if vbasis[n_var + np.searchsorted(range_constr_map, i)] == grb.GRB.NONBASIC_UPPER:
-                    active_constr[i] = 1
-                elif vbasis[n_var + np.searchsorted(range_constr_map, i)] == grb.GRB.NONBASIC_LOWER:
-                    active_constr[i] = -1
+            #  if i not in range_constr_map:
+            #      # If Equality constraint (not range constraint)
+            #      if cbasis[i] == -1:  # Active
+            #          active_constr[i] = 1
+            #  else:
+                #  # If Range constraint, look at additional variable
+                #  if vbasis[n_var + np.searchsorted(range_constr_map, i)] == grb.GRB.NONBASIC_UPPER:
+                #      active_constr[i] = 1
+                #  elif vbasis[n_var + np.searchsorted(range_constr_map, i)] == grb.GRB.NONBASIC_LOWER:
+                #      active_constr[i] = -1
+            # Opposite convention!
+            if vbasis[i] == grb.NONBASIC_UPPER:
+                active_constr[i] = -1
+            elif vbasis[i] == grb.NONBASIC_UPPER:
+                active_constr[i] = 1
 
         return active_constr
 
