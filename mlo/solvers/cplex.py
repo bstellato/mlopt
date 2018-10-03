@@ -2,10 +2,11 @@ import cplex as cpx
 import numpy as np
 from . import statuses as s
 from .results import Results
-from ..constants import INFINITY, TOL
+from ..constants import TOL
+from .solver import Solver
 
 
-class CPLEXSolver(object):
+class CPLEXSolver(Solver):
     """
     An interface for the CPLEX QP solver.
     """
@@ -82,6 +83,7 @@ class CPLEXSolver(object):
                                           model.variables.type.integer)
 
         # Add constraints
+        eq_idx = []
         for i in range(m):  # Add inequalities
             start = p['A'].indptr[i]
             end = p['A'].indptr[i+1]
@@ -100,6 +102,8 @@ class CPLEXSolver(object):
                                          senses=["R"],
                                          range_values=[l[i] - u[i]],
                                          rhs=[u[i]])
+            if np.abs(u[i] - l[i]) <= TOL:
+                eq_idx.append(i)
 
         # Set quadratic Cost
         #  if p['P'].count_nonzero():  # Only if quadratic form is not null
@@ -168,7 +172,7 @@ class CPLEXSolver(object):
                 dual = -np.array(model.solution.get_dual_values())
 
                 # Get active constraints
-                active_cons = self.active_constraints(model, l, u)
+                active_cons = self.active_constraints(dual, eq_idx)
 
             else:
                 dual = None
@@ -180,22 +184,28 @@ class CPLEXSolver(object):
             return Results(status, None, None, None,
                                    cputime, total_iter, None)
 
-    def active_constraints(self, model, l, u):
-        var, ineq = model.solution.basis.get_basis()
-        n_constr = len(ineq)
-        active_constr = np.zeros(n_constr, dtype=int)
-        for i in range(len(ineq)):
-            if ineq[i] == 2:
-                active_constr[i] = 1
-            elif ineq[i] == 0:
-                active_constr[i] = -1
-
-        # Check active constraints
-        #  for i in range(n_constr):
-        #      if active_constr[i] == 1 and u[i] == cpx.infinity:
-        #          print("wrong active upper bounds")
-        #          import ipdb; ipdb.set_trace()
-        #      elif active_constr[i] == -1 and l[i] == -cpx.infinity:
-        #          print("wrong active lower bound")
-        #          import ipdb; ipdb.set_trace()
-        return active_constr
+    #  def active_constraints(self, model, eq_idx):
+    #      var, ineq = model.solution.basis.get_basis()
+    #      n_constr = len(ineq)
+    #      active_constr = np.zeros(n_constr, dtype=int)
+    #      for i in eq_idx:
+    #          active_constr[i] = 1
+    #
+    #      for i in range(len(ineq)):
+    #          if ineq[i] == model.solution.basis.status.at_upper_bound:
+    #              active_constr[i] = 1
+    #          elif ineq[i] == model.solution.basis.status.at_lower_bound:
+    #              if i not in eq_idx:
+    #                  active_constr[i] = -1
+    #
+    #      import ipdb; ipdb.set_trace()
+    #
+    #      # Check active constraints
+    #      #  for i in range(n_constr):
+    #      #      if active_constr[i] == 1 and u[i] == cpx.infinity:
+    #      #          print("wrong active upper bounds")
+    #      #          import ipdb; ipdb.set_trace()
+    #      #      elif active_constr[i] == -1 and l[i] == -cpx.infinity:
+    #      #          print("wrong active lower bound")
+    #      #          import ipdb; ipdb.set_trace()
+    #      return active_constr

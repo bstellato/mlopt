@@ -1,11 +1,12 @@
-import gurobi as grb
+import gurobipy as grb
 import numpy as np
 from . import statuses as s
 from .results import Results
 from ..constants import INFINITY, TOL
+from .solver import Solver
 
 
-class GUROBISolver(object):
+class GUROBISolver(Solver):
 
     STATUS_MAP = {2: s.OPTIMAL,
                   3: s.PRIMAL_INFEASIBLE,
@@ -80,6 +81,7 @@ class GUROBISolver(object):
 
         # Add inequality constraints: iterate over the rows of A
         # adding each row into the model
+        eq_idx = []
         if p['A'] is not None:
             for i in range(m):
                 start = p['A'].indptr[i]
@@ -99,6 +101,8 @@ class GUROBISolver(object):
                     #  # Add map to retrieve active constraints
                     #  range_constrs_map.append(i)
                 model.addRange(expr, lower=l[i], upper=u[i])
+                if (np.abs(u[i] - l[i]) < TOL):
+                    eq_idx.append(i)
 
         # Define objective
         obj = grb.LinExpr(p['c'], x)  # Linear part of the objective
@@ -154,9 +158,8 @@ class GUROBISolver(object):
                 constrs = model.getConstrs()
                 y = -np.array([constrs[i].Pi for i in range(m)])
 
-                print(m)
                 # Get active constraints
-                active_cons = self.active_constraints(model)
+                active_cons = self.active_constraints(y, eq_idx)
             else:
                 y = None
                 active_cons = np.array([])
@@ -167,33 +170,35 @@ class GUROBISolver(object):
             return Results(status, None, None, None,
                            run_time, niter, None)
 
-    def active_constraints(self, model, range_constr_map):
-
-        #  print(model.NumConstrs)
-        #  n_var = model.NumVars - len(range_constr_map)
-        n_constr = model.NumConstrs
-        active_constr = np.zeros(model.NumConstrs, dtype=int)
-
-        #  cbasis = model.getAttr(grb.AttrConstClass.CBasis)
-        vbasis = model.getAttr(grb.AttrConstClass.VBasis)
-
-        for i in range(n_constr):
-
-            #  if i not in range_constr_map:
-            #      # If Equality constraint (not range constraint)
-            #      if cbasis[i] == -1:  # Active
-            #          active_constr[i] = 1
-            #  else:
-                #  # If Range constraint, look at additional variable
-                #  if vbasis[n_var + np.searchsorted(range_constr_map, i)] == grb.GRB.NONBASIC_UPPER:
-                #      active_constr[i] = 1
-                #  elif vbasis[n_var + np.searchsorted(range_constr_map, i)] == grb.GRB.NONBASIC_LOWER:
-                #      active_constr[i] = -1
-            # Opposite convention!
-            if vbasis[i] == grb.NONBASIC_UPPER:
-                active_constr[i] = -1
-            elif vbasis[i] == grb.NONBASIC_UPPER:
-                active_constr[i] = 1
-
-        return active_constr
+    #  def active_constraints(self, model, slack_idx):
+    #
+    #      #  print(model.NumConstrs)
+    #      n_var = model.NumVars
+    #      n_constr = model.NumConstrs
+    #      active_constr = np.zeros(model.NumConstrs, dtype=int)
+    #
+    #      cbasis = model.getAttr(grb.AttrConstClass.CBasis)
+    #      vbasis = model.getAttr(grb.AttrConstClass.VBasis)
+    #
+    #      for i in range(n_constr):
+    #
+    #          #  if i not in range_constr_map:
+    #          #      # If Equality constraint (not range constraint)
+    #          #      if cbasis[i] == -1:  # Active
+    #          #          active_constr[i] = 1
+    #          #  else:
+    #              #  # If Range constraint, look at additional variable
+    #              #  if vbasis[n_var + np.searchsorted(range_constr_map, i)] == grb.GRB.NONBASIC_UPPER:
+    #              #      active_constr[i] = 1
+    #              #  elif vbasis[n_var + np.searchsorted(range_constr_map, i)] == grb.GRB.NONBASIC_LOWER:
+    #              #      active_constr[i] = -1
+    #          # Opposite convention
+    #          if vbasis[n_var + i] == grb.GRB.NONBASIC_UPPER:
+    #              active_constr[i] = -1
+    #          elif vbasis[n_var + i] == grb.GRB.NONBASIC_LOWER:
+    #              active_constr[i] = 1
+    #
+    #      import ipdb; ipdb.set_trace()
+    #
+    #      return active_constr
 

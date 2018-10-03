@@ -4,9 +4,10 @@ import scipy.sparse as spa
 from . import statuses as s
 from .results import Results
 from ..constants import INFINITY, TOL
+from .solver import Solver
 
 
-class MOSEKSolver(object):
+class MOSEKSolver(Solver):
 
     # Map of Mosek status to mathprogbasepy status.
     STATUS_MAP = {mosek.solsta.optimal: s.OPTIMAL,
@@ -99,10 +100,14 @@ class MOSEKSolver(object):
             con_bound_l = []
             con_bound_u = []
 
+            eq_idx = []
             for j in range(m):
                 # Get bounds and keys
                 u_temp = p['u'][j] if p['u'][j] < INFINITY else np.inf
                 l_temp = p['l'][j] if p['l'][j] > -INFINITY else -np.inf
+
+                if (u_temp - l_temp) <= TOL:
+                    eq_idx.append(j)
 
                 # Divide 5 cases
                 if (np.abs(l_temp - u_temp) < TOL):
@@ -188,7 +193,8 @@ class MOSEKSolver(object):
                 # it appears signs are inverted
                 y = -y
                 # get active constraints
-                active_cons = self.active_constraints(task)
+                #  active_cons = self.active_constraints(y, eq_idx)
+                active_cons = self.active_constraints_mosek(task, eq_idx)
             else:
                 y = None
                 active_cons = np.array([])
@@ -199,7 +205,7 @@ class MOSEKSolver(object):
             return Results(status, None, None, None,
                            cputime, None, None)
 
-    def active_constraints(self, task):
+    def active_constraints_mosek(self, task, eq_idx):
         """
         Get active constraints
         """
@@ -211,13 +217,15 @@ class MOSEKSolver(object):
         task.getskc(mosek.soltype.bas, keys_constr)
 
         active_constr = np.zeros(num_constr, dtype=int)
+        for i in eq_idx:
+            active_constr[i] = 1
+
         for i in range(num_constr):
             if keys_constr[i] == mosek.stakey.low:
-                active_constr[i] = -1
+                if i not in eq_idx:
+                    active_constr[i] = -1
             elif keys_constr[i] == mosek.stakey.upr:
                 active_constr[i] = 1
-            elif keys_constr[i] == mosek.stakey.fix:
-                active_constr[i] = 1  # Either of them is active
 
         return active_constr
 

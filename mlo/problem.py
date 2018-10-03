@@ -82,8 +82,7 @@ class OptimizationProblem(object):
         """
         results = SOLVER_MAP[solver](settings).solve(self.data)
 
-        # DEBUG CHECK OTHER SOLVER
-        #  res_gurobi = SOLVER_MAP['GUROBI'](settings).solve(self.data)
+
         #  assert np.linalg.norm(self.cost(results.x) -
         #                        self.cost(res_gurobi.x)) <= 1e-05
 
@@ -226,6 +225,22 @@ class OptimizationProblem(object):
         theta, solver, settings = args
         self.populate(theta)
         results = self.solve(solver, settings)
+
+        # DEBUG. Solve with other solvers and check
+        #  res_cplex = self.solve('CPLEX', settings)
+        res_gurobi = self.solve('GUROBI', settings)
+
+        #  import ipdb; ipdb.set_trace()
+        #  if np.linalg.norm(results[0] - res_gurobi[0]) > TOL:
+        #      if np.abs(self.cost(results[0]) - self.cost(res_gurobi[0])) > TOL:
+        #          print("Wrong solution")
+        #          import ipdb; ipdb.set_trace()
+        #  assert np.linalg.norm(results[0] - res_cplex[0]) <= TOL
+        if res_gurobi[2] != results[2]:
+            print("Wrong strategy")
+            import ipdb; ipdb.set_trace()
+        #  assert res_cplex[2] == results[2]
+
         return results
 
     def solve_parametric(self, theta,

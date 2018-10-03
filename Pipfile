@@ -13,6 +13,7 @@ tqdm = "*"
 cvxpy = "*"
 mosek = {file = "https://download.mosek.com/stable/wheel/Mosek-8.1.63-cp36-cp36m-macosx_10_7_x86_64.whl"}
 "666ae1c" = {path = "/Applications/CPLEX_Studio128/cplex/python/3.6/x86-64_osx"}
+python-language-server = {version = "*", extras = ["all"]}
 
 [dev-packages]
 pytest = "*"

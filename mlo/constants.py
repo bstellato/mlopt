@@ -1,3 +1,4 @@
 # Define constants
 TOL = 1e-06
+ACTIVE_CONSTRAINTS_TOL = 1e-05
 INFINITY = 1e15

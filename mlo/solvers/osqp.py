@@ -1,9 +1,11 @@
 import osqp
 from . import statuses as s
 from .results import Results
+from .solver import Solver
+from ..constants import ACTIVE_CONSTRAINTS_TOL as TOL
 
 
-class OSQPSolver(object):
+class OSQPSolver(Solver):
 
     m = osqp.OSQP()
     STATUS_MAP = {m.constant('OSQP_SOLVED'): s.OPTIMAL,
@@ -50,6 +52,12 @@ class OSQPSolver(object):
         # Solve
         results = m.solve()
         status = self.STATUS_MAP.get(results.info.status_val, s.SOLVER_ERROR)
+
+        # Get equality constraints
+        eq_idx = np.where(p['u'] - p['l'] <= TOL)[0]
+
+        # get active constraints
+        active_cons = self.active_constraints(results.y, eq_idx)
 
         return_results = Results(status,
                                  results.info.obj_val,
