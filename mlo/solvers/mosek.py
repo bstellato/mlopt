@@ -194,6 +194,8 @@ class MOSEKSolver(Solver):
                 y = -y
                 # get active constraints
                 #  active_cons = self.active_constraints(y, eq_idx)
+                # Use different function because
+                # It works well in Mosek
                 active_cons = self.active_constraints_mosek(task, eq_idx)
             else:
                 y = None

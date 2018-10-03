@@ -7,13 +7,13 @@ name = "pypi"
 numpy = "*"
 scipy = "*"
 pandas = "*"
-julia = {path = "./../cloned/pyjulia"}
 tensorflow = {file = "https://storage.googleapis.com/tensorflow/mac/cpu/tensorflow-1.11.0-py3-none-any.whl"}
 tqdm = "*"
 cvxpy = "*"
 mosek = {file = "https://download.mosek.com/stable/wheel/Mosek-8.1.63-cp36-cp36m-macosx_10_7_x86_64.whl"}
 "666ae1c" = {path = "/Applications/CPLEX_Studio128/cplex/python/3.6/x86-64_osx"}
 python-language-server = {version = "*", extras = ["all"]}
+julia = {path = "./../../projects/cloned/pyjulia"}
 
 [dev-packages]
 pytest = "*"

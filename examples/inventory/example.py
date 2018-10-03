@@ -45,10 +45,11 @@ y_train, enc2strategy = mlo.encode_strategies(strategies)
 n_input = len(theta_bar)
 n_layers = [15, 15]
 n_classes = len(enc2strategy)
-with mlo.NeuralNet(n_input, n_layers, n_classes) as learner:
+#  with mlo.NeuralNet(n_input, n_layers, n_classes) as learner:
+with mlo.OptimalTree() as learner:
     learner.train(theta_train, y_train)
 
     #  Testing
     results = mlo.eval_performance(theta_test, learner, problem,
                                    enc2strategy, k=3)
-    mlo.store(results, 'examples/output/inventory')
+    mlo.store(results, 'output/')

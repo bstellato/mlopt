@@ -6,4 +6,5 @@ from .sampling import uniform_sphere_sample
 
 # Learners
 from .learners.neural_net import NeuralNet
+from .learners.optimal_tree import OptimalTree
 

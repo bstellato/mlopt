@@ -227,19 +227,10 @@ class OptimizationProblem(object):
         results = self.solve(solver, settings)
 
         # DEBUG. Solve with other solvers and check
-        #  res_cplex = self.solve('CPLEX', settings)
-        res_gurobi = self.solve('GUROBI', settings)
-
-        #  import ipdb; ipdb.set_trace()
-        #  if np.linalg.norm(results[0] - res_gurobi[0]) > TOL:
-        #      if np.abs(self.cost(results[0]) - self.cost(res_gurobi[0])) > TOL:
-        #          print("Wrong solution")
-        #          import ipdb; ipdb.set_trace()
-        #  assert np.linalg.norm(results[0] - res_cplex[0]) <= TOL
-        if res_gurobi[2] != results[2]:
-            print("Wrong strategy")
-            import ipdb; ipdb.set_trace()
-        #  assert res_cplex[2] == results[2]
+        #  res_gurobi = self.solve('GUROBI', settings)
+        #  if res_gurobi[2] != results[2]:
+        #      print("Wrong strategy")
+        #      import ipdb; ipdb.set_trace()
 
         return results
 
