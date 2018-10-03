@@ -22,6 +22,7 @@ matplotlib = "*"
 pypandoc = "*"
 wheel = "*"
 ipdb = "*"
+python-language-server = "*"
 
 [requires]
 python_version = "3.6"
