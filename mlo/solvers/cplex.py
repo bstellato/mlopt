@@ -61,8 +61,8 @@ class CPLEXSolver(object):
         m, n = p['A'].shape
 
         # Convert infinity values to Cplex Infinity
-        u = np.maximum(np.minimum(p['u'], cpx.infinity), -cpx.infinity)
-        l = np.maximum(np.minimum(p['l'], cpx.infinity), -cpx.infinity)
+        u = np.minimum(p['u'], cpx.infinity)
+        l = np.maximum(p['l'], -cpx.infinity)
 
         # Define CPLEX problem
         model = cpx.Cplex()
@@ -87,19 +87,19 @@ class CPLEXSolver(object):
             end = p['A'].indptr[i+1]
             row = [[p['A'].indices[start:end].tolist(),
                     p['A'].data[start:end].tolist()]]
-            if (l[i] != -cpx.infinity) & (u[i] == cpx.infinity):
-                model.linear_constraints.add(lin_expr=row,
-                                             senses=["G"],
-                                             rhs=[l[i]])
-            elif (l[i] == -cpx.infinity) & (u[i] != cpx.infinity):
-                    model.linear_constraints.add(lin_expr=row,
-                                                 senses=["L"],
-                                                 rhs=[u[i]])
-            else:
-                model.linear_constraints.add(lin_expr=row,
-                                             senses=["R"],
-                                             range_values=[l[i] - u[i]],
-                                             rhs=[u[i]])
+            #  if (l[i] != -cpx.infinity) & (u[i] == cpx.infinity):
+            #      model.linear_constraints.add(lin_expr=row,
+            #                                   senses=["G"],
+            #                                   rhs=[l[i]])
+            #  elif (l[i] == -cpx.infinity) & (u[i] != cpx.infinity):
+            #          model.linear_constraints.add(lin_expr=row,
+            #                                       senses=["L"],
+            #                                       rhs=[u[i]])
+            #  else:
+            model.linear_constraints.add(lin_expr=row,
+                                         senses=["R"],
+                                         range_values=[l[i] - u[i]],
+                                         rhs=[u[i]])
 
         # Set quadratic Cost
         #  if p['P'].count_nonzero():  # Only if quadratic form is not null
@@ -168,7 +168,8 @@ class CPLEXSolver(object):
                 dual = -np.array(model.solution.get_dual_values())
 
                 # Get active constraints
-                active_cons = self.active_constraints(model)
+                active_cons = self.active_constraints(model, l, u)
+
             else:
                 dual = None
                 active_cons = np.array([])
@@ -179,8 +180,8 @@ class CPLEXSolver(object):
             return Results(status, None, None, None,
                                    cputime, total_iter, None)
 
-    def active_constraints(self, model):
-        _, ineq = model.solution.basis.get_basis()
+    def active_constraints(self, model, l, u):
+        var, ineq = model.solution.basis.get_basis()
         n_constr = len(ineq)
         active_constr = np.zeros(n_constr, dtype=int)
         for i in range(len(ineq)):
@@ -189,4 +190,12 @@ class CPLEXSolver(object):
             elif ineq[i] == 0:
                 active_constr[i] = -1
 
+        # Check active constraints
+        #  for i in range(n_constr):
+        #      if active_constr[i] == 1 and u[i] == cpx.infinity:
+        #          print("wrong active upper bounds")
+        #          import ipdb; ipdb.set_trace()
+        #      elif active_constr[i] == -1 and l[i] == -cpx.infinity:
+        #          print("wrong active lower bound")
+        #          import ipdb; ipdb.set_trace()
         return active_constr

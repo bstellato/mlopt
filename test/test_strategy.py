@@ -28,5 +28,3 @@ class TestStrategy(unittest.TestCase):
 
         # Verify both solutions are equal
         npt.assert_almost_equal(x_opt, x_new)
-
-

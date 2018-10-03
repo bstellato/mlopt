@@ -180,8 +180,8 @@ class OptimizationProblem(object):
         active_constr = strategy.active_constraints
 
         if self.is_mip():
-            assert np.max(int_vars) <= len(self.data['l'])
-            assert np.min(int_vars) >= 0
+            assert np.max(int_idx) <= len(self.data['l'])
+            assert np.min(int_idx) >= 0
 
         n_var = c.size
 
