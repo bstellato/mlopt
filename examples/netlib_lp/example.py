@@ -4,9 +4,9 @@ from glob import glob
 #  from problem import NetlibLP
 
 # Development
-import mlo
+import mlopt
 import importlib
-importlib.reload(mlo)
+importlib.reload(mlopt)
 
 # Get problems by file size
 lp_data_dir = os.path.join("benchmarks", "netlib_lp", "lp_data", "mat")
@@ -48,16 +48,16 @@ files = files[2]  # Afiro
 #      theta_train,
 #      message="Compute active constraints for training set"
 #  )
-#  y_train, enc2strategy = mlo.encode_strategies(strategies)
+#  y_train, enc2strategy = mlopt.encode_strategies(strategies)
 #
 #  # Training
 #  n_input = len(theta_bar)
 #  n_layers = [15, 15]
 #  n_classes = len(enc2strategy)
-#  with mlo.NeuralNet(n_input, n_layers, n_classes) as learner:
+#  with mlopt.NeuralNet(n_input, n_layers, n_classes) as learner:
 #      learner.train(theta_train, y_train)
 #
 #      #  Testing
-#      results = mlo.eval_performance(theta_test, learner, problem,
+#      results = mlopt.eval_performance(theta_test, learner, problem,
 #                                     enc2strategy, k=3)
-#      mlo.store(results, 'examples/output/inventory')
+#      mlopt.store(results, 'examples/output/inventory')

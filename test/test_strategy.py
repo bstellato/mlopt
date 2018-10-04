@@ -2,8 +2,8 @@ import unittest
 import scipy.sparse as spa
 import numpy as np
 import numpy.testing as npt
-from mlo.problem import OptimizationProblem
-from mlo.utils import problem_data
+from mlopt.problem import OptimizationProblem
+from mlopt.utils import problem_data
 
 
 class TestStrategy(unittest.TestCase):

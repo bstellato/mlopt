@@ -1,11 +1,11 @@
 import cvxpy as cvx
 import pandas as pd
-import mlo
+import mlopt
 import importlib
-importlib.reload(mlo)
+importlib.reload(mlopt)
 
 
-class Inventory(mlo.OptimizationProblem):
+class Inventory(mlopt.OptimizationProblem):
     def __init__(self, T, M, K, radius, bin_vars=False):
         self.name = "inventory"
         self.T = T  # Horizon
@@ -67,12 +67,12 @@ class Inventory(mlo.OptimizationProblem):
         self.params['d'].value = theta.iloc[4:].values
 
         # Get new problem data
-        self.data = mlo.cvxpy2data(self.cvxpy_problem)
+        self.data = mlopt.cvxpy2data(self.cvxpy_problem)
 
     def sample(self, theta_bar, N=100):
 
         # Sample points from multivariate ball
-        X = mlo.uniform_sphere_sample(theta_bar, self.radius, N=N)
+        X = mlopt.uniform_sphere_sample(theta_bar, self.radius, N=N)
 
         df = pd.DataFrame({'h': X[:, 0],
                            'p': X[:, 1],
