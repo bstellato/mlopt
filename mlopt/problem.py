@@ -8,11 +8,38 @@ from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
 from .solvers.statuses import SOLUTION_PRESENT
 from .strategy import Strategy
 from .constants import TOL
-from .utils import problem_data
+from .utils import cvxpy2data, problem_data, has_digits
 from tqdm import tqdm
 
 
 class OptimizationProblem(object):
+
+    def __init__(self, cvxpy_problem, name="problem"):
+        """Initialize Optimization problem
+
+        Parameters
+        ----------
+        cvxpy_problem: cvxpy Problem
+            Problem generated in CVXPY.
+        """
+        self.cvxpy_problem = cvxpy_problem
+        self.name = name
+
+        # Convert parameters to dict
+        params = cvxpy_problem.parameters()
+        self.params = {}
+        for p in params:
+            self.params[p.name()] = p
+
+    def populate(self, theta):
+        """
+        Populate problem using parameter theta
+        """
+        for c in theta.index.values:
+            self.params[c].value = theta[c]
+
+        # Get new problem data
+        self.data = cvxpy2data(self.cvxpy_problem)
 
     def cost(self, x):
         """Compute cost function value"""

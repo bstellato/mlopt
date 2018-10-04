@@ -25,17 +25,17 @@ class Inventory(mlopt.OptimizationProblem):
             self.vars['v'] = v
 
         # Define parameters
-        x0 = cvx.Parameter(nonneg=True)
+        x_init = cvx.Parameter(nonneg=True)
         h = cvx.Parameter(nonneg=True)
         p = cvx.Parameter(nonneg=True)
         c = cvx.Parameter(nonneg=True)
         d = cvx.Parameter(T, nonneg=True)
-        self.params = {'x0': x0, 'h': h, 'p': p,
+        self.params = {'x_init': x_init, 'h': h, 'p': p,
                        'c': c, 'd': d}
 
         # Constaints
         constraints = []
-        constraints += [x[0] == x0]
+        constraints += [x[0] == x_init]
         constraints += [y >= h * x, y >= -p * x]
         for t in range(T):
             constraints += [x[t+1] == x[t] + u[t] - d[t]]
@@ -54,21 +54,6 @@ class Inventory(mlopt.OptimizationProblem):
         # Define problem
         self.cvxpy_problem = cvx.Problem(cvx.Minimize(cost), constraints)
 
-    def populate(self, theta):
-        """
-        Populate problem using parameter theta.
-        """
-
-        # Get parameters from dataframe
-        self.params['h'].value = theta["h"]
-        self.params['p'].value = theta["p"]
-        self.params['c'].value = theta["c"]
-        self.params['x0'].value = theta["x0"]
-        self.params['d'].value = theta.iloc[4:].values
-
-        # Get new problem data
-        self.data = mlopt.cvxpy2data(self.cvxpy_problem)
-
     def sample(self, theta_bar, N=100):
 
         # Sample points from multivariate ball
@@ -79,6 +64,6 @@ class Inventory(mlopt.OptimizationProblem):
                            'c': X[:, 2],
                            'x0': X[:, 3]})
         for i in range(self.T):
-            df['d%d' % i] = X[:, 3 + i]
+            df['d_%d' % i] = X[:, 3 + i]
 
         return df

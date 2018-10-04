@@ -1,14 +1,18 @@
 # Inventory example script
 import numpy as np
-from problem import Inventory
-
+import cvxpy as cp
+import pandas as pd
 
 # Development
 import mlopt
 import importlib
 importlib.reload(mlopt)
 
-#  def run_inventory():
+'''
+Define Inventory problem
+'''
+bin_vars = True
+
 # Generate data
 np.random.seed(1)
 T = 10
@@ -16,6 +20,47 @@ M = 4.
 K = 10.
 radius = 3.0
 
+
+# Define problem
+x = cp.Variable(T+1)
+u = cp.Variable(T)
+y = cp.Variable(T+1)  # Auxiliary y = max(h * x, - p * x)
+
+if bin_vars:
+    v = cp.Variable(T, integer=True)
+
+# Define parameters
+x_init = cp.Parameter(nonneg=True, name="x_init")
+h = cp.Parameter(nonneg=True, name="h")
+p = cp.Parameter(nonneg=True, name="p")
+c = cp.Parameter(nonneg=True, name="c")
+d = cp.Parameter(T, nonneg=True, name="d")
+
+# Constaints
+constraints = [x[0] == x_init]
+constraints += [y >= h * x, y >= -p * x]
+for t in range(T):
+    constraints += [x[t+1] == x[t] + u[t] - d[t]]
+constraints += [u >= 0]
+if bin_vars:
+    constraints += [u <= M * v]
+    constraints += [0 <= v, v <= 1]  # Binary variables
+else:
+    constraints += [u <= M]
+
+# Objective
+cost = cp.sum(y) + c * cp.sum(u)
+if bin_vars:
+    cost += K * cp.sum(v)
+
+# Define problem
+problem = mlopt.OptimizationProblem(cp.Problem(cp.Minimize(cost),
+                                               constraints),
+                                    name="inventory")
+
+'''
+Sample points
+'''
 # Operating point
 theta_bar = np.array([
     4.,  # h
@@ -25,14 +70,30 @@ theta_bar = np.array([
     ])
 theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
 
-# Define problem
-problem = Inventory(T, M, K, radius, bin_vars=True)
+
+def sample_inventory(theta_bar, radius, N=100):
+
+    # Sample points from multivariate ball
+    X = mlopt.uniform_sphere_sample(theta_bar, radius, N=N)
+
+    df = pd.DataFrame({'h': X[:, 0],
+                       'p': X[:, 1],
+                       'c': X[:, 2],
+                       'x_init': X[:, 3],
+                       'd': X[:, 4:].tolist()})
+
+    return df
+
+
+'''
+Train and solve
+'''
 
 # Training and testing data
-n_train = 5000
-n_test = 100
-theta_train = problem.sample(theta_bar, N=n_train)
-theta_test = problem.sample(theta_bar, N=n_test)
+n_train = 50
+n_test = 10
+theta_train = sample_inventory(theta_bar, radius, N=n_train)
+theta_test = sample_inventory(theta_bar, radius, N=n_test)
 
 # Encode training strategies
 _, _, strategies = problem.solve_parametric(
@@ -45,11 +106,11 @@ y_train, enc2strategy = mlopt.encode_strategies(strategies)
 n_input = len(theta_bar)
 n_layers = [15, 15]
 n_classes = len(enc2strategy)
-#  with mlopt.NeuralNet(n_input, n_layers, n_classes) as learner:
-with mlopt.OptimalTree() as learner:
+with mlopt.NeuralNet(n_input, n_layers, n_classes) as learner:
+#  with mlopt.OptimalTree() as learner:
     learner.train(theta_train, y_train)
 
     #  Testing
     results = mlopt.eval_performance(theta_test, learner, problem,
-                                   enc2strategy, k=3)
+                                     enc2strategy, k=3)
     mlopt.store(results, 'output/')

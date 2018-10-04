@@ -100,26 +100,3 @@ class Learner(ABC):
 
         # Return x, time and strategy for all the points
         return x, time, strategy
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

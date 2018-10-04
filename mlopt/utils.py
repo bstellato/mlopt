@@ -5,6 +5,10 @@ import cvxpy.settings as s
 import scipy.sparse as spa
 
 
+def has_digits(s):
+    """Check if string s has digits inside"""
+    return any(i.isdigit() for i in s)
+
 def problem_data(c, l, A, u, int_idx=None):
     """Create problem data dictionary"""
     data = {'c': c,
