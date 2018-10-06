@@ -20,7 +20,6 @@ M = 4.
 K = 10.
 radius = 3.0
 
-
 # Define problem
 x = cp.Variable(T+1)
 u = cp.Variable(T)
@@ -96,10 +95,10 @@ theta_train = sample_inventory(theta_bar, radius, N=n_train)
 theta_test = sample_inventory(theta_bar, radius, N=n_test)
 
 # Encode training strategies
-_, _, strategies = problem.solve_parametric(
+strategies = problem.solve_parametric(
     theta_train,
     message="Compute active constraints for training set"
-)
+)[2]
 y_train, enc2strategy = mlopt.encode_strategies(strategies)
 
 # Training

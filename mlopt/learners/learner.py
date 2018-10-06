@@ -39,6 +39,44 @@ class Learner(ABC):
     def __exit__(self, exc_type, exc_value, traceback):
         """Exit for context manager"""
 
+    def pandas2array(self, X):
+        """
+        Unroll dataframe elements to construct 2d array in case of
+        cells containing tuples.
+        """
+
+        # get number of datapoints
+        n_data = len(X)
+        # Get dimensions by inspecting first row
+        n = 0
+        for c in X.columns.values:
+
+            if isinstance(X[c][0], list):
+                # If list add length
+                n += len(X[c][0])
+            else:
+                # If number add 1
+                n += 1
+
+        # Allocate full vector
+        X_new = np.empty((0, n))
+        #  X_new = np.array([], shape=(0, n))
+
+        # Unroll
+        # TODO: Speedup this process
+        for i in range(n_data):
+            x_temp = np.array([])
+            x_data = X.iloc[i, :].values
+            for i in x_data:
+                if isinstance(i, list):
+                    x_temp = np.concatenate((x_temp, np.array(i)))
+                else:
+                    x_temp = np.append(x_temp, i)
+
+            X_new = np.vstack((X_new, x_temp))
+
+        return X_new
+
     def predict_best_points(self, X, problem, k, enc2strategy,
                             message="Predict active constraints"):
         """

@@ -55,6 +55,9 @@ class NeuralNet(Learner):
     def train(self, X_train, y_train):
         self.n_train = len(X_train)
 
+        # Unroll pandas df to array
+        X_train = self.pandas2array(X_train)
+
         # Create dataset from input data
         ds = tf.data.Dataset.from_tensor_slices((X_train, y_train))
 
@@ -141,6 +144,9 @@ class NeuralNet(Learner):
         #  # Get right shape
         #  x = np.array([x_pred])
         n_points = len(X_pred)
+
+        # Unroll pandas df to array
+        X_pred = self.pandas2array(X_pred)
 
         # Evaluate probabilities
         proba = tf.nn.softmax(self.logits)

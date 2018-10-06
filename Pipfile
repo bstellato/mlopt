@@ -14,8 +14,6 @@ mosek = {file = "https://download.mosek.com/stable/wheel/Mosek-8.1.63-cp36-cp36m
 "666ae1c" = {path = "/Applications/CPLEX_Studio128/cplex/python/3.6/x86-64_osx"}
 python-language-server = {version = "*", extras = ["all"]}
 julia = {path = "./../../projects/cloned/pyjulia"}
-torch = "*"
-torchvision = "*"
 
 [dev-packages]
 pytest = "*"
@@ -25,7 +23,7 @@ matplotlib = "*"
 pypandoc = "*"
 wheel = "*"
 ipdb = "*"
-python-language-server = "*"
+python-language-server = {version = "*", extras = ["all"]}
 
 [requires]
 python_version = "3.6"

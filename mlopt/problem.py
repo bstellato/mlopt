@@ -8,28 +8,31 @@ from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
 from .solvers.statuses import SOLUTION_PRESENT
 from .strategy import Strategy
 from .constants import TOL
-from .utils import cvxpy2data, problem_data, has_digits
+from .utils import cvxpy2data, problem_data
 from tqdm import tqdm
 
 
 class OptimizationProblem(object):
 
-    def __init__(self, cvxpy_problem, name="problem"):
+    def __init__(self, cvxpy_problem=None, name="problem"):
         """Initialize Optimization problem
 
         Parameters
         ----------
         cvxpy_problem: cvxpy Problem
             Problem generated in CVXPY.
+        name : string
+            Problem name for outputting learner.
         """
-        self.cvxpy_problem = cvxpy_problem
         self.name = name
+        if cvxpy_problem is not None:
+            self.cvxpy_problem = cvxpy_problem
 
-        # Convert parameters to dict
-        params = cvxpy_problem.parameters()
-        self.params = {}
-        for p in params:
-            self.params[p.name()] = p
+            # Convert parameters to dict
+            params = cvxpy_problem.parameters()
+            self.params = {}
+            for p in params:
+                self.params[p.name()] = p
 
     def populate(self, theta):
         """

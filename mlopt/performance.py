@@ -94,7 +94,6 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
     df = pd.DataFrame(
         {
             "problem": [problem.name],
-            "radius": [problem.radius],
             "k": [k],
             "num_var": [num_var],
             "num_constr": [num_constr],
@@ -113,6 +112,13 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
             "max_time_improv": [np.max(time_comp)],
         }
     )
+    # Add radius info if problem has it.
+    # TODO: We should remove it later
+    try:
+        df["radius"] = [problem.radius]
+    except AttributeError:
+        pass
+
     df_detail = pd.DataFrame(
         {
             "problem": [problem.name] * num_test,
