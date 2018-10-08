@@ -68,9 +68,6 @@ class PyTorchNeuralNet(Learner):
         self.criterion = nn.CrossEntropyLoss()
 
         # Define optimizer
-        #  self.optimizer = optim.SGD(self.net.parameters(),
-        #                             lr=learning_rate,
-        #                             momentum=momentum)
         self.optimizer = optim.Adam(self.net.parameters(),
                                     lr=learning_rate)
 
@@ -144,12 +141,3 @@ class PyTorchNeuralNet(Learner):
             idx_probs[i, :] = np.argsort(y_pred[i, :])[-k:]
 
         return idx_probs
-
-        #  # Predict using internal model with data X
-        #  # Test model
-        #  correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-        #  # Calculate accuracy
-        #  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        #  print("Accuracy:", accuracy.eval({x: mnist.test.images,
-        #                                    y: mnist.test.labels}))
-        #
