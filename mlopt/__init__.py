@@ -5,6 +5,7 @@ from .utils import cvxpy2data
 from .sampling import uniform_sphere_sample
 
 # Learners
-from .learners.neural_net import NeuralNet
+from .learners.tensorflow_neural_net import TensorFlowNeuralNet
+from .learners.pytorch_neural_net import PyTorchNeuralNet
 #  from .learners.optimal_tree import OptimalTree
 

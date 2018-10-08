@@ -4,7 +4,7 @@ import tensorflow as tf
 from tqdm import trange
 
 
-class NeuralNet(Learner):
+class TensorFlowNeuralNet(Learner):
 
     def __enter__(self):
         """Enter for context manager"""
