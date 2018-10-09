@@ -2,7 +2,7 @@ import gurobipy as grb
 import numpy as np
 from . import statuses as s
 from .results import Results
-from ..constants import INFINITY, TOL
+from ..settings import INFINITY, TOL
 from .solver import Solver
 
 

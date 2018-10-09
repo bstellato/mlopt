@@ -1,4 +1,4 @@
-from ..constants import ACTIVE_CONSTRAINTS_TOL as TOL
+from ..settings import ACTIVE_CONSTRAINTS_TOL as TOL
 import numpy as np
 
 

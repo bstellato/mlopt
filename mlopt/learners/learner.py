@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ..constants import TOL
+from ..settings import TOL
 import numpy as np
 from tqdm import tqdm
 
@@ -60,7 +60,6 @@ class Learner(ABC):
 
         # Allocate full vector
         X_new = np.empty((0, n))
-        #  X_new = np.array([], shape=(0, n))
 
         # Unroll
         # TODO: Speedup this process

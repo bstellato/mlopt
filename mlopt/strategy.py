@@ -21,6 +21,18 @@ class Strategy:
     def __eq__(self, other):
         """Overrides the default equality implementation"""
         if isinstance(other, Strategy):
+
+            # Compare integer variables
+
+
+
+
+
+
+
+
+
+
             same_int_vars = np.array_equal(self.int_vars, other.int_vars)
             same_active_constraints = np.array_equal(self.active_constraints,
                                                      other.active_constraints)

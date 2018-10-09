@@ -3,7 +3,7 @@ import numpy as np
 import scipy.sparse as spa
 from . import statuses as s
 from .results import Results
-from ..constants import INFINITY, TOL
+from ..settings import INFINITY, TOL
 from .solver import Solver
 
 

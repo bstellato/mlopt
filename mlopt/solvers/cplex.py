@@ -2,7 +2,7 @@ import cplex as cpx
 import numpy as np
 from . import statuses as s
 from .results import Results
-from ..constants import TOL
+from ..settings import TOL
 from .solver import Solver
 
 

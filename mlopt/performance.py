@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from .constants import TOL
+from .settings import TOL
 
 
 def accuracy(strategy_pred, strategy_test):

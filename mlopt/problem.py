@@ -1,20 +1,22 @@
 from multiprocessing import Pool, cpu_count
+from copy import deepcopy  # For copying problem
 from itertools import repeat
 import numpy as np
 import scipy.sparse as spa
 import scipy.sparse.linalg as spla
-from . import constants as con
-from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
-from .solvers.statuses import SOLUTION_PRESENT
+from . import settings as con
+#  from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
+#  from .solvers.statuses import SOLUTION_PRESENT
+from cvxpy.settings import SOLUTION_PRESENT
 from .strategy import Strategy
-from .constants import TOL
+from .settings import TOL, DEFAULT_SOLVER
 from .utils import cvxpy2data, problem_data
 from tqdm import tqdm
 
 
 class OptimizationProblem(object):
 
-    def __init__(self, cvxpy_problem=None, name="problem"):
+    def __init__(self, cvxpy_problem, name="problem"):
         """Initialize Optimization problem
 
         Parameters
@@ -25,72 +27,121 @@ class OptimizationProblem(object):
             Problem name for outputting learner.
         """
         self.name = name
-        if cvxpy_problem is not None:
-            self.cvxpy_problem = cvxpy_problem
+        self.cvxpy_problem = cvxpy_problem
 
-            # Convert parameters to dict
-            params = cvxpy_problem.parameters()
-            self.params = {}
-            for p in params:
-                self.params[p.name()] = p
+        #  # Get objective and constraints
+        #  self.objective =
+        #  self.constraints = cvxpy_problem.constraints
+        #
+        #  # Convert parameters to dict
+        #  params = cvxpy_problem.parameters()
+        #  self.params = {}
+        #  for p in params:
+        #      self.params[p.name()] = p
+        #
+        import ipdb; ipdb.set_trace()
 
-            import ipdb; ipdb.set_trace()
 
     def populate(self, theta):
         """
         Populate problem using parameter theta
         """
-        for c in theta.index.values:
-            self.params[c].value = theta[c]
+        for p in self.cvxpy_problem.parameters():
+            p.value = theta[p.name()]
 
-        # Get new problem data
-        self.data = cvxpy2data(self.cvxpy_problem)
+        # OLD
+        #  for c in theta.index.values:
+        #      self.params[c].value = theta[c]
+        #  for p in params:
+        #      p.value = theta[p.name()]
+        #  for c in theta.index.values:
+        #      self.params[c].value = theta[c]
 
-    def cost(self, x):
+    def cost(self):
         """Compute cost function value"""
-        return self.data['c'].dot(x)
+        #  return self.data['c'].dot(x)
+        return self.cvxpy_problem.objective.value
 
     def is_mip(self):
         """Check if problem has integer variables."""
-        return len(self.data['int_idx']) > 0
+        return self.cvxpy_problem.is_mixed_integer()
 
-    def eq_ineq(self):
-        """
-        Return equality and inequality constraints
-        """
-        n_con = len(self.data['l'])
-        eq = np.where(self.data['u'] - self.data['l']) <= con.TOL
-        ineq = np.array(set(range(n_con)) - set(eq))
-        return eq, ineq
-
-    def infeasibility(self, x):
+    def infeasibility(self):
         """
         Compute infeasibility for vector x
         """
-        l, A, u = self.data['l'], self.data['A'], self.data['u']
+        violations = [c.violation() for c in self.cvxpy_problem.constraints]
 
-        norm_A = [spla.norm(A[i, :], np.inf) for i in range(A.shape[0])]
+        return np.linalg.norm(violations)
 
-        upper = np.maximum(A.dot(x) - u, 0.)
-        lower = np.maximum(l - A.dot(x), 0.)
+        #  l, A, u = self.data['l'], self.data['A'], self.data['u']
+        #
+        #  norm_A = [spla.norm(A[i, :], np.inf) for i in range(A.shape[0])]
+        #
+        #  upper = np.maximum(A.dot(x) - u, 0.)
+        #  lower = np.maximum(l - A.dot(x), 0.)
+        #
+        #  # Normalize nonzero ones
+        #  for i in range(len(upper)):
+        #      if upper[i] >= TOL:
+        #          upper[i] /= np.maximum(norm_A[i], np.abs(u[i]))
+        #  for i in range(len(lower)):
+        #      if lower[i] >= TOL:
+        #          lower[i] /= np.maximum(norm_A[i], np.abs(l[i]))
+        #
+        #  return np.linalg.norm(upper + lower)
 
-        # Normalize nonzero ones
-        for i in range(len(upper)):
-            if upper[i] >= TOL:
-                upper[i] /= np.maximum(norm_A[i], np.abs(u[i]))
-        for i in range(len(lower)):
-            if lower[i] >= TOL:
-                lower[i] /= np.maximum(norm_A[i], np.abs(l[i]))
+    #  def suboptimality(self, x, x_opt):
+    #      """
+    #      Compute suboptimality for vector x
+    #      """
+    #      c = self.data['c']
+    #      return (self.cost(x) - self.cost(x_opt)) / \
+    #          np.linalg.norm(c, np.inf)
 
-        return np.linalg.norm(upper + lower)
-
-    def suboptimality(self, x, x_opt):
+    def _solve(self, problem, solver, settings):
         """
-        Compute suboptimality for vector x
+        Solve problem with CVXPY and return results dictionary
         """
-        c = self.data['c']
-        return (self.cost(x) - self.cost(x_opt)) / \
-            np.linalg.norm(c, np.inf)
+        problem.solve(solver=solver)
+
+        results = {}
+        results['x'] = np.array([v.value for v in problem.variables()])
+        results['time'] = problem.solver_stats.setup_time + \
+            problem.solver_stats.solve_time
+
+        if not problem.is_mixed_integer():
+            active_constraints = dict()
+            for c in problem.constraints:
+                active_constraints[c.id] = \
+                    [1 if y >= TOL else 0 for y in c.dual_value]
+            results['active_constraints'] = active_constraints
+
+        return results
+
+    def _is_var_mip(self, var):
+        """
+        Is the cvxpy variable mixed-integer?
+        """
+        return var.attributes['boolean'] or var.attributes['integer']
+
+    def _set_bool_var(self, var):
+        """Set variable to be boolean"""
+        var.attributes['boolean'] = True
+        var.boolean_idx = list(np.ndindex(max(var.shape, (1,))))
+
+    def _set_cont_var(self, var):
+        """Set variable to be continuous"""
+        var.attributes['boolean'] = False
+        var.boolean_idx = []
+
+    #  def _get_vars(self, objective, constraints):
+    #      vars_ = objective.variables()
+    #      for constr in contraints:
+    #          vars_ += constr.variables()
+    #      seen = set()
+    #      # never use list as a variable name
+    #      return [seen.add(obj.id) or obj for obj in vars_ if obj.id not in seen]
 
     def solve(self, solver=DEFAULT_SOLVER, settings={}):
         """
@@ -112,70 +163,41 @@ class OptimizationProblem(object):
         strategy
             Strategy.
         """
-        results = SOLVER_MAP[solver](settings).solve(self.data)
+        # Solve complete problem with CVXPY
+        results = self._solve(self.cvxpy_problem, solver, settings)
 
+        # Get solution and integer variables
+        x_opt = results['x']
+        time = results['time']
+        x_int = dict()
 
-        #  assert np.linalg.norm(self.cost(results.x) -
-        #                        self.cost(res_gurobi.x)) <= 1e-05
-
-        # DEBUG Solve with CVXPY
-        #  self.problem.solve()
-        #  if not self.is_mip():
-        #      x_cvxpy = np.concatenate((self.vars['y'].value,
-        #                                self.vars['u'].value,
-        #                                self.vars['x'].value))
-        #  else:
-        #      x_cvxpy = np.concatenate((self.vars['y'].value,
-        #                                self.vars['u'].value,
-        #                                self.vars['v'].value,
-        #                                self.vars['x'].value))
-        #
-        #  #  import ipdb; ipdb.set_trace()
-        #  if np.linalg.norm(x_cvxpy - results.x) > TOL:
-        #      print("Solutions are different of %.2e" % np.linalg.norm(x_cvxpy -
-        #          results.x))
-        #      print(x_cvxpy)
-        #      print(results.x)
-        #
-
-        n_constr = len(self.data['u'])  # Number of constraints
-        if results.status not in SOLUTION_PRESENT:
-            #  import cvxpy as cvx
-            #  x = cvx.Variable(len(self.data.c))
-            #  problem = cvx.Problem(cvx.Minimize(self.data.c * x),
-            #                        [self.data.A * x <= self.data.u,
-            #                         self.data.A * x >= self.data.l])
-            #  problem.solve(cvx.MOSEK, verbose=True)
-            raise ValueError('Problem not solved. Status %s' % results.status)
-
-        x_opt = results.x
-        time = results.run_time
-        x_int = np.array([], dtype=int)
         if self.is_mip():
-            x_int = np.round(results.x[self.data['int_idx']]).astype(int)
+            # Get integer variables
+            int_vars = [v if self._is_var_mip(v)
+                        for v in self.cvxpy_problem.variables()]
 
-            # If mixed-integer, solve continuous restriction and get basis
-            # Create continuous restriction
-            c_cont = self.data['c']
-            n_var = len(c_cont)
-            A_cont = spa.vstack([self.data['A'],
-                                 spa.eye(n_var,
-                                         format='csc')[self.data['int_idx'], :]])
-            u_cont = np.concatenate((self.data['u'], x_int))
-            l_cont = np.concatenate((self.data['l'], x_int))
-            data_cont = problem_data(c_cont, l_cont, A_cont, u_cont)
+            # Get value of integer variables
+            x_int = dict()
+            for x in int_vars:
+                x_int[x.id] = deepcopy(x.value)
 
-            # Solve and get active constraints
-            results_cont = SOLVER_MAP[solver](settings).solve(data_cont)
-            if results_cont.status not in SOLUTION_PRESENT:
-                raise ValueError('Continuous restriction problem not ' +
-                                 'solved. Status %s' % results_cont.status)
-            # Get only active constraints of the original problem (ignore x_int
-            # fixing)
-            active_constraints = results_cont.active_constraints[:n_constr]
-        else:
-            # Continuous problem. Get active constraints directly
-            active_constraints = results.active_constraints
+            # Change attributes to continuous
+            int_vars_fix = []
+            for x in int_vars:
+                self._set_cont_var(x)  # Set continuous variable
+                int_vars_fix += [x == x_int[x.id]]
+
+            # Define new constraints to fix integer variables
+            prob_fix_vars = cp.Problem(cp.Minimize(0), int_vars_fix)
+            prob_cont = self.cvxpy_problem + prob_fix_vars
+
+            # Solve
+            results_cont = self._solve(prob_cont, solver, settings)
+            active_constraints = results['active_constraints']
+
+            # Restore integer variables
+            for x in int_vars:
+                self._set_bool_var(x)
 
         # Get strategy
         strategy = Strategy(x_int, active_constraints)

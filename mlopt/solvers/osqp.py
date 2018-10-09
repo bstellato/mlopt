@@ -2,7 +2,7 @@ import osqp
 from . import statuses as s
 from .results import Results
 from .solver import Solver
-from ..constants import ACTIVE_CONSTRAINTS_TOL as TOL
+from ..settings import ACTIVE_CONSTRAINTS_TOL as TOL
 
 
 class OSQPSolver(Solver):
