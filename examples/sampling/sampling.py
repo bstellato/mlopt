@@ -2,11 +2,7 @@
 import numpy as np
 import cvxpy as cp
 import pandas as pd
-
-# Development
 import mlopt
-#  import importlib
-#  importlib.reload(mlopt)
 
 '''
 Define Inventory problem
@@ -18,7 +14,6 @@ np.random.seed(1)
 T = 10
 M = 4.
 K = 10.
-radius = 3.0
 
 # Define problem
 x = cp.Variable(T+1)
@@ -57,20 +52,23 @@ problem = mlopt.OptimizationProblem(cp.Problem(cp.Minimize(cost),
                                                constraints),
                                     name="inventory")
 
+
 '''
 Sample points
 '''
-# Operating point
-theta_bar = np.array([
-    4.,  # h
-    6.,  # p
-    3.5,  # c
-    5.,  # x_0
-    ])
-theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
 
 
-def sample_inventory(theta_bar, radius, N=100):
+def sample_inventory(N=10):
+    # Operating point
+    theta_bar = np.array([
+        4.,  # h
+        6.,  # p
+        3.5,  # c
+        5.,  # x_0
+        ])
+    theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
+
+    radius = 3.0
 
     # Sample points from multivariate ball
     X = mlopt.uniform_sphere_sample(theta_bar, radius, N=N)
@@ -80,7 +78,6 @@ def sample_inventory(theta_bar, radius, N=100):
                        'c': X[:, 2],
                        'x_init': X[:, 3],
                        'd': X[:, 4:].tolist()})
-
     return df
 
 
@@ -88,36 +85,11 @@ def sample_inventory(theta_bar, radius, N=100):
 Train and solve
 '''
 
-# Training and testing data
-n_train = 500
-n_test = 10
-theta_train = sample_inventory(theta_bar, radius, N=n_train)
-theta_test = sample_inventory(theta_bar, radius, N=n_test)
+sampler = mlopt.Sampler(problem, sample_inventory)
+theta, s_theta = sampler.sample()
 
-# Encode training strategies
-#  strategies = problem.solve_parametric(
+#  # Encode training strategies strategies = problem.solve_parametric(
 #      theta_train,
 #      message="Compute active constraints for training set"
 #  )[2]
-x_train, _, strategies = problem.solve_parametric(
-    theta_train,
-    message="Compute active constraints for training set"
-)
-y_train, enc2strategy = mlopt.encode_strategies(strategies)
-
-# Training
-n_input = len(theta_bar)
-n_classes = len(enc2strategy)
-#  with mlopt.TensorFlowNeuralNet(n_input, n_layers, n_classes) as learner:
-with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
-#  with mlopt.OptimalTree() as learner:
-    learner.train(theta_train, y_train)
-
-    #  Testing
-    #  results = mlopt.eval_performance(theta_test, learner, problem,
-    #                                   enc2strategy, k=3)
-    results0, results1, x_pred, x_test = mlopt.eval_performance(theta_test, learner, problem,
-                                                                enc2strategy, k=3)
-    results = results0, results1
-
-    mlopt.store(results, 'output/')
+#  y_train, enc2strategy = mlopt.encode_strategies(strategies)

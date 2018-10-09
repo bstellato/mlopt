@@ -129,7 +129,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
         }
     )
 
-    return df, df_detail
+    return df, df_detail, x_pred, x_test
 
 
 def store(results, file_name):

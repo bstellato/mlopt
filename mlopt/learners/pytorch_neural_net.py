@@ -13,7 +13,7 @@ class Net(nn.Module):
     PyTorch internal neural network class.
     """
 
-    def __init__(self, n_input, n_layers, n_classes):
+    def __init__(self, n_input, n_classes):
         super(Net, self).__init__()
         n_hidden = int((n_classes + n_input) / 2)
         self.f1 = nn.Linear(n_input, n_hidden)
@@ -42,12 +42,14 @@ class PyTorchNeuralNet(Learner):
 
     def __init__(self,
                  n_input,
-                 n_layers,
                  n_classes,
                  n_epochs=1000,
                  learning_rate=0.001,
                  momentum=0.9,
                  batch_size=100):
+
+        # Reset torch seed
+        torch.manual_seed(1)
 
         # Assign settings
         self.learning_rate = learning_rate
@@ -62,7 +64,7 @@ class PyTorchNeuralNet(Learner):
             )
 
         # Create PyTorch Neural Network and port to to device
-        self.net = Net(n_input, n_layers, n_classes).to(self.device)
+        self.net = Net(n_input, n_classes).to(self.device)
 
         # Define criterion
         self.criterion = nn.CrossEntropyLoss()

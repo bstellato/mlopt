@@ -34,6 +34,8 @@ class OptimizationProblem(object):
             for p in params:
                 self.params[p.name()] = p
 
+            import ipdb; ipdb.set_trace()
+
     def populate(self, theta):
         """
         Populate problem using parameter theta
