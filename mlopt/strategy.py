@@ -2,42 +2,52 @@
 import numpy as np
 
 
-class Strategy:
+class Strategy(object):
     """
     Solving strategy.
 
     Parameters
     ----------
-    int_vars : numpy array
-        Value of the integer variables.
-    active_constraints : numpy array
-        Set of active constraints.
+    active_constraints : dict of numpy int arrays
+        Set of active constraints. The keys are the CVXPY constraint id.
+        The values are numpy int arrays (1/0 for active/inactive).
+    int_vars : dict of numpy int arrays
+        Value of the integer variables. The keys are CVXPY variable id.
+        The values are numpy int arrays.
     """
-
-    def __init__(self, int_vars, active_constraints):
-        self.int_vars = int_vars
+    def __init__(self, active_constraints, int_vars):
         self.active_constraints = active_constraints
+        self.int_vars = int_vars
+
+    def _compare_arrays_dict(self, d1, d2):
+        """Compare dictionaries of numpy arrays"""
+        for key in d1.keys():
+            if not np.array_equal(d1[key], d2[key]):
+                return False
+        return True
+
+    def __hash__(self):
+        """Overrides default hash implementation"""
+        f_int_vars = frozenset(self.int_vars)
+        f_active_constraints = frozenset(self.active_constraints)
+        return hash((f_active_constraints, f_int_vars))
 
     def __eq__(self, other):
         """Overrides the default equality implementation"""
         if isinstance(other, Strategy):
 
+            # Compare active constraints
+            same_active_constraints = \
+                self._compare_arrays_dict(self.active_constraints,
+                                          other.active_constraints)
+
             # Compare integer variables
+            same_int_vars = self._compare_arrays_dict(self.int_vars,
+                                                      other.int_vars)
 
-
-
-
-
-
-
-
-
-
-            same_int_vars = np.array_equal(self.int_vars, other.int_vars)
-            same_active_constraints = np.array_equal(self.active_constraints,
-                                                     other.active_constraints)
-            return same_int_vars and same_active_constraints
-        return False
+            return same_active_constraints and same_int_vars
+        else:
+            return False
 
 
 def unique_strategies(strategies):
@@ -46,7 +56,7 @@ def unique_strategies(strategies):
 
     Parameters
     ----------
-    strategies : Strategy array
+    strategies : Strategy list
         Strategies to be processed.
 
     Returns
@@ -54,24 +64,7 @@ def unique_strategies(strategies):
     Strategy array :
         Unique strategies.
     """
-    n_int_var = len(strategies[0].int_vars)
-
-    # Construct vector of vectors and get unique elements
-    # NB. We need to convert the active constraints from set
-    # to numpy arrays to make it work
-    strategy_vecs = np.unique(
-        np.array(
-            [
-                np.concatenate((s.int_vars, s.active_constraints))
-                for s in strategies
-            ],
-            dtype=int),
-        axis=0,
-    )
-
-    # Get unique vectors
-    return [Strategy(s[:n_int_var].astype(int), s[n_int_var:].astype(int))
-            for s in strategy_vecs]
+    return list(set(strategies))
 
 
 def encode_strategies(strategies):
