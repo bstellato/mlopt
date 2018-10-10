@@ -73,7 +73,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
 
     num_test = len(theta)
     num_train = learner.n_train  # Number of training samples from learner
-    n_theta = num_dataframe_features(theta)  # Number of parameters in dataframe
+    n_theta = num_dataframe_features(theta)  # Number of parameters
     n_active_sets = len(enc2strategy)  # Number of active sets
 
     # Compute comparative statistics

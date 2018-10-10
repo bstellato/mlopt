@@ -2,15 +2,11 @@ from multiprocessing import Pool, cpu_count
 from copy import deepcopy  # For copying problem
 from itertools import repeat
 import numpy as np
-import scipy.sparse as spa
-import scipy.sparse.linalg as spla
-from . import settings as con
 #  from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
 #  from .solvers.statuses import SOLUTION_PRESENT
-from cvxpy.settings import SOLUTION_PRESENT
 from .strategy import Strategy
 from .settings import TOL, DEFAULT_SOLVER
-from .utils import cvxpy2data, problem_data
+import cvxpy as cp
 from tqdm import tqdm
 
 
@@ -28,9 +24,6 @@ class OptimizationProblem(object):
         """
         self.name = name
         self.cvxpy_problem = cvxpy_problem
-
-        import ipdb; ipdb.set_trace()
-
 
     def populate(self, theta):
         """
@@ -61,7 +54,8 @@ class OptimizationProblem(object):
         """
         Compute infeasibility for vector x
         """
-        violations = [c.violation() for c in self.cvxpy_problem.constraints]
+        violations = np.concatenate([np.atleast_1d(c.violation())
+                                     for c in self.cvxpy_problem.constraints])
 
         return np.linalg.norm(violations)
 
@@ -73,8 +67,7 @@ class OptimizationProblem(object):
 
         results = {}
         results['x'] = np.array([v.value for v in problem.variables()])
-        results['time'] = problem.solver_stats.setup_time + \
-            problem.solver_stats.solve_time
+        results['time'] = problem.solver_stats.solve_time
         results['cost'] = self.cost()
         results['infeasibility'] = self.infeasibility()
 
@@ -82,7 +75,7 @@ class OptimizationProblem(object):
             active_constraints = dict()
             for c in problem.constraints:
                 active_constraints[c.id] = \
-                    [1 if y >= TOL else 0 for y in c.dual_value]
+                    [1 if y >= TOL else 0 for y in np.atleast_1d(c.dual_value)]
             results['active_constraints'] = active_constraints
 
         return results
@@ -105,7 +98,7 @@ class OptimizationProblem(object):
         var.boolean_idx = []
         var.integer_idx = []
 
-    def solve(self, solver=DEFAULT_SOLVER, settings={}):
+    def solve(self, solver=DEFAULT_SOLVER, **settings):
         """
         Solve optimization problem
 
@@ -118,25 +111,19 @@ class OptimizationProblem(object):
 
         Returns
         -------
-        numpy array
-            Solution.
-        float
-            Time.
-        strategy
-            Strategy.
+        dict
+            Results dictionary.
         """
         # Solve complete problem with CVXPY
         results = self._solve(self.cvxpy_problem, solver, settings)
 
         # Get solution and integer variables
-        x_opt = results['x']
-        time = results['time']
         x_int = dict()
 
         if self.is_mip():
             # Get integer variables
-            int_vars = [v if self._is_var_mip(v)
-                        for v in self.cvxpy_problem.variables()]
+            int_vars = [v for v in self.cvxpy_problem.variables()
+                        if self._is_var_mip(v)]
 
             # Get value of integer variables
             x_int = dict()
@@ -155,19 +142,25 @@ class OptimizationProblem(object):
 
             # Solve
             results_cont = self._solve(prob_cont, solver, settings)
-            active_constraints = results_cont['active_constraints']
+
+            # Get active constraints from original problem
+            active_constraints = dict()
+            for c in self.cvxpy_problem.constraints:
+                active_constraints[c.id] = results_cont['active_constraints'][c.id]
 
             # Restore integer variables
             for x in int_vars:
                 self._set_bool_var(x)
+        else:
+            active_constraints = results['active_constraints']
 
         # Get strategy
         strategy = Strategy(active_constraints, x_int)
 
         # Define return dictionary
         return_dict = {}
-        return_dict['x'] = x_opt
-        return_dict['time'] = time
+        return_dict['x'] = results['x']
+        return_dict['time'] = results['time']
         return_dict['cost'] = results['cost']
         return_dict['infeasibility'] = results['infeasibility']
         return_dict['strategy'] = strategy
@@ -175,7 +168,7 @@ class OptimizationProblem(object):
         return return_dict
 
     def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
-                            settings={}):
+                            **settings):
         """
         Solve problem using strategy
 
@@ -203,25 +196,35 @@ class OptimizationProblem(object):
         objective = self.cvxpy_problem.objective
 
         # Get only constraints in strategy
-        constraints = [c if active_constraints[c.id]
-                       for c in self.cvxpy_problem.constraints]
+        constraints = []
+        for con in self.cvxpy_problem.constraints:
+            idx_active = np.where(active_constraints[con.id])[0]
+            if len(idx_active) > 0:
+                # Active constraints in expression
+                con_expr = con.args[0]
+                if con_expr.shape == ():
+                    # Scalar case no slicing
+                    active_expr = con_expr
+                else:
+                    # Get active constraints
+                    active_expr = con.args[0][idx_active]
+                constraints += [type(con)(active_expr)]
 
         # Fix integer variables
-        variables = self.cvxpy_problem.variables()
         int_fix = []
-        for v in variables:
+        for v in self.cvxpy_problem.variables():
             if self._is_var_mip(v):
-                self._set_cont_var(x)
+                self._set_cont_var(v)
                 int_fix += [v == int_vars[v.id]]
 
         # Solve problem
-        prob_red = cp.Problem(cp.Minimize(objective,
-                                          constraints))
+        prob_red = cp.Problem(objective, constraints + int_fix)
         results = self._solve(prob_red, solver, settings)
 
         # Make variables discrete again
-        for x in int_vars:
-            self._set_bool_var(x)
+        for v in self.cvxpy_problem.variables():
+            if self._is_var_mip(v):
+                self._set_bool_var(v)
 
         return results
 

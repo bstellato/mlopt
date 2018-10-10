@@ -20,16 +20,17 @@ def num_dataframe_features(df):
     int
         Number of features.
     """
-        n = 0
-        for c in X.columns.values:
-            if isinstance(X[c][0], list):
-                # If list add length
-                n += len(X[c][0])
-            else:
-                # If number add 1
-                n += 1
+    n = 0
+    for c in df.columns.values:
+        if isinstance(df[c][0], list):
+            # If list add length
+            n += len(df[c][0])
+        else:
+            # If number add 1
+            n += 1
 
     return n
+
 
 def problem_data(c, l, A, u, int_idx=None):
     """Create problem data dictionary"""

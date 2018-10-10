@@ -15,6 +15,7 @@ class Strategy(object):
         Value of the integer variables. The keys are CVXPY variable id.
         The values are numpy int arrays.
     """
+
     def __init__(self, active_constraints, int_vars):
         self.active_constraints = active_constraints
         self.int_vars = int_vars
