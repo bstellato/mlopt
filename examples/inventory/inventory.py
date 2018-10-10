@@ -15,7 +15,7 @@ bin_vars = True
 
 # Generate data
 np.random.seed(1)
-T = 10
+T = 2
 M = 4.
 K = 10.
 radius = 3.0
@@ -26,7 +26,7 @@ u = cp.Variable(T)
 y = cp.Variable(T+1)  # Auxiliary y = max(h * x, - p * x)
 
 if bin_vars:
-    v = cp.Variable(T, integer=True)
+    v = cp.Variable(T, boolean=True)
 
 # Define parameters
 x_init = cp.Parameter(nonneg=True, name="x_init")
@@ -89,7 +89,7 @@ Train and solve
 '''
 
 # Training and testing data
-n_train = 500
+n_train = 100
 n_test = 10
 theta_train = sample_inventory(theta_bar, radius, N=n_train)
 theta_test = sample_inventory(theta_bar, radius, N=n_test)
@@ -99,11 +99,11 @@ theta_test = sample_inventory(theta_bar, radius, N=n_test)
 #      theta_train,
 #      message="Compute active constraints for training set"
 #  )[2]
-x_train, _, strategies = problem.solve_parametric(
+results = problem.solve_parametric(
     theta_train,
     message="Compute active constraints for training set"
 )
-y_train, enc2strategy = mlopt.encode_strategies(strategies)
+y_train, enc2strategy = mlopt.encode_strategies([r['strategy'] for r in results])
 
 # Training
 n_input = len(theta_bar)
@@ -114,10 +114,7 @@ with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
     learner.train(theta_train, y_train)
 
     #  Testing
-    #  results = mlopt.eval_performance(theta_test, learner, problem,
-    #                                   enc2strategy, k=3)
-    results0, results1, x_pred, x_test = mlopt.eval_performance(theta_test, learner, problem,
-                                                                enc2strategy, k=3)
-    results = results0, results1
+    results = mlopt.eval_performance(theta_test, learner, problem,
+                                     enc2strategy, k=3)
 
     mlopt.store(results, 'output/')

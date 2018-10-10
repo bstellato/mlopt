@@ -6,7 +6,10 @@ import numpy as np
 #  from .solvers.statuses import SOLUTION_PRESENT
 from .strategy import Strategy
 from .settings import TOL, DEFAULT_SOLVER
+# Import cvxpy and constraint types
 import cvxpy as cp
+from cvxpy.constraints.nonpos import NonPos
+from cvxpy.constraints.zero import Zero
 from tqdm import tqdm
 
 
@@ -50,10 +53,18 @@ class OptimizationProblem(object):
         """Check if problem has integer variables."""
         return self.cvxpy_problem.is_mixed_integer()
 
+    #  def infeasibility(self, variables):
     def infeasibility(self):
         """
-        Compute infeasibility for vector x
+        Compute infeasibility for variables
         """
+        # Assign variables
+        #  for x in variables:
+        #      for v in self.cvxpy_problem.variables():
+        #          if v.id == x.id:
+        #              v.value = x.value
+
+        # Compute violations
         violations = np.concatenate([np.atleast_1d(c.violation())
                                      for c in self.cvxpy_problem.constraints])
 
@@ -63,20 +74,26 @@ class OptimizationProblem(object):
         """
         Solve problem with CVXPY and return results dictionary
         """
-        problem.solve(solver=solver, **settings)
+        problem.solve(solver=solver, verbose=True, **settings)
 
         results = {}
-        results['x'] = np.array([v.value for v in problem.variables()])
         results['time'] = problem.solver_stats.solve_time
-        results['cost'] = self.cost()
-        results['infeasibility'] = self.infeasibility()
+        results['x'] = np.concatenate([np.atleast_1d(v.value) for v in problem.variables()])
 
-        if not problem.is_mixed_integer():
-            active_constraints = dict()
-            for c in problem.constraints:
-                active_constraints[c.id] = \
-                    [1 if y >= TOL else 0 for y in np.atleast_1d(c.dual_value)]
-            results['active_constraints'] = active_constraints
+        if problem.status in cp.settings.SOLUTION_PRESENT:
+            results['cost'] = self.cost()
+            results['infeasibility'] = self.infeasibility()
+
+            if not problem.is_mixed_integer():
+                active_constraints = dict()
+                for c in problem.constraints:
+                    active_constraints[c.id] = \
+                        [1 if y >= TOL else 0 for y in np.atleast_1d(c.dual_value)]
+                results['active_constraints'] = active_constraints
+        else:
+            results['cost'] = np.inf
+            results['infeasibility'] = np.inf
+            results['active_constraints'] = dict()
 
         return results
 
@@ -137,8 +154,10 @@ class OptimizationProblem(object):
                 int_vars_fix += [x == x_int[x.id]]
 
             # Define new constraints to fix integer variables
-            prob_fix_vars = cp.Problem(cp.Minimize(0), int_vars_fix)
-            prob_cont = self.cvxpy_problem + prob_fix_vars
+            #  prob_fix_vars = cp.Problem(cp.Minimize(0), int_vars_fix)
+            #  prob_cont = self.cvxpy_problem + prob_fix_vars
+            prob_cont = cp.Problem(self.cvxpy_problem.objective,
+                                   self.cvxpy_problem.constraints + int_vars_fix)
 
             # Solve
             results_cont = self._solve(prob_cont, solver, settings)
@@ -146,7 +165,8 @@ class OptimizationProblem(object):
             # Get active constraints from original problem
             active_constraints = dict()
             for c in self.cvxpy_problem.constraints:
-                active_constraints[c.id] = results_cont['active_constraints'][c.id]
+                active_constraints[c.id] = \
+                    results_cont['active_constraints'][c.id]
 
             # Restore integer variables
             for x in int_vars:
@@ -163,6 +183,7 @@ class OptimizationProblem(object):
         return_dict['time'] = results['time']
         return_dict['cost'] = results['cost']
         return_dict['infeasibility'] = results['infeasibility']
+        #  return_dict['infeasibility'] = self.infeasibility(self.cvxpy_problem.variables())
         return_dict['strategy'] = strategy
 
         return return_dict
@@ -208,14 +229,21 @@ class OptimizationProblem(object):
                 else:
                     # Get active constraints
                     active_expr = con.args[0][idx_active]
-                constraints += [type(con)(active_expr)]
+
+                # Set linear inequalities as equalities
+                new_type = type(con)
+                if type(con) == NonPos:
+                    new_type = Zero
+
+                constraints += [new_type(active_expr)]
 
         # Fix integer variables
         int_fix = []
-        for v in self.cvxpy_problem.variables():
-            if self._is_var_mip(v):
-                self._set_cont_var(v)
-                int_fix += [v == int_vars[v.id]]
+        if self.is_mip():
+            for v in self.cvxpy_problem.variables():
+                if self._is_var_mip(v):
+                    self._set_cont_var(v)
+                    int_fix += [v == int_vars[v.id]]
 
         # Solve problem
         prob_red = cp.Problem(objective, constraints + int_fix)
@@ -234,7 +262,7 @@ class OptimizationProblem(object):
            multiprocessing."""
         theta, solver, settings = args
         self.populate(theta)
-        results = self.solve(solver, settings)
+        results = self.solve(solver, **settings)
 
         # DEBUG. Solve with other solvers and check
         #  res_gurobi = self.solve('GUROBI', settings)
@@ -267,12 +295,8 @@ class OptimizationProblem(object):
 
         Returns
         -------
-        x : numpy array list
-            solutions
-        time : float list
-            computation times
-        strategy : Strategy list
-            strategies
+        dict
+            Results dictionary.
         """
         n = len(theta)  # Number of points
 

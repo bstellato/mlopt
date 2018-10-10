@@ -7,3 +7,4 @@ INFINITY = 1e15
 
 # Define default solver
 DEFAULT_SOLVER=cp.MOSEK
+#  DEFAULT_SOLVER=cp.GUROBI

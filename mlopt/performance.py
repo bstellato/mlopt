@@ -55,7 +55,6 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
     # Get strategy for each point
     results_test = problem.solve_parametric(theta, message="Compute active " +
                                             "constraints for test set")
-    #  x_test = [r['x'] for r in results_test]
     time_test = [r['time'] for r in results_test]
     strategy_test = [r['strategy'] for r in results_test]
     cost_test = [r['cost'] for r in results_test]
@@ -91,7 +90,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
             "problem": [problem.name],
             "k": [k],
             "num_var": [problem.num_var],
-            "num_constr": [problem.num_constr],
+            "num_constr": [problem.num_constraints],
             "num_test": [num_test],
             "num_train": [num_train],
             "n_theta": [n_theta],

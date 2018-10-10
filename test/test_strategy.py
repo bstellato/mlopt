@@ -3,7 +3,6 @@ import scipy.sparse as spa
 import numpy as np
 import numpy.testing as npt
 from mlopt.problem import OptimizationProblem
-from mlopt.utils import problem_data
 import cvxpy as cp
 
 
@@ -11,7 +10,7 @@ class TestStrategy(unittest.TestCase):
     def test_compute(self):
 
         # Define problem
-        c = -1 * np.ones(2)
+        c = np.array([-1, -2])
         x = cp.Variable(2, boolean=True)
         cost = c * x
         constraints = [x[1] <= 0.5 * x[0] + 1.5,
