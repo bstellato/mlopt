@@ -131,6 +131,4 @@ class Learner(ABC):
             results_i['infeasibility'] = infeas_temp[idx_pick]
             results.append(results_i)
 
-            import ipdb; ipdb.set_trace()
-
         return results

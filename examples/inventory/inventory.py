@@ -11,7 +11,7 @@ import mlopt
 '''
 Define Inventory problem
 '''
-bin_vars = True
+bin_vars = False
 
 # Generate data
 np.random.seed(1)

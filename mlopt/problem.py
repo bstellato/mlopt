@@ -88,8 +88,16 @@ class OptimizationProblem(object):
                 active_constraints = dict()
                 for c in problem.constraints:
                     active_constraints[c.id] = \
-                        [1 if y >= TOL else 0 for y in np.atleast_1d(c.dual_value)]
+                        [1 if abs(y) >= TOL else 0 for y in np.atleast_1d(c.dual_value)]
                 results['active_constraints'] = active_constraints
+
+                # DEBUG
+                n_active = sum([sum(x) for x in active_constraints.values()])
+                n_var = sum([x.size for x in problem.variables()])
+                if n_active < n_var:
+                    print("Number of active constraints: ", n_active)
+                    print("Number of variables: ", n_var)
+                    import ipdb; ipdb.set_trace()
         else:
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
@@ -247,6 +255,7 @@ class OptimizationProblem(object):
 
         # Solve problem
         prob_red = cp.Problem(objective, constraints + int_fix)
+        #  import ipdb; ipdb.set_trace()
         results = self._solve(prob_red, solver, settings)
 
         # Make variables discrete again
