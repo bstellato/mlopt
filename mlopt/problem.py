@@ -29,16 +29,6 @@ class OptimizationProblem(object):
         self.name = name
         self.cvxpy_problem = cvxpy_problem
 
-        #  # Get objective and constraints
-        #  self.objective =
-        #  self.constraints = cvxpy_problem.constraints
-        #
-        #  # Convert parameters to dict
-        #  params = cvxpy_problem.parameters()
-        #  self.params = {}
-        #  for p in params:
-        #      self.params[p.name()] = p
-        #
         import ipdb; ipdb.set_trace()
 
 
@@ -48,14 +38,6 @@ class OptimizationProblem(object):
         """
         for p in self.cvxpy_problem.parameters():
             p.value = theta[p.name()]
-
-        # OLD
-        #  for c in theta.index.values:
-        #      self.params[c].value = theta[c]
-        #  for p in params:
-        #      p.value = theta[p.name()]
-        #  for c in theta.index.values:
-        #      self.params[c].value = theta[c]
 
     def cost(self):
         """Compute cost function value"""
@@ -74,36 +56,11 @@ class OptimizationProblem(object):
 
         return np.linalg.norm(violations)
 
-        #  l, A, u = self.data['l'], self.data['A'], self.data['u']
-        #
-        #  norm_A = [spla.norm(A[i, :], np.inf) for i in range(A.shape[0])]
-        #
-        #  upper = np.maximum(A.dot(x) - u, 0.)
-        #  lower = np.maximum(l - A.dot(x), 0.)
-        #
-        #  # Normalize nonzero ones
-        #  for i in range(len(upper)):
-        #      if upper[i] >= TOL:
-        #          upper[i] /= np.maximum(norm_A[i], np.abs(u[i]))
-        #  for i in range(len(lower)):
-        #      if lower[i] >= TOL:
-        #          lower[i] /= np.maximum(norm_A[i], np.abs(l[i]))
-        #
-        #  return np.linalg.norm(upper + lower)
-
-    #  def suboptimality(self, x, x_opt):
-    #      """
-    #      Compute suboptimality for vector x
-    #      """
-    #      c = self.data['c']
-    #      return (self.cost(x) - self.cost(x_opt)) / \
-    #          np.linalg.norm(c, np.inf)
-
     def _solve(self, problem, solver, settings):
         """
         Solve problem with CVXPY and return results dictionary
         """
-        problem.solve(solver=solver)
+        problem.solve(solver=solver, settings**)
 
         results = {}
         results['x'] = np.array([v.value for v in problem.variables()])
@@ -134,14 +91,6 @@ class OptimizationProblem(object):
         """Set variable to be continuous"""
         var.attributes['boolean'] = False
         var.boolean_idx = []
-
-    #  def _get_vars(self, objective, constraints):
-    #      vars_ = objective.variables()
-    #      for constr in contraints:
-    #          vars_ += constr.variables()
-    #      seen = set()
-    #      # never use list as a variable name
-    #      return [seen.add(obj.id) or obj for obj in vars_ if obj.id not in seen]
 
     def solve(self, solver=DEFAULT_SOLVER, settings={}):
         """
@@ -226,51 +175,34 @@ class OptimizationProblem(object):
             Time.
         """
 
-        c = self.data['c']
-        l, A, u = self.data['l'], self.data['A'], self.data['u']
-        int_idx = self.data['int_idx']
+        active_constraints = strategy.active_constraints
         int_vars = strategy.int_vars
-        active_constr = strategy.active_constraints
 
-        if self.is_mip():
-            assert np.max(int_idx) <= len(self.data['l'])
-            assert np.min(int_idx) >= 0
+        # Get same objective
+        objective = self.cvxpy_problem.objective
 
-        n_var = c.size
+        # Get only constraints in strategy
+        constraints = [c if active_constraints[c.id]
+                       for c in self.cvxpy_problem.constraints]
 
-        # Create equivalent problem
-        A_red = spa.csc_matrix((0, n_var))
-        bound_red = np.array([])
+        # Fix integer variables
+        variables = self.cvxpy_problem.variables()
+        int_fix = []
+        for v in variables:
+            if self._is_var_mip(v):
+                self._set_cont_var(x)
+                int_fix += [v == int_vars[v.id]]
 
-        # 1) Use active constraints
-        active_constraints_upper = np.where(active_constr == 1)[0]
-        active_constraints_lower = np.where(active_constr == -1)[0]
-        if len(active_constraints_upper) > 0:
-            A_upper = A[active_constraints_upper, :]
-            u_upper = u[active_constraints_upper]
-            A_red = spa.vstack([A_red, A_upper]).tocsc()
-            bound_red = np.concatenate((bound_red, u_upper))
+        # Solve problem
+        prob_red = cp.Problem(cp.Minimize(objective,
+                                          constraints))
+        results_cont = self._solve(prob_red, solver, settings)
 
-        if len(active_constraints_lower) > 0:
-            A_lower = A[active_constraints_lower, :]
-            l_lower = l[active_constraints_lower]
-            A_red = spa.vstack([A_red, A_lower]).tocsc()
-            bound_red = np.concatenate((bound_red, l_lower))
+        # Make variables discrete again
+        for x in int_vars:
+            self._set_bool_var(x)
 
-        # 2) If integer program, fix integer variable
-        if self.is_mip():
-            A_red = spa.vstack([A_red,
-                                spa.eye(n_var, format='csc')[int_idx, :]])
-            bound_red = np.concatenate((bound_red, int_vars))
-
-        # 3) Create problem data
-        problem_red = OptimizationProblem()
-        problem_red.data = problem_data(c, bound_red, A_red, bound_red)
-
-        # Solve reduced problem
-        x, time, _ = problem_red.solve(solver=solver, settings=settings)
-
-        return x, time
+        return results['x'], results['time']
 
     def populate_and_solve(self, args):
         """Single function to populate the problem with
