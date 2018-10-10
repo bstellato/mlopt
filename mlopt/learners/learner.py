@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from ..settings import TOL
 import numpy as np
 from tqdm import tqdm
+from ..utils import num_dataframe_features
 
 
 class Learner(ABC):
@@ -48,15 +49,7 @@ class Learner(ABC):
         # get number of datapoints
         n_data = len(X)
         # Get dimensions by inspecting first row
-        n = 0
-        for c in X.columns.values:
-
-            if isinstance(X[c][0], list):
-                # If list add length
-                n += len(X[c][0])
-            else:
-                # If number add 1
-                n += 1
+        n = num_dataframe_features(X)
 
         # Allocate full vector
         X_new = np.empty((0, n))
@@ -83,10 +76,13 @@ class Learner(ABC):
         """
         n_points = len(X)
 
-        # Data to return for each point
-        strategy = []
-        x = []
-        time = []
+        # Define array of results to return
+        results = []
+
+        #  # Data to return for each point
+        #  strategy = []
+        #  x = []
+        #  time = []
 
         # Predict best classes for all the points
         classes = self.predict_best(X, k=k)
@@ -106,15 +102,11 @@ class Learner(ABC):
             cost_temp = []
 
             for j in range(k):
-                sol = problem.solve_with_strategy(strategy_classes[j])
-                x_temp.append(sol[0])
-                time_temp.append(sol[1])
-
-                # Compute infeasibility
-                infeas_temp.append(problem.infeasibility(x_temp[-1]))
-
-                # Compute cost
-                cost_temp.append(problem.cost(x_temp[-1]))
+                res = problem.solve_with_strategy(strategy_classes[j])
+                x_temp.append(res['x'])
+                time_temp.append(res['time'])
+                infeas_temp.append(res['infeasibility'])
+                cost_temp.append(res['cost'])
 
             # Pick best class between k ones
             infeas_temp = np.array(infeas_temp)
@@ -131,9 +123,12 @@ class Learner(ABC):
                 idx_pick = np.argmin(infeas_temp)
 
             # Store values we are interested in
-            x.append(x_temp[idx_pick])
-            time.append(np.sum(time_temp))
-            strategy.append(strategy_classes[idx_pick])
+            results_i = {}
+            results_i['x'] = x_temp[idx_pick]
+            results_i['time'] = np.sum(time_temp)
+            results_i['strategy'] = strategy_classes[idx_pick]
+            results_i['cost'] = cost_temp[idx_pick]
+            results_i['infeasibility'] = infeas_temp[idx_pick]
+            results.append(results_i)
 
-        # Return x, time and strategy for all the points
-        return x, time, strategy
+        return results

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from .settings import TOL
+from .utils import num_dataframe_features
 
 
 def accuracy(strategy_pred, strategy_test):
@@ -52,40 +53,34 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
 
     print("Performance evaluation")
     # Get strategy for each point
-    x_test, time_test, strategy_test = \
-        problem.solve_parametric(theta, message="Compute active " +
-                                                "constraints for test set")
+    results_test = problem.solve_parametric(theta, message="Compute active " +
+                                            "constraints for test set")
+    #  x_test = [r['x'] for r in results_test]
+    time_test = [r['time'] for r in results_test]
+    strategy_test = [r['strategy'] for r in results_test]
+    cost_test = [r['cost'] for r in results_test]
 
     # Get predicted strategy for each point
-    x_pred, time_pred, strategy_pred = learner.predict_best_points(
+    results_pred = learner.predict_best_points(
         theta, problem, k, enc2strategy,
         message="Predict active constraints for test set"
     )
+    #  x_pred = [r['x'] for r in results_pred]
+    time_pred = [r['time'] for r in results_pred]
+    strategy_pred = [r['strategy'] for r in results_pred]
+    cost_pred = [r['cost'] for r in results_pred]
+    infeas = np.array([r['infeasibility'] for r in results_pred])
 
     num_test = len(theta)
     num_train = learner.n_train  # Number of training samples from learner
-    n_theta = theta.shape[1]  # Parameters dimension
+    n_theta = num_dataframe_features(theta)  # Number of parameters in dataframe
     n_active_sets = len(enc2strategy)  # Number of active sets
 
-    # Compute infeasibility and optimality for each problem
-    # NB. We need to populate the problem for each point
-    infeas = []
-    subopt = []
-    time_comp = []
-    for i in range(num_test):
-        problem.populate(theta.iloc[i, :])
-        infeas.append(problem.infeasibility(x_pred[i]))
-        subopt.append(problem.suboptimality(x_pred[i], x_test[i]))
-        time_comp.append(1 - time_pred[i] / time_test[i])
-
-    # Convert to array
-    infeas = np.array(infeas)
-    subopt = np.array(subopt)
-    time_comp = np.array(time_comp)
-
-    # Get number of variables and constraints from one of the problems
-    num_var = len(problem.data['c'])
-    num_constr = len(problem.data['l'])
+    # Compute comparative statistics
+    time_comp = np.array([(1 - time_pred[i] / time_test[i])
+                          for i in range(num_test)])
+    subopt = np.array([(cost_pred[i] - cost_test[i])/(cost_test[i] + 1e-10)
+                       for i in range(num_test)])
 
     # accuracy
     test_accuracy, idx_correct = accuracy(strategy_pred, strategy_test)
@@ -95,8 +90,8 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
         {
             "problem": [problem.name],
             "k": [k],
-            "num_var": [num_var],
-            "num_constr": [num_constr],
+            "num_var": [problem.num_var],
+            "num_constr": [problem.num_constr],
             "num_test": [num_test],
             "num_train": [num_train],
             "n_theta": [n_theta],
@@ -129,7 +124,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
         }
     )
 
-    return df, df_detail, x_pred, x_test
+    return df, df_detail
 
 
 def store(results, file_name):

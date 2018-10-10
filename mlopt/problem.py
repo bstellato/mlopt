@@ -39,9 +39,18 @@ class OptimizationProblem(object):
         for p in self.cvxpy_problem.parameters():
             p.value = theta[p.name()]
 
+    @property
+    def num_var(self):
+        """Number of variables"""
+        return sum([x.size for x in self.cvxpy_problem.variables()])
+
+    @property
+    def num_constraints(self):
+        """Number of variables"""
+        return sum([x.size for x in self.cvxpy_problem.constraints])
+
     def cost(self):
         """Compute cost function value"""
-        #  return self.data['c'].dot(x)
         return self.cvxpy_problem.objective.value
 
     def is_mip(self):
@@ -60,12 +69,14 @@ class OptimizationProblem(object):
         """
         Solve problem with CVXPY and return results dictionary
         """
-        problem.solve(solver=solver, settings**)
+        problem.solve(solver=solver, **settings)
 
         results = {}
         results['x'] = np.array([v.value for v in problem.variables()])
         results['time'] = problem.solver_stats.setup_time + \
             problem.solver_stats.solve_time
+        results['cost'] = self.cost()
+        results['infeasibility'] = self.infeasibility()
 
         if not problem.is_mixed_integer():
             active_constraints = dict()
@@ -90,7 +101,9 @@ class OptimizationProblem(object):
     def _set_cont_var(self, var):
         """Set variable to be continuous"""
         var.attributes['boolean'] = False
+        var.attributes['integer'] = False
         var.boolean_idx = []
+        var.integer_idx = []
 
     def solve(self, solver=DEFAULT_SOLVER, settings={}):
         """
@@ -142,16 +155,24 @@ class OptimizationProblem(object):
 
             # Solve
             results_cont = self._solve(prob_cont, solver, settings)
-            active_constraints = results['active_constraints']
+            active_constraints = results_cont['active_constraints']
 
             # Restore integer variables
             for x in int_vars:
                 self._set_bool_var(x)
 
         # Get strategy
-        strategy = Strategy(x_int, active_constraints)
+        strategy = Strategy(active_constraints, x_int)
 
-        return x_opt, time, strategy
+        # Define return dictionary
+        return_dict = {}
+        return_dict['x'] = x_opt
+        return_dict['time'] = time
+        return_dict['cost'] = results['cost']
+        return_dict['infeasibility'] = results['infeasibility']
+        return_dict['strategy'] = strategy
+
+        return return_dict
 
     def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
                             settings={}):
@@ -196,13 +217,13 @@ class OptimizationProblem(object):
         # Solve problem
         prob_red = cp.Problem(cp.Minimize(objective,
                                           constraints))
-        results_cont = self._solve(prob_red, solver, settings)
+        results = self._solve(prob_red, solver, settings)
 
         # Make variables discrete again
         for x in int_vars:
             self._set_bool_var(x)
 
-        return results['x'], results['time']
+        return results
 
     def populate_and_solve(self, args):
         """Single function to populate the problem with
@@ -280,9 +301,4 @@ class OptimizationProblem(object):
                 results.append(self.populate_and_solve((theta.iloc[i, :],
                                                         solver, settings)))
 
-        # Reorganize results
-        x = [results[i][0] for i in range(n)]
-        time = [results[i][1] for i in range(n)]
-        strategy = [results[i][2] for i in range(n)]
-
-        return x, time, strategy
+        return results

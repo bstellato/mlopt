@@ -5,9 +5,31 @@ import cvxpy.settings as s
 import scipy.sparse as spa
 
 
-def has_digits(s):
-    """Check if string s has digits inside"""
-    return any(i.isdigit() for i in s)
+def num_dataframe_features(df):
+    """
+    Get number of features in dataframe
+    where cells contain tuples.
+
+    Parameters
+    ----------
+    df : pandas DataFrame
+        Dataframe.
+
+    Returns
+    -------
+    int
+        Number of features.
+    """
+        n = 0
+        for c in X.columns.values:
+            if isinstance(X[c][0], list):
+                # If list add length
+                n += len(X[c][0])
+            else:
+                # If number add 1
+                n += 1
+
+    return n
 
 def problem_data(c, l, A, u, int_idx=None):
     """Create problem data dictionary"""
