@@ -11,6 +11,7 @@ from subprocess import call
 jl = julia.Julia()
 SPARSITY = jl.eval('PyCall.pyjlwrap_new(:sparsity)')
 
+
 class OptimalTree(Learner):
 
     def __enter__(self):
@@ -26,9 +27,8 @@ class OptimalTree(Learner):
                  output_folder="output"
                  ):
 
-
         # Assign settings
-        self.sparse = sparse,
+        self.sparse = sparse
         self.options = {
                         'max_depth': 10,
                         #  'minbucket': 1,
@@ -42,17 +42,17 @@ class OptimalTree(Learner):
         self.export_tree = export_tree,
         self.output_folder = output_folder
 
-    def train(self, X_train, y_train):
+    def train(self, X, y):
 
         # Convert X to array
-        self.n_train = len(X_train)
-        X_train = np.array(X_train)
+        self.n_train = len(X)
+        X = self.pandas2array(X)
 
         # Create classifier
         self.lnr = OT.OptimalTreeClassifier(**self.options)
 
         # Train classifier
-        OT.fit_b(self.lnr, X_train, y_train)
+        OT.fit_b(self.lnr, X, y)
 
         # Export tree
         if self.export_tree:
@@ -69,25 +69,25 @@ class OptimalTree(Learner):
                   "%s.pdf" % export_tree_name,
                   "%s.dot" % export_tree_name])
 
-    def predict(self, X_pred):
+    def predict(self, X):
 
-        return self.predict_best(X_pred, k=1)
+        return self.predict_best(X, k=1)
 
-    def predict_best(self, X_pred, k=1):
+    def predict_best(self, X, k=1):
 
         #  # Get right shape
-        X_pred = np.array(X_pred)
-        n_points = len(X_pred)
+        n_points = len(X)
+        X = self.pandas2array(X)
 
         # Evaluate probabilities
-        proba_pred = Array(OT.predict_proba(self.lnr, X_pred))
+        proba = Array(OT.predict_proba(self.lnr, X))
 
         # Sort probabilities
         idx_probs = np.empty((n_points, k), dtype='int')
         for i in range(n_points):
             # Get best k indices
             # NB. Argsort sorts in reverse mode
-            idx_probs[i, :] = np.argsort(proba_pred[i, :])[-k:]
+            idx_probs[i, :] = np.argsort(proba[i, :])[-k:]
 
         return idx_probs
 

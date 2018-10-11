@@ -74,7 +74,9 @@ class OptimizationProblem(object):
         """
         Solve problem with CVXPY and return results dictionary
         """
-        problem.solve(solver=solver, verbose=True, **settings)
+        problem.solve(solver=solver,
+                      #  verbose=True,
+                      **settings)
 
         results = {}
         results['time'] = problem.solver_stats.solve_time
@@ -94,10 +96,10 @@ class OptimizationProblem(object):
                 # DEBUG
                 n_active = sum([sum(x) for x in active_constraints.values()])
                 n_var = sum([x.size for x in problem.variables()])
-                if n_active < n_var:
-                    print("Number of active constraints: ", n_active)
-                    print("Number of variables: ", n_var)
-                    import ipdb; ipdb.set_trace()
+                #  if n_active < n_var:
+                #      print("Number of active constraints: ", n_active)
+                #      print("Number of variables: ", n_var)
+                #      #  import ipdb; ipdb.set_trace()
         else:
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
