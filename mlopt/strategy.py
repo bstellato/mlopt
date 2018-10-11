@@ -27,6 +27,21 @@ class Strategy(object):
                 return False
         return True
 
+    def __sprint_dict(self, d):
+        s = ""
+        for attribute, value in d.items():
+            s += '      {} : {}\n'.format(attribute, value)
+        return s.rstrip()
+
+    def __repr__(self):
+        string = "Strategy\n"
+        string += "  - Active constraints:\n"
+        string += self.__sprint_dict(self.active_constraints)
+        if len(self.int_vars) > 0:
+            string += "  - Integer variables values:\n"
+            string += self.__sprint_dict(self.int_vars)
+        return string
+
     def __hash__(self):
         """Overrides default hash implementation"""
         f_int_vars = frozenset(self.int_vars)

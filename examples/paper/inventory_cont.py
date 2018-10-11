@@ -68,10 +68,10 @@ Train and solve
 '''
 
 # Training and testing data
-n_train = 500
-n_test = 50
+n_train = 10
+#  n_test = 50
 theta_train = sample_inventory(theta_bar, radius, N=n_train)
-theta_test = sample_inventory(theta_bar, radius, N=n_test)
+#  theta_test = sample_inventory(theta_bar, radius, N=n_test)
 
 # Encode training strategies
 results = problem.solve_parametric(
@@ -80,17 +80,17 @@ results = problem.solve_parametric(
 )
 y_train, enc2strategy = mlopt.encode_strategies([r['strategy'] for r in results])
 
-# Training
-n_input = len(theta_bar)
-n_classes = len(enc2strategy)
-#  with mlopt.TensorFlowNeuralNet(n_input, n_layers, n_classes) as learner:
-with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
-#  with mlopt.OptimalTree() as learner:
-    learner.train(theta_train, y_train)
-
-    #  Testing
-    results = mlopt.eval_performance(theta_test, learner, problem,
-                                     enc2strategy, k=3)
-
-    mlopt.store(results, 'output/')
-
+#  # Training
+#  n_input = len(theta_bar)
+#  n_classes = len(enc2strategy)
+#  #  with mlopt.TensorFlowNeuralNet(n_input, n_layers, n_classes) as learner:
+#  with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
+#  #  with mlopt.OptimalTree() as learner:
+#      learner.train(theta_train, y_train)
+#
+#      #  Testing
+#      results = mlopt.eval_performance(theta_test, learner, problem,
+#                                       enc2strategy, k=3)
+#
+#      mlopt.store(results, 'output/')
+#
