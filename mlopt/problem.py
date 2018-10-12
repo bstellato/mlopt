@@ -80,7 +80,9 @@ class OptimizationProblem(object):
 
         results = {}
         results['time'] = problem.solver_stats.solve_time
-        results['x'] = np.concatenate([np.atleast_1d(v.value) for v in problem.variables()])
+        results['x'] = np.concatenate([np.atleast_1d(v.value)
+                                       for v in problem.variables()])
+        results['cost'] = np.inf
 
         if problem.status in cp.settings.SOLUTION_PRESENT:
             results['cost'] = self.cost()
@@ -90,12 +92,13 @@ class OptimizationProblem(object):
                 active_constraints = dict()
                 for c in problem.constraints:
                     active_constraints[c.id] = \
-                        [1 if abs(y) >= TOL else 0 for y in np.atleast_1d(c.dual_value)]
+                        [1 if abs(y) >= TOL else 0
+                         for y in np.atleast_1d(c.dual_value)]
                 results['active_constraints'] = active_constraints
 
                 # DEBUG
-                n_active = sum([sum(x) for x in active_constraints.values()])
-                n_var = sum([x.size for x in problem.variables()])
+                #  n_active = sum([sum(x) for x in active_constraints.values()])
+                #  n_var = sum([x.size for x in problem.variables()])
                 #  if n_active < n_var:
                 #      print("Number of active constraints: ", n_active)
                 #      print("Number of variables: ", n_var)
@@ -167,7 +170,8 @@ class OptimizationProblem(object):
             #  prob_fix_vars = cp.Problem(cp.Minimize(0), int_vars_fix)
             #  prob_cont = self.cvxpy_problem + prob_fix_vars
             prob_cont = cp.Problem(self.cvxpy_problem.objective,
-                                   self.cvxpy_problem.constraints + int_vars_fix)
+                                   self.cvxpy_problem.constraints +
+                                   int_vars_fix)
 
             # Solve
             results_cont = self._solve(prob_cont, solver, settings)
