@@ -53,7 +53,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
 
     print("Performance evaluation")
     # Get strategy for each point
-    results_test = problem.solve_parametric(theta, message="Compute active " +
+    results_test = problem.solve_parametric(theta, message="Compute binding " +
                                             "constraints for test set")
     time_test = [r['time'] for r in results_test]
     strategy_test = [r['strategy'] for r in results_test]
@@ -62,7 +62,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
     # Get predicted strategy for each point
     results_pred = learner.predict_best_points(
         theta, problem, k, enc2strategy,
-        message="Predict active constraints for test set"
+        message="Predict binding constraints for test set"
     )
     #  x_pred = [r['x'] for r in results_pred]
     time_pred = [r['time'] for r in results_pred]
@@ -73,7 +73,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
     num_test = len(theta)
     num_train = learner.n_train  # Number of training samples from learner
     n_theta = num_dataframe_features(theta)  # Number of parameters
-    n_active_sets = len(enc2strategy)  # Number of active sets
+    n_binding_sets = len(enc2strategy)  # Number of binding sets
 
     # Compute comparative statistics
     time_comp = np.array([(1 - time_pred[i] / time_test[i])
@@ -95,7 +95,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
             "num_train": [num_train],
             "n_theta": [n_theta],
             "n_corect": [np.sum(idx_correct)],
-            "n_active_sets": [n_active_sets],
+            "n_binding_sets": [n_binding_sets],
             "accuracy": [test_accuracy],
             "n_infeas": [np.sum(infeas >= TOL)],
             "avg_infeas": [np.mean(infeas)],

@@ -69,13 +69,15 @@ class TestStrategy(unittest.TestCase):
         problem = OptimizationProblem(cp_problem)
 
         # Solve and compute strategy
-        results = problem.solve(solver='MOSEK', verbose=True)
+        results = problem.solve(solver='MOSEK',
+                                #  verbose=True
+                                )
 
 
         # Solve just with strategy
         results_new = problem.solve_with_strategy(results['strategy'],
                                                   solver='MOSEK',
-                                                  verbose=True
+                                                  #  verbose=True
                                                   )
 
         # Verify both solutions are equal

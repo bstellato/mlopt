@@ -8,16 +8,16 @@ class Strategy(object):
 
     Parameters
     ----------
-    active_constraints : dict of numpy int arrays
-        Set of active constraints. The keys are the CVXPY constraint id.
-        The values are numpy int arrays (1/0 for active/inactive).
+    binding_constraints : dict of numpy int arrays
+        Set of binding constraints. The keys are the CVXPY constraint id.
+        The values are numpy int arrays (1/0 for binding/non binding).
     int_vars : dict of numpy int arrays
         Value of the integer variables. The keys are CVXPY variable id.
         The values are numpy int arrays.
     """
 
-    def __init__(self, active_constraints, int_vars):
-        self.active_constraints = active_constraints
+    def __init__(self, binding_constraints, int_vars):
+        self.binding_constraints = binding_constraints
         self.int_vars = int_vars
 
     def _compare_arrays_dict(self, d1, d2):
@@ -35,8 +35,8 @@ class Strategy(object):
 
     def __repr__(self):
         string = "Strategy\n"
-        string += "  - Active constraints:\n"
-        string += self.__sprint_dict(self.active_constraints)
+        string += "  - Binding constraints:\n"
+        string += self.__sprint_dict(self.binding_constraints)
         if len(self.int_vars) > 0:
             string += "  - Integer variables values:\n"
             string += self.__sprint_dict(self.int_vars)
@@ -45,23 +45,23 @@ class Strategy(object):
     def __hash__(self):
         """Overrides default hash implementation"""
         f_int_vars = frozenset(self.int_vars)
-        f_active_constraints = frozenset(self.active_constraints)
-        return hash((f_active_constraints, f_int_vars))
+        f_binding_constraints = frozenset(self.binding_constraints)
+        return hash((f_binding_constraints, f_int_vars))
 
     def __eq__(self, other):
         """Overrides the default equality implementation"""
         if isinstance(other, Strategy):
 
-            # Compare active constraints
-            same_active_constraints = \
-                self._compare_arrays_dict(self.active_constraints,
-                                          other.active_constraints)
+            # Compare binding constraints
+            same_binding_constraints = \
+                self._compare_arrays_dict(self.binding_constraints,
+                                          other.binding_constraints)
 
             # Compare integer variables
             same_int_vars = self._compare_arrays_dict(self.int_vars,
                                                       other.int_vars)
 
-            return same_active_constraints and same_int_vars
+            return same_binding_constraints and same_int_vars
         else:
             return False
 

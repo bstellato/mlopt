@@ -46,7 +46,7 @@ files = files[2]  # Afiro
 #  # Encode training strategies
 #  _, _, strategies = problem.solve_parametric(
 #      theta_train,
-#      message="Compute active constraints for training set"
+#      message="Compute binding constraints for training set"
 #  )
 #  y_train, enc2strategy = mlopt.encode_strategies(strategies)
 #

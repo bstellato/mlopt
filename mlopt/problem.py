@@ -89,24 +89,24 @@ class OptimizationProblem(object):
             results['infeasibility'] = self.infeasibility()
 
             if not problem.is_mixed_integer():
-                active_constraints = dict()
+                binding_constraints = dict()
                 for c in problem.constraints:
-                    active_constraints[c.id] = \
+                    binding_constraints[c.id] = \
                         [1 if abs(y) >= TOL else 0
                          for y in np.atleast_1d(c.dual_value)]
-                results['active_constraints'] = active_constraints
+                results['binding_constraints'] = binding_constraints
 
                 # DEBUG
-                #  n_active = sum([sum(x) for x in active_constraints.values()])
+                #  n_binding = sum([sum(x) for x in binding_constraints.values()])
                 #  n_var = sum([x.size for x in problem.variables()])
-                #  if n_active < n_var:
-                #      print("Number of active constraints: ", n_active)
+                #  if n_binding < n_var:
+                #      print("Number of binding constraints: ", n_binding)
                 #      print("Number of variables: ", n_var)
                 #      #  import ipdb; ipdb.set_trace()
         else:
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
-            results['active_constraints'] = dict()
+            results['binding_constraints'] = dict()
 
         return results
 
@@ -176,20 +176,20 @@ class OptimizationProblem(object):
             # Solve
             results_cont = self._solve(prob_cont, solver, settings)
 
-            # Get active constraints from original problem
-            active_constraints = dict()
+            # Get binding constraints from original problem
+            binding_constraints = dict()
             for c in self.cvxpy_problem.constraints:
-                active_constraints[c.id] = \
-                    results_cont['active_constraints'][c.id]
+                binding_constraints[c.id] = \
+                    results_cont['binding_constraints'][c.id]
 
             # Restore integer variables
             for x in int_vars:
                 self._set_bool_var(x)
         else:
-            active_constraints = results['active_constraints']
+            binding_constraints = results['binding_constraints']
 
         # Get strategy
-        strategy = Strategy(active_constraints, x_int)
+        strategy = Strategy(binding_constraints, x_int)
 
         # Define return dictionary
         return_dict = {}
@@ -224,7 +224,7 @@ class OptimizationProblem(object):
             Time.
         """
 
-        active_constraints = strategy.active_constraints
+        binding_constraints = strategy.binding_constraints
         int_vars = strategy.int_vars
 
         # Get same objective
@@ -233,23 +233,23 @@ class OptimizationProblem(object):
         # Get only constraints in strategy
         constraints = []
         for con in self.cvxpy_problem.constraints:
-            idx_active = np.where(active_constraints[con.id])[0]
-            if len(idx_active) > 0:
-                # Active constraints in expression
+            idx_binding = np.where(binding_constraints[con.id])[0]
+            if len(idx_binding) > 0:
+                # Binding constraints in expression
                 con_expr = con.args[0]
                 if con_expr.shape == ():
                     # Scalar case no slicing
-                    active_expr = con_expr
+                    binding_expr = con_expr
                 else:
-                    # Get active constraints
-                    active_expr = con.args[0][idx_active]
+                    # Get binding constraints
+                    binding_expr = con.args[0][idx_binding]
 
                 # Set linear inequalities as equalities
                 new_type = type(con)
                 if type(con) == NonPos:
                     new_type = Zero
 
-                constraints += [new_type(active_expr)]
+                constraints += [new_type(binding_expr)]
 
         # Fix integer variables
         int_fix = []

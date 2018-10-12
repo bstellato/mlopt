@@ -97,11 +97,11 @@ theta_test = sample_inventory(theta_bar, radius, N=n_test)
 # Encode training strategies
 #  strategies = problem.solve_parametric(
 #      theta_train,
-#      message="Compute active constraints for training set"
+#      message="Compute binding constraints for training set"
 #  )[2]
 results = problem.solve_parametric(
     theta_train,
-    message="Compute active constraints for training set"
+    message="Compute binding constraints for training set"
 )
 y_train, enc2strategy = mlopt.encode_strategies([r['strategy'] for r in results])
 

@@ -70,7 +70,7 @@ class Learner(ABC):
         return X_new
 
     def predict_best_points(self, X, problem, k, enc2strategy,
-                            message="Predict active constraints"):
+                            message="Predict binding constraints"):
         """
         Predict best points by picking the best values when solving the problem
         """

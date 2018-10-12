@@ -90,6 +90,6 @@ theta, s_theta = sampler.sample()
 
 #  # Encode training strategies strategies = problem.solve_parametric(
 #      theta_train,
-#      message="Compute active constraints for training set"
+#      message="Compute binding constraints for training set"
 #  )[2]
 #  y_train, enc2strategy = mlopt.encode_strategies(strategies)
