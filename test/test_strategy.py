@@ -84,5 +84,55 @@ class TestStrategy(unittest.TestCase):
         npt.assert_almost_equal(results['x'], results_new['x'])
         npt.assert_almost_equal(results['cost'], results_new['cost'])
 
-    #  def test_random_integer(self):
-    #      """Mixed-integer random LP test"""
+    def test_random_boolean(self):
+        """Mixed-boolean random LP test"""
+
+        # Seed for reproducibility
+        np.random.seed(1)
+
+        # Define problem
+        n = 20
+        m = 70
+
+        # Define constraints
+        v = np.random.rand(n)   # Solution
+        A = spa.random(m, n, density=0.8,
+                       data_rvs=np.random.randn,
+                       format='csc')
+        b = A.dot(v) + 10 * np.random.rand(m)
+
+        # Split in 2 parts
+        A1 = A[:int(m/2), :]
+        b1 = b[:int(m/2)]
+        A2 = A[int(m/2):, :]
+        b2 = b[int(m/2):]
+
+        # Cost
+        c = np.random.rand(n)
+        x = cp.Variable(n)  # Variable
+        y = cp.Variable(m, boolean=True)  # Variable
+        cost = c * x - cp.sum(y)
+
+        # Define constraints
+        constraints = [A1 * x + y[:int(m/2)] <= b1,
+                       A2 * x + y[int(m/2):] <= b2]
+
+        # Problem
+        cp_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = OptimizationProblem(cp_problem)
+
+        # Solve and compute strategy
+        results = problem.solve(solver='MOSEK',
+                                verbose=True
+                                )
+
+
+        # Solve just with strategy
+        results_new = problem.solve_with_strategy(results['strategy'],
+                                                  solver='MOSEK',
+                                                  verbose=True
+                                                  )
+
+        # Verify both solutions are equal
+        npt.assert_almost_equal(results['x'], results_new['x'])
+        npt.assert_almost_equal(results['cost'], results_new['cost'])
