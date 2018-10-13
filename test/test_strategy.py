@@ -120,7 +120,7 @@ class TestStrategy(unittest.TestCase):
         c = np.random.rand(n)
         x = cp.Variable(n)  # Variable
         y = cp.Variable(m, boolean=True)  # Variable
-        cost = c * x - cp.sum(y)
+        cost = c * x - cp.sum(y) + 3 * y[7]
 
         # Define constraints
         constraints = [A1 * x + y[:int(m/2)] <= b1,
