@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 import scipy.sparse as spa
 import numpy.testing as npt
+from .settings import TEST_TOL as TOL
 from mlopt.problem import OptimizationProblem
 import cvxpy as cp
 
@@ -28,8 +29,12 @@ class TestStrategy(unittest.TestCase):
                                                   solver='MOSEK')
 
         # Verify both solutions are equal
-        npt.assert_almost_equal(results['x'], results_new['x'])
-        npt.assert_almost_equal(results['cost'], results_new['cost'])
+        npt.assert_almost_equal(results['x'],
+                                results_new['x'],
+                                decimal=TOL)
+        npt.assert_almost_equal(results['cost'],
+                                results_new['cost'],
+                                decimal=TOL)
 
 
     def test_random_cont(self):
@@ -81,8 +86,12 @@ class TestStrategy(unittest.TestCase):
                                                   )
 
         # Verify both solutions are equal
-        npt.assert_almost_equal(results['x'], results_new['x'])
-        npt.assert_almost_equal(results['cost'], results_new['cost'])
+        npt.assert_almost_equal(results['x'],
+                                results_new['x'],
+                                decimal=TOL)
+        npt.assert_almost_equal(results['cost'],
+                                results_new['cost'],
+                                decimal=TOL)
 
     def test_random_boolean(self):
         """Mixed-boolean random LP test"""
@@ -134,5 +143,9 @@ class TestStrategy(unittest.TestCase):
                                                   )
 
         # Verify both solutions are equal
-        npt.assert_almost_equal(results['x'], results_new['x'])
-        npt.assert_almost_equal(results['cost'], results_new['cost'])
+        npt.assert_almost_equal(results['x'],
+                                results_new['x'],
+                                decimal=TOL)
+        npt.assert_almost_equal(results['cost'],
+                                results_new['cost'],
+                                decimal=TOL)
