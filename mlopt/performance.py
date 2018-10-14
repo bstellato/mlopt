@@ -73,7 +73,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
     num_test = len(theta)
     num_train = learner.n_train  # Number of training samples from learner
     n_theta = num_dataframe_features(theta)  # Number of parameters
-    n_binding_sets = len(enc2strategy)  # Number of binding sets
+    n_strategies = len(enc2strategy)  # Number of binding sets
 
     # Compute comparative statistics
     time_comp = np.array([(1 - time_pred[i] / time_test[i])
@@ -95,7 +95,7 @@ def eval_performance(theta, learner, problem, enc2strategy, k=1):
             "num_train": [num_train],
             "n_theta": [n_theta],
             "n_corect": [np.sum(idx_correct)],
-            "n_binding_sets": [n_binding_sets],
+            "n_strategies": [n_strategies],
             "accuracy": [test_accuracy],
             "n_infeas": [np.sum(infeas >= TOL)],
             "avg_infeas": [np.mean(infeas)],

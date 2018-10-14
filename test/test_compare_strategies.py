@@ -73,5 +73,3 @@ class TestCompareStrategies(unittest.TestCase):
 
         assert np.array_equal(y, np.array([0, 1, 0, 1, 0, 2]))
         assert unique == [s1, s2, s6]
-
-        pass
