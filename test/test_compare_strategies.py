@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from mlopt.strategy import Strategy
+from mlopt.strategy import Strategy, encode_strategies
 
 
 class TestCompareStrategies(unittest.TestCase):
@@ -48,10 +48,7 @@ class TestCompareStrategies(unittest.TestCase):
         """Test same strategy"""
         s1 = Strategy(self.binding_cons1, self.int_vars1)
         s2 = Strategy(self.binding_cons1cp, self.int_vars1cp)
-
         assert s1 == s2
-        print(hash(s1))
-        print(hash(s2))
 
     def test_wrong_values_strategy(self):
         """Test strategy with wrong values"""
@@ -64,5 +61,17 @@ class TestCompareStrategies(unittest.TestCase):
 
     def test_unique_filter(self):
         """Test unique strategies filter"""
+
+        s1 = Strategy(self.binding_cons1, self.int_vars1)
+        s2 = Strategy(self.binding_cons3, self.int_vars3)
+        s3 = Strategy(self.binding_cons1cp, self.int_vars1cp)
+        s4 = Strategy(self.binding_cons3, self.int_vars3)
+        s5 = Strategy(self.binding_cons1cp, self.int_vars1cp)
+        s6 = Strategy(self.binding_cons1, self.int_vars2)
+
+        y, unique = encode_strategies([s1, s2, s3, s4, s5, s6])
+
+        assert np.array_equal(y, np.array([0, 1, 0, 1, 0, 2]))
+        assert unique == [s1, s2, s6]
 
         pass

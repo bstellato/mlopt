@@ -39,7 +39,7 @@ class Strategy(object):
         for key in d1.keys():
             try:
                 isequal = np.array_equal(d1[key], d2[key])
-            except AttributeError:
+            except KeyError:
                 return False
             if not isequal:
                 return False
@@ -55,16 +55,18 @@ class Strategy(object):
         string = "Strategy\n"
         string += "  - Binding constraints:\n"
         string += self.__sprint_dict(self.binding_constraints)
+        string += "\n"
         if len(self.int_vars) > 0:
             string += "  - Integer variables values:\n"
             string += self.__sprint_dict(self.int_vars)
         return string
 
-    def __hash__(self):
-        """Overrides default hash implementation"""
-        f_int_vars = frozenset(self.int_vars)
-        f_binding_constraints = frozenset(self.binding_constraints)
-        return hash((f_binding_constraints, f_int_vars))
+    # TODO: Implement hash if unique list comparison starts getting slow
+    #  def __hash__(self):
+    #      """Overrides default hash implementation"""
+    #      f_int_vars = frozenset(self.int_vars)
+    #      f_binding_constraints = frozenset(self.binding_constraints)
+    #      return hash((f_binding_constraints, f_int_vars))
 
     def __eq__(self, other):
         """Overrides the default equality implementation"""
@@ -95,10 +97,21 @@ def unique_strategies(strategies):
 
     Returns
     -------
-    Strategy array :
+    Strategy set :
         Unique strategies.
     """
-    return list(set(strategies))
+    # Using set
+    #  unique = list(set(strategies))
+
+    # Using list
+    unique = []
+    # traverse for all elements
+    for x in strategies:
+        # check if exists in unique_list or not
+        if x not in unique:
+            unique.append(x)
+
+    return unique
 
 
 def encode_strategies(strategies):
