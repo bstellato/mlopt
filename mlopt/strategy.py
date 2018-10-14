@@ -19,12 +19,12 @@ class Strategy(object):
     def __init__(self, binding_constraints, int_vars):
         # Check that integer variables are non negative
         for _, v in binding_constraints.items():
-            if any(v < 0) or any(v > 1):
+            if np.any(np.logical_or(v < 0, v > 1)):
                 raise ValueError("Binding constraints vector "
                                  "does not contain only 0-1.")
 
         for _, v in int_vars.items():
-            if any(v < 0):
+            if np.any(v < 0):
                 raise ValueError("Integer variables vector " +
                                  "has negative entries.")
 
