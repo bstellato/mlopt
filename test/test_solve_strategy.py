@@ -7,7 +7,7 @@ from mlopt.problem import OptimizationProblem
 import cvxpy as cp
 
 
-class TestStrategy(unittest.TestCase):
+class TestSolveStrategy(unittest.TestCase):
     def test_small(self):
         """Test small continuous LP"""
 
@@ -35,7 +35,6 @@ class TestStrategy(unittest.TestCase):
         npt.assert_almost_equal(results['cost'],
                                 results_new['cost'],
                                 decimal=TOL)
-
 
     def test_random_cont(self):
         """Test random continuous LP test"""

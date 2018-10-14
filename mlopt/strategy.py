@@ -9,7 +9,7 @@ class Strategy(object):
     Parameters
     ----------
     binding_constraints : dict of numpy int arrays
-        Set of binding constraints. The keys are the CVXPY constraint id.
+        Set of binding constraints. The keys are the CVXPY constraint ids.
         The values are numpy int arrays (1/0 for binding/non binding).
     int_vars : dict of numpy int arrays
         Value of the integer variables. The keys are CVXPY variable id.
@@ -17,13 +17,31 @@ class Strategy(object):
     """
 
     def __init__(self, binding_constraints, int_vars):
+        # Check that integer variables are non negative
+        for _, v in binding_constraints.items():
+            if any(v < 0) or any(v > 1):
+                raise ValueError("Binding constraints vector "
+                                 "does not contain only 0-1.")
+
+        for _, v in int_vars.items():
+            if any(v < 0):
+                raise ValueError("Integer variables vector " +
+                                 "has negative entries.")
+
+        # Check that binding constraints are not
         self.binding_constraints = binding_constraints
         self.int_vars = int_vars
 
     def _compare_arrays_dict(self, d1, d2):
         """Compare dictionaries of numpy arrays"""
+        if len(d1) != len(d2):
+            return False
         for key in d1.keys():
-            if not np.array_equal(d1[key], d2[key]):
+            try:
+                isequal = np.array_equal(d1[key], d2[key])
+            except AttributeError:
+                return false
+            if not isequal:
                 return False
         return True
 
