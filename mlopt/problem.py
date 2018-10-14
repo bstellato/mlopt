@@ -1,5 +1,4 @@
 from multiprocessing import Pool, cpu_count
-from copy import deepcopy  # For copying problem
 from itertools import repeat
 import numpy as np
 #  from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
@@ -92,8 +91,8 @@ class OptimizationProblem(object):
                 binding_constraints = dict()
                 for c in problem.constraints:
                     binding_constraints[c.id] = \
-                        [1 if abs(y) >= TOL else 0
-                         for y in np.atleast_1d(c.dual_value)]
+                        np.array([1 if abs(y) >= TOL else 0
+                                  for y in np.atleast_1d(c.dual_value)])
                 results['binding_constraints'] = binding_constraints
 
                 # DEBUG
@@ -158,7 +157,7 @@ class OptimizationProblem(object):
             # Get value of integer variables
             x_int = dict()
             for x in int_vars:
-                x_int[x.id] = deepcopy(x.value)
+                x_int[x.id] = np.array(x.value)
 
             # Change attributes to continuous
             int_vars_fix = []

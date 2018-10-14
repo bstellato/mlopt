@@ -40,7 +40,7 @@ class Strategy(object):
             try:
                 isequal = np.array_equal(d1[key], d2[key])
             except AttributeError:
-                return false
+                return False
             if not isequal:
                 return False
         return True
