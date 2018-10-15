@@ -201,6 +201,28 @@ class OptimizationProblem(object):
 
         return return_dict
 
+    def _verify_strategy(self, strategy):
+        """Verify that strategy is compatible with current problem."""
+        # Compare keys for binding constraints and integer variables
+        variables = {v.id: v
+                     for v in self.cvxpy_problem.variables()}
+        con_keys = [c.id for c in self.cvxpy_problem.constraints]
+
+        for key in strategy.binding_constraints.keys():
+            if key not in con_keys:
+                raise ValueError("Binding constraints not compatible " +
+                                 "with problem. Constaint IDs not matching.")
+
+        for key in strategy.int_vars.keys():
+            try:
+                v = variables[key]
+            except KeyError:
+                raise ValueError("Integer variables not compatible with problem. " +
+                                 "Constaint IDs not matching an integer variable.")
+            if not self._is_var_mip(v):
+                raise ValueError("Integer variables not compatible with problem. " +
+                                 "Constaint IDs not matching an integer variable.")
+
     def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
                             **settings):
         """
@@ -222,16 +244,23 @@ class OptimizationProblem(object):
         float
             Time.
         """
+        self._verify_strategy(strategy)
 
+        # Unpack strategy
         binding_constraints = strategy.binding_constraints
         int_vars = strategy.int_vars
 
+        # Unpack original problem
+        orig_objective = self.cvxpy_problem.objective
+        orig_variables = self.cvxpy_problem.variables()
+        orig_constraints = self.cvxpy_problem.constraints
+
         # Get same objective
-        objective = self.cvxpy_problem.objective
+        objective = orig_objective
 
         # Get only constraints in strategy
         constraints = []
-        for con in self.cvxpy_problem.constraints:
+        for con in orig_constraints:
             idx_binding = np.where(binding_constraints[con.id])[0]
             if len(idx_binding) > 0:
                 # Binding constraints in expression
@@ -252,20 +281,26 @@ class OptimizationProblem(object):
 
         # Fix integer variables
         int_fix = []
-        if self.is_mip():
-            for v in self.cvxpy_problem.variables():
-                if self._is_var_mip(v):
-                    self._set_cont_var(v)
-                    int_fix += [v == int_vars[v.id]]
+        for v in orig_variables:
+            if self._is_var_mip(v):
+                self._set_cont_var(v)
+                int_fix += [v == int_vars[v.id]]
 
         # Solve problem
         prob_red = cp.Problem(objective, constraints + int_fix)
-        #  import ipdb; ipdb.set_trace()
-        results = self._solve(prob_red, solver, settings)
+        #  results = self._solve(prob_red, solver, settings)
+        results = self._solve(prob_red, solver, {'verbose': True})
+
+        # Assign original problem variables to prob_red variables
+        # TODO: Needed?
+        #  prob_red_values = {v.id:v.value
+        #                     for v in prob_red.variables()}
+        #  for v in orig_variables:
+        #      v.value = prob_red_values[v.id]
 
         # Make variables discrete again
         for v in self.cvxpy_problem.variables():
-            if self._is_var_mip(v):
+            if v.id in int_vars.keys():
                 self._set_bool_var(v)
 
         return results

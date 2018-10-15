@@ -4,6 +4,8 @@ import scipy.sparse as spa
 import numpy.testing as npt
 from .settings import TEST_TOL as TOL
 from mlopt.problem import OptimizationProblem
+from mlopt.strategy import Strategy
+from mlopt.settings import DEFAULT_SOLVER
 import cvxpy as cp
 
 
@@ -23,10 +25,12 @@ class TestSolveStrategy(unittest.TestCase):
 
         # Solve and compute strategy
         results = problem.solve(solver='MOSEK')
+        violation1 = problem.infeasibility()
 
         # Solve just with strategy
         results_new = problem.solve_with_strategy(results['strategy'],
                                                   solver='MOSEK')
+        violation2 = problem.infeasibility()
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results['x'],
@@ -35,6 +39,7 @@ class TestSolveStrategy(unittest.TestCase):
         npt.assert_almost_equal(results['cost'],
                                 results_new['cost'],
                                 decimal=TOL)
+        assert abs(violation1 - violation2) <= TOL
 
     def test_random_cont(self):
         """Test random continuous LP test"""
@@ -76,7 +81,6 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve(solver='MOSEK',
                                 #  verbose=True
                                 )
-
 
         # Solve just with strategy
         results_new = problem.solve_with_strategy(results['strategy'],
@@ -134,7 +138,6 @@ class TestSolveStrategy(unittest.TestCase):
                                 verbose=True
                                 )
 
-
         # Solve just with strategy
         results_new = problem.solve_with_strategy(results['strategy'],
                                                   solver='MOSEK',
@@ -148,3 +151,60 @@ class TestSolveStrategy(unittest.TestCase):
         npt.assert_almost_equal(results['cost'],
                                 results_new['cost'],
                                 decimal=TOL)
+
+    def test_small_inventory(self):
+        # Generate data
+        np.random.seed(1)
+        T = 5
+        M = 2.
+        h = 1.
+        c = 1.
+        p = 1.
+        x_init = 2.
+
+        # Define problem
+        x = cp.Variable(T+1)
+        u = cp.Variable(T)
+
+        # Explicitly define parameter
+        d = np.array([3.94218985, 2.98861724,
+                      2.48309709, 1.91226946,
+                      2.33123841])
+
+        # Constaints
+        constraints = [x[0] == x_init]
+        for t in range(T):
+            constraints += [x[t+1] == x[t] + u[t] - d[t]]
+        constraints += [u >= 0, u <= M]
+
+        # Objective
+        # TODO: If you remove that part it reports a crappy solution
+        cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + \
+            1e-08 * cp.sum_squares(u)
+
+        # Define problem
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = OptimizationProblem(cvxpy_problem)
+        results = problem.solve(solver=DEFAULT_SOLVER)
+
+        # Solve with strategy!
+        int_vars = {}
+        binding_constraints = {constraints[0].id: np.array([1]),
+                               constraints[1].id: np.array([1]),
+                               constraints[2].id: np.array([1]),
+                               constraints[3].id: np.array([1]),
+                               constraints[4].id: np.array([1]),
+                               constraints[5].id: np.array([1]),
+                               constraints[6].id: np.array([0, 0, 0, 0, 0]),
+                               constraints[7].id: np.array([1, 1, 1, 1, 0])
+                               }
+        strategy = Strategy(binding_constraints, int_vars)
+        results_strategy = problem.solve_with_strategy(strategy)
+
+        # TODO: Solve issue!
+        # Correct strategy but variable is infeasible for original problem.
+        # Need to rethink how we choose the strategy!
+
+        assert problem.infeasibility() >= 0
+        assert problem.infeasibility() <= TOL
+        assert abs(results['cost'] - results_strategy['cost']) <= TOL
