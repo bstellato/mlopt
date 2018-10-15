@@ -354,20 +354,20 @@ class OptimizationProblem(object):
             #  with tqdm(total=n, desc=message + " (parallel)") as self.pbar:
             with Pool(processes=min(n, cpu_count())) as pool:
                 # Solve in parallel
-                results = \
-                    pool.map(self.populate_and_solve,
-                             zip([theta.iloc[i, :] for i in range(n)],
-                                 repeat(solver),
-                                 repeat(settings)))
+                #  results = \
+                #      pool.map(self.populate_and_solve,
+                #               zip([theta.iloc[i, :] for i in range(n)],
+                #                   repeat(solver),
+                #                   repeat(settings)))
                 # Solve in parallel
                 #  results = pool.starmap(self._populate_and_solve,)
                 # Solve in parallel and print tqdm progress bar
-                #  results = list(tqdm(pool.imap(self._populate_and_solve,
-                #                                zip([theta.iloc[i, :]
-                #                                     for i in range(n)],
-                #                                    repeat(solver),
-                #                                    repeat(settings))),
-                #                      total=n))
+                results = list(tqdm(pool.imap(self.populate_and_solve,
+                                              zip([theta.iloc[i, :]
+                                                   for i in range(n)],
+                                                  repeat(solver),
+                                                  repeat(settings))),
+                                    total=n))
         else:
             # Preallocate solutions
             results = []
