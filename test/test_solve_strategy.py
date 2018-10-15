@@ -4,7 +4,6 @@ import scipy.sparse as spa
 import numpy.testing as npt
 from .settings import TEST_TOL as TOL
 from mlopt.problem import OptimizationProblem
-from mlopt.strategy import Strategy
 from mlopt.settings import DEFAULT_SOLVER
 import cvxpy as cp
 

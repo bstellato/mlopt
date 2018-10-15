@@ -4,7 +4,7 @@ import numpy.testing as npt
 import cvxpy as cp
 import mlopt as mo
 from mlopt.settings import DEFAULT_SOLVER
-from mlopt.settings import TOL
+from .settings import TEST_TOL as TOL
 from copy import deepcopy
 
 

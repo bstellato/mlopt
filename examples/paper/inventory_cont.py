@@ -39,12 +39,11 @@ constraints += [u >= 0, u <= M]
 
 # Objective
 #  cost = cp.sum(y) + c * cp.sum(u)
-cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + \
-    0.01 * cp.sum_squares(u)
+cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
 # Define problem
-cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
-problem = mlopt.OptimizationProblem(cvxpy_problem,
+problem = mlopt.OptimizationProblem(cp.Minimize(cost),
+                                    constraints,
                                     name="inventory")
 
 '''
@@ -94,5 +93,4 @@ with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
     #  Testing
     results = mlopt.eval_performance(theta_test, learner, problem,
                                      enc2strategy, k=1)
-
     mlopt.store(results, 'output/')

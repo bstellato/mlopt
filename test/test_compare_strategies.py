@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import numpy.testing as npt
 from mlopt.strategy import Strategy, encode_strategies
 
 
@@ -70,6 +71,5 @@ class TestCompareStrategies(unittest.TestCase):
         s6 = Strategy(self.binding_cons1, self.int_vars2)
 
         y, unique = encode_strategies([s1, s2, s3, s4, s5, s6])
-
-        self.assertTrue(np.array_equal(y, np.array([0, 1, 0, 1, 0, 2])))
+        npt.assert_array_equal(y, np.array([0, 1, 0, 1, 0, 2]))
         self.assertTrue(unique == [s1, s2, s6])
