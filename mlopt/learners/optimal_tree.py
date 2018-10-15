@@ -1,21 +1,23 @@
 from .learner import Learner
 import numpy as np
-import julia
-from julia.Base import Array
-import julia.OptimalTrees as OT
 import datetime
 import os
 from subprocess import call
 
 
-jl = julia.Julia()
-SPARSITY = jl.eval('PyCall.pyjlwrap_new(:sparsity)')
-
-
 class OptimalTree(Learner):
 
     def __enter__(self):
-        """Enter for context manager"""
+        """Create OptimalTree learner by
+           loading the Julia package.
+        """
+        import julia
+        from julia.Base import Array
+        import julia.OptimalTrees as OT
+        self.Array = Array
+        self.OT = OT
+        jl = julia.Julia()
+        self.SPARSITY = jl.eval('PyCall.pyjlwrap_new(:sparsity)')
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -32,11 +34,11 @@ class OptimalTree(Learner):
         self.options = {
                         'max_depth': 10,
                         #  'minbucket': 1,
-                        #  'cp': 0.001
+                        #  'cp': 0.00001
                        }
         if self.sparse:
             # Create symbol (maybe not ideal way)
-            self.options['hyperplane_config'] = [{SPARSITY: 2}]
+            self.options['hyperplane_config'] = [{self.SPARSITY: 2}]
             self.options['fast_num_support_restarts'] = 10
 
         self.export_tree = export_tree,
@@ -49,10 +51,10 @@ class OptimalTree(Learner):
         X = self.pandas2array(X)
 
         # Create classifier
-        self.lnr = OT.OptimalTreeClassifier(**self.options)
+        self.lnr = self.OT.OptimalTreeClassifier(**self.options)
 
         # Train classifier
-        OT.fit_b(self.lnr, X, y)
+        self.OT.fit_b(self.lnr, X, y)
 
         # Export tree
         if self.export_tree:
@@ -62,7 +64,7 @@ class OptimalTree(Learner):
                 os.makedirs(self.output_folder)
             print("Export tree to ", export_tree_name)
             # NB Julia call with subfolder does not work
-            OT.writedot("%s.dot" % export_tree_name, self.lnr)
+            self.OT.writedot("%s.dot" % export_tree_name, self.lnr)
             #  os.rename("%s.dot" % output_na export_tree_name % export_tree_name)
 
             call(["dot", "-Tpdf", "-o",
@@ -80,7 +82,7 @@ class OptimalTree(Learner):
         X = self.pandas2array(X)
 
         # Evaluate probabilities
-        proba = Array(OT.predict_proba(self.lnr, X))
+        proba = self.Array(self.OT.predict_proba(self.lnr, X))
 
         # Sort probabilities
         idx_probs = np.empty((n_points, k), dtype='int')

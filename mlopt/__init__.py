@@ -6,5 +6,5 @@ from .sampling import Sampler, uniform_sphere_sample
 # Learners
 from .learners.tensorflow_neural_net import TensorFlowNeuralNet
 from .learners.pytorch_neural_net import PyTorchNeuralNet
-#  from .learners.optimal_tree import OptimalTree
+from .learners.optimal_tree import OptimalTree
 

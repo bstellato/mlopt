@@ -25,6 +25,7 @@ wheel = "*"
 ipdb = "*"
 neovim = "*"
 python-language-server = {extras = ["all"], version = "*"}
+pytest-cov = "*"
 
 [requires]
 python_version = "3.6"
