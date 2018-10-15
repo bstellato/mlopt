@@ -103,7 +103,6 @@ class Learner(ABC):
 
             for j in range(k):
                 res = problem.solve_with_strategy(strategy_classes[j])
-                print(res['infeasibility'])
                 x_temp.append(res['x'])
                 time_temp.append(res['time'])
                 infeas_temp.append(res['infeasibility'])

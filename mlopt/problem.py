@@ -196,7 +196,6 @@ class OptimizationProblem(object):
         return_dict['time'] = results['time']
         return_dict['cost'] = results['cost']
         return_dict['infeasibility'] = results['infeasibility']
-        #  return_dict['infeasibility'] = self.infeasibility(self.cvxpy_problem.variables())
         return_dict['strategy'] = strategy
 
         return return_dict
@@ -213,15 +212,16 @@ class OptimizationProblem(object):
                 raise ValueError("Binding constraints not compatible " +
                                  "with problem. Constaint IDs not matching.")
 
+        int_var_error = ValueError("Integer variables not compatible " +
+                                   "with problem. Constaint IDs not " +
+                                   "matching an integer variable.")
         for key in strategy.int_vars.keys():
             try:
                 v = variables[key]
             except KeyError:
-                raise ValueError("Integer variables not compatible with problem. " +
-                                 "Constaint IDs not matching an integer variable.")
+                raise int_var_error
             if not self._is_var_mip(v):
-                raise ValueError("Integer variables not compatible with problem. " +
-                                 "Constaint IDs not matching an integer variable.")
+                raise int_var_error
 
     def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
                             **settings):
@@ -239,10 +239,8 @@ class OptimizationProblem(object):
 
         Returns
         -------
-        numpy array
-            Solution.
-        float
-            Time.
+        dict
+            Results.
         """
         self._verify_strategy(strategy)
 
@@ -288,8 +286,8 @@ class OptimizationProblem(object):
 
         # Solve problem
         prob_red = cp.Problem(objective, constraints + int_fix)
-        #  results = self._solve(prob_red, solver, settings)
-        results = self._solve(prob_red, solver, {'verbose': True})
+        results = self._solve(prob_red, solver, settings)
+        #  results = self._solve(prob_red, solver, {'verbose': True})
 
         # Assign original problem variables to prob_red variables
         # TODO: Needed?
@@ -324,7 +322,7 @@ class OptimizationProblem(object):
     def solve_parametric(self, theta,
                          solver=DEFAULT_SOLVER, settings={},
                          message="Solving for all theta",
-                         parallel=False  # Solve problems in parallel
+                         parallel=True  # Solve problems in parallel
                          ):
         """
         Solve parametric problems for each value of theta.

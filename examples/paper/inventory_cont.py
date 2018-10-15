@@ -5,8 +5,8 @@ import pandas as pd
 
 # Development
 import mlopt
-#  import importlib
-#  importlib.reload(mlopt)
+import importlib
+importlib.reload(mlopt)
 
 '''
 Define Inventory problem
@@ -39,7 +39,8 @@ constraints += [u >= 0, u <= M]
 
 # Objective
 #  cost = cp.sum(y) + c * cp.sum(u)
-cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
+cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + \
+    0.01 * cp.sum_squares(u)
 
 # Define problem
 cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
@@ -79,14 +80,15 @@ results = problem.solve_parametric(
     theta_train,
     message="Compute binding constraints for training set"
 )
-y_train, enc2strategy = mlopt.encode_strategies([r['strategy'] for r in results])
+y_train, enc2strategy = mlopt.encode_strategies(
+    [r['strategy'] for r in results])
 
 # Training
 n_input = len(theta_bar)
 n_classes = len(enc2strategy)
 #  with mlopt.TensorFlowNeuralNet(n_input, n_layers, n_classes) as learner:
 with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
-#  with mlopt.OptimalTree() as learner:
+    #  with mlopt.OptimalTree() as learner:
     learner.train(theta_train, y_train)
 
     #  Testing
@@ -94,4 +96,3 @@ with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
                                      enc2strategy, k=1)
 
     mlopt.store(results, 'output/')
-

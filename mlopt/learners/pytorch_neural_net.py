@@ -94,7 +94,8 @@ class PyTorchNeuralNet(Learner):
 
         # Define loader for batches
         data_loader = DataLoader(dataset, batch_size=self.batch_size,
-                                 shuffle=True)
+                                 #  shuffle=True
+                                 )
 
         n_batches_per_epoch = int(self.n_train / self.batch_size)
         with trange(self.n_epochs, desc="Training neural net") as t:
