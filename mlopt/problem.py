@@ -33,7 +33,7 @@ class OptimizationProblem(object):
         # Perturb objective to avoid degeneracy
         cost_perturb = objective.args[0]
         for v in objective.variables():
-            perturb = PERTURB_TOL * v.size * np.random.randn(*v.shape)
+            perturb = PERTURB_TOL * np.random.randn(*v.shape)
             cost_perturb += perturb * v
         self.cvxpy_problem = cp.Problem(cp.Minimize(cost_perturb), constraints)
 

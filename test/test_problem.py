@@ -55,7 +55,7 @@ class TestProblem(unittest.TestCase):
         x_cvxpy = deepcopy(x.value)
         cost_cvxpy = cost.value
         problem = mo.OptimizationProblem(cp.Minimize(cost), constraints)
-        results = problem.solve(verbose=True)
+        problem.solve(verbose=True)
         x_problem = deepcopy(x.value)
         cost_problem = cost.value
 
