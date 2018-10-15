@@ -22,8 +22,7 @@ class TestProblem(unittest.TestCase):
         c = np.random.randn(n)
         A = np.random.randn(m, n)
         b = np.random.randn(m)
-        prob = cp.Problem(cp.Minimize(c * x), [A * x <= b])
-        mlprob = mo.OptimizationProblem(prob)
+        mlprob = mo.OptimizationProblem(cp.Minimize(c * x), [A * x <= b])
 
         # Set variable value
         x_val = 10 * np.random.randn(n)
@@ -33,4 +32,4 @@ class TestProblem(unittest.TestCase):
         viol_cvxpy = mlprob.infeasibility()
         viol_manual = np.linalg.norm(np.maximum(A.dot(x_val) - b,
                                                 0))
-        assert abs(viol_cvxpy - viol_manual) <= TOL
+        self.assertTrue(abs(viol_cvxpy - viol_manual) <= TOL)

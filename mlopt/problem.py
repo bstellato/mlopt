@@ -1,31 +1,41 @@
 from multiprocessing import Pool, cpu_count
 from itertools import repeat
 import numpy as np
-#  from .solvers.solvers import SOLVER_MAP, DEFAULT_SOLVER
-#  from .solvers.statuses import SOLUTION_PRESENT
 from .strategy import Strategy
-from .settings import TOL, DEFAULT_SOLVER
+from .settings import TOL, DEFAULT_SOLVER, PERTURB_TOL
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos
 from cvxpy.constraints.zero import Zero
+# Progress bars
 from tqdm import tqdm
 
 
 class OptimizationProblem(object):
 
-    def __init__(self, cvxpy_problem, name="problem"):
+    def __init__(self, objective, constraints, name="problem"):
         """Initialize Optimization problem
+
+        The problem cost is perturbed to avoid degeneracy when the
+        solution lies on a hyperplane.
 
         Parameters
         ----------
-        cvxpy_problem: cvxpy Problem
-            Problem generated in CVXPY.
+        objective: cvxpy objective
+            Objective defined in CVXPY.
+        constraints: cvxpy constraints
+            Constraints defined in CVXPY.
         name : string
             Problem name for outputting learner.
         """
         self.name = name
-        self.cvxpy_problem = cvxpy_problem
+
+        # Perturb objective to avoid degeneracy
+        cost_perturb = objective.args[0]
+        for v in objective.variables():
+            perturb = PERTURB_TOL * v.size * np.random.randn(*v.shape)
+            cost_perturb += perturb * v
+        self.cvxpy_problem = cp.Problem(cp.Minimize(cost_perturb), constraints)
 
     def populate(self, theta):
         """
@@ -346,28 +356,28 @@ class OptimizationProblem(object):
             Results dictionary.
         """
         n = len(theta)  # Number of points
+        n_proc = cpu_count()
+        #  n_proc = 2
 
         if parallel:
             print("Solving for all theta (parallel %i processors)..." %
                   cpu_count())
             #  self.pbar = tqdm(total=n, desc=message + " (parallel)")
             #  with tqdm(total=n, desc=message + " (parallel)") as self.pbar:
-            with Pool(processes=min(n, cpu_count())) as pool:
+            with Pool(processes=min(n, n_proc)) as pool:
                 # Solve in parallel
-                #  results = \
-                #      pool.map(self.populate_and_solve,
-                #               zip([theta.iloc[i, :] for i in range(n)],
-                #                   repeat(solver),
-                #                   repeat(settings)))
-                # Solve in parallel
-                #  results = pool.starmap(self._populate_and_solve,)
+                results = \
+                    pool.map(self.populate_and_solve,
+                             zip([theta.iloc[i, :] for i in range(n)],
+                                 repeat(solver),
+                                 repeat(settings)))
                 # Solve in parallel and print tqdm progress bar
-                results = list(tqdm(pool.imap(self.populate_and_solve,
-                                              zip([theta.iloc[i, :]
-                                                   for i in range(n)],
-                                                  repeat(solver),
-                                                  repeat(settings))),
-                                    total=n))
+                #  results = list(tqdm(pool.imap(self.populate_and_solve,
+                                              #  zip([theta.iloc[i, :]
+                                                   #  for i in range(n)],
+                                                  #  repeat(solver),
+                                                  #  repeat(settings))),
+                                    #  total=n))
         else:
             # Preallocate solutions
             results = []

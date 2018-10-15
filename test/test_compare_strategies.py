@@ -41,14 +41,14 @@ class TestCompareStrategies(unittest.TestCase):
         s2 = Strategy(self.binding_cons3, self.int_vars3)
         s3 = Strategy(self.binding_cons1, self.int_vars2)
 
-        assert s1 == s2
-        assert s2 != s3
+        self.assertTrue(s1 == s2)
+        self.assertTrue(s2 != s3)
 
     def test_same_strategy2(self):
         """Test same strategy"""
         s1 = Strategy(self.binding_cons1, self.int_vars1)
         s2 = Strategy(self.binding_cons1cp, self.int_vars1cp)
-        assert s1 == s2
+        self.assertTrue(s1 == s2)
 
     def test_wrong_values_strategy(self):
         """Test strategy with wrong values"""
@@ -71,5 +71,5 @@ class TestCompareStrategies(unittest.TestCase):
 
         y, unique = encode_strategies([s1, s2, s3, s4, s5, s6])
 
-        assert np.array_equal(y, np.array([0, 1, 0, 1, 0, 2]))
-        assert unique == [s1, s2, s6]
+        self.assertTrue(np.array_equal(y, np.array([0, 1, 0, 1, 0, 2])))
+        self.assertTrue(unique == [s1, s2, s6])

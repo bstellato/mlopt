@@ -1,7 +1,7 @@
 from .strategy import encode_strategies
 from .performance import eval_performance, store
 from .problem import OptimizationProblem
-from .sampling import uniform_sphere_sample, Sampler
+from .sampling import Sampler
 
 # Learners
 from .learners.tensorflow_neural_net import TensorFlowNeuralNet

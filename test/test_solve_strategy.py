@@ -20,8 +20,7 @@ class TestSolveStrategy(unittest.TestCase):
         constraints = [x[1] <= 0.5 * x[0] + 1.5,
                        x[1] <= -0.5 * x[0] + 3.5,
                        x[1] <= -5.0 * x[0] + 10]
-        cp_problem = cp.Problem(cp.Minimize(cost), constraints)
-        problem = OptimizationProblem(cp_problem)
+        problem = OptimizationProblem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
         results = problem.solve(solver='MOSEK')
@@ -39,7 +38,7 @@ class TestSolveStrategy(unittest.TestCase):
         npt.assert_almost_equal(results['cost'],
                                 results_new['cost'],
                                 decimal=TOL)
-        assert abs(violation1 - violation2) <= TOL
+        self.assertTrue(abs(violation1 - violation2) <= TOL)
 
     def test_random_cont(self):
         """Test random continuous LP test"""
@@ -74,8 +73,7 @@ class TestSolveStrategy(unittest.TestCase):
                        A2 * x <= b2]
 
         # Problem
-        cp_problem = cp.Problem(cp.Minimize(cost), constraints)
-        problem = OptimizationProblem(cp_problem)
+        problem = OptimizationProblem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
         results = problem.solve(solver='MOSEK',
@@ -130,8 +128,7 @@ class TestSolveStrategy(unittest.TestCase):
                        A2 * x + y[int(m/2):] <= b2]
 
         # Problem
-        cp_problem = cp.Problem(cp.Minimize(cost), constraints)
-        problem = OptimizationProblem(cp_problem)
+        problem = OptimizationProblem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
         results = problem.solve(solver='MOSEK',
@@ -179,32 +176,32 @@ class TestSolveStrategy(unittest.TestCase):
 
         # Objective
         # TODO: If you remove that part it reports a crappy solution
-        cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + \
-            1e-08 * cp.sum_squares(u)
+        cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
-        problem = OptimizationProblem(cvxpy_problem)
+        problem = OptimizationProblem(cp.Minimize(cost), constraints)
         results = problem.solve(solver=DEFAULT_SOLVER)
 
+        # NB. This is the strategy that you would get if
+        #     you do not perturb the cost.
+        #  int_vars = {}
+        #  binding_constraints = {constraints[0].id: np.array([1]),
+        #                         constraints[1].id: np.array([1]),
+        #                         constraints[2].id: np.array([1]),
+        #                         constraints[3].id: np.array([1]),
+        #                         constraints[4].id: np.array([1]),
+        #                         constraints[5].id: np.array([1]),
+        #                         constraints[6].id: np.array([0, 0, 0, 0, 0]),
+        #                         constraints[7].id: np.array([1, 1, 1, 1, 0])
+        #                         }
+        #  strategy = Strategy(binding_constraints, int_vars)
+
         # Solve with strategy!
-        int_vars = {}
-        binding_constraints = {constraints[0].id: np.array([1]),
-                               constraints[1].id: np.array([1]),
-                               constraints[2].id: np.array([1]),
-                               constraints[3].id: np.array([1]),
-                               constraints[4].id: np.array([1]),
-                               constraints[5].id: np.array([1]),
-                               constraints[6].id: np.array([0, 0, 0, 0, 0]),
-                               constraints[7].id: np.array([1, 1, 1, 1, 0])
-                               }
-        strategy = Strategy(binding_constraints, int_vars)
-        results_strategy = problem.solve_with_strategy(strategy)
+        results_strategy = problem.solve_with_strategy(results['strategy'])
 
         # TODO: Solve issue!
         # Correct strategy but variable is infeasible for original problem.
         # Need to rethink how we choose the strategy!
-
-        assert problem.infeasibility() >= 0
-        assert problem.infeasibility() <= TOL
-        assert abs(results['cost'] - results_strategy['cost']) <= TOL
+        self.assertTrue(problem.infeasibility() >= 0)
+        self.assertTrue(problem.infeasibility() <= TOL)
+        self.assertTrue(abs(results['cost'] - results_strategy['cost']) <= TOL)
