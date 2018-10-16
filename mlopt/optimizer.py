@@ -51,9 +51,6 @@ class Optimizer(object):
         # Save training data internally
         self.X_train = X
 
-        # Define learner
-        self._learner = LEARNER_MAP[learner](**learner_options)
-
         # Encode training strategies by solving
         # the problem for all the points
         results = self._problem.solve_parametric(X, message="Compute " +
@@ -61,6 +58,11 @@ class Optimizer(object):
                                                  "for training set")
         train_strategies = [r['strategy'] for r in results]
         self.y_train, self.enc2strategy = encode_strategies(train_strategies)
+
+        # Define learner
+        self._learner = LEARNER_MAP[learner](n_input=len(self.X_train),
+                                             n_classes=len(self.enc2strategy),
+                                             **learner_options)
 
         # Train learner
         self._learner.train(self.X_train, self.y_train)

@@ -77,7 +77,6 @@ class Problem(object):
         for p in self.cvxpy_problem.parameters():
             p.value = theta[p.name()]
 
-
     def cost(self):
         """Compute cost function value"""
         return self.cvxpy_problem.objective.value
@@ -312,20 +311,18 @@ class Problem(object):
 
         return results
 
-    def populate_and_solve(self, args):
+    def populate_and_solve(self, theta):
         """Single function to populate the problem with
            theta and solve it with the solver. Useful for
            multiprocessing."""
-        theta, solver = args
         self.populate(theta)
-        results = self.solve(solver)
+        results = self.solve()
 
         return results
 
     def solve_parametric(self, theta,
-                         solver=DEFAULT_SOLVER, settings={},
+                         parallel=True,  # Solve problems in parallel
                          message="Solving for all theta",
-                         parallel=True  # Solve problems in parallel
                          ):
         """
         Solve parametric problems for each value of theta.
@@ -334,14 +331,10 @@ class Problem(object):
         ----------
         theta : DataFrame
             Parameter values.
-        problem : Optimizationproblem
-            Optimization problem to solve.
-        solver : string, optional
-            Solver to be used. Default Mosek.
-        settings : dict, optional
-            Solver settings. Default empty.
         parallel : bool, optional
             Solve problems in parallel. Default True.
+        message : str, optional
+            Message to be printed on progress bar.
 
         Returns
         -------
@@ -361,21 +354,16 @@ class Problem(object):
                 # Solve in parallel
                 #  results = \
                     #  pool.map(self.populate_and_solve,
-                             #  zip([theta.iloc[i, :] for i in range(n)],
-                                 #  repeat(solver),
-                                 #  repeat(settings)))
+                             #  zip([theta.iloc[i, :] for i in range(n)]))
                 # Solve in parallel and print tqdm progress bar
                 results = list(tqdm(pool.imap(self.populate_and_solve,
-                                              zip([theta.iloc[i, :]
-                                                   for i in range(n)],
-                                                  repeat(solver),
-                                                  repeat(settings))),
+                                              [theta.iloc[i, :]
+                                               for i in range(n)]),
                                     total=n))
         else:
             # Preallocate solutions
             results = []
             for i in tqdm(range(n), desc=message + " (serial)"):
-                results.append(self.populate_and_solve((theta.iloc[i, :],
-                                                        solver, settings)))
+                results.append(self.populate_and_solve(theta.iloc[i, :]))
 
         return results

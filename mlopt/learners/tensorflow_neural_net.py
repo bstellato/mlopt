@@ -6,15 +6,13 @@ from tqdm import trange
 
 class TensorFlowNeuralNet(Learner):
 
-    def __enter__(self):
-        """Enter for context manager"""
-        tf.set_random_seed(1)  # Random seed for reproducibility
-        self.sess = tf.Session()  # Initialize tf session
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Exit for context manager"""
-        self.sess.close()  # Close tensorflow session
+    #  def __enter__(self):
+    #      """Enter for context manager"""
+    #      return self
+    #
+    #  def __exit__(self, exc_type, exc_value, traceback):
+    #      """Exit for context manager"""
+    #      self.sess.close()  # Close tensorflow session
 
     def __init__(self, **options):
         """
@@ -25,6 +23,11 @@ class TensorFlowNeuralNet(Learner):
         options : dict
             Learner options as a dictionary.
         """
+
+        # TODO: This needs to go into some __enter__/__exit__
+        # method.
+        tf.set_random_seed(1)  # Random seed for reproducibility
+        self.sess = tf.Session()  # Initialize tf session
 
         # Unpack settings
         self.learning_rate = options.pop('learning_rate', 0.01)

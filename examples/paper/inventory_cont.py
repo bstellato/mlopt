@@ -5,6 +5,7 @@ import pandas as pd
 
 # Development
 import mlopt
+from mlopt.sampling import uniform_sphere_sample
 import importlib
 importlib.reload(mlopt)
 
@@ -63,7 +64,7 @@ radius = 2.0
 def sample_inventory(theta_bar, radius, N=100):
 
     # Sample points from multivariate ball
-    X = mlopt.uniform_sphere_sample(theta_bar, radius, N=N)
+    X = uniform_sphere_sample(theta_bar, radius, N=N)
 
     df = pd.DataFrame({'d': X.tolist()})
 

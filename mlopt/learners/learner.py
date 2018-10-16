@@ -29,13 +29,13 @@ class Learner(ABC):
     def predict(self, X):
         """Predict strategy from data"""
 
-    @abstractmethod
-    def __enter__(self):
-        """Enter for context manager"""
-
-    @abstractmethod
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Exit for context manager"""
+    #  @abstractmethod
+    #  def __enter__(self):
+    #      """Enter for context manager"""
+    #
+    #  @abstractmethod
+    #  def __exit__(self, exc_type, exc_value, traceback):
+    #      """Exit for context manager"""
 
     def pandas2array(self, X):
         """

@@ -80,6 +80,7 @@ class PyTorchNeuralNet(Learner):
             Labels.
         """
 
+        import ipdb; ipdb.set_trace()
         self.n_train = len(X)
 
         # Convert data to tensor dataset
@@ -121,7 +122,7 @@ class PyTorchNeuralNet(Learner):
         X.to(self.device)
 
         # Evaluate probabilities
-        # TODO: Required?
+        # TODO: Required? Maybe we do not need softmax
         y = F.softmax(self.net(X),
                       dim=1).detach().numpy()
 
