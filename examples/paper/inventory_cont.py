@@ -46,13 +46,6 @@ cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 # Define optimizer
 m = mlopt.Optimizer(cp.Minimize(cost), constraints)
 
-
-#
-#  # Define problem
-#  problem = mlopt.Problem(cp.Minimize(cost),
-#                                      constraints,
-#                                      name="inventory")
-
 '''
 Sample points
 '''
@@ -87,28 +80,6 @@ m.train(theta_train)
 # Benchmark
 results = m.performance(theta_test)
 
-#
-#  # Encode training strategies
-#  results = problem.solve_parametric(
-#      theta_train,
-#      message="Compute binding constraints for training set"
-#  )
-#  y_train, enc2strategy = mlopt.encode_strategies(
-#      [r['strategy'] for r in results])
-#
-#  # Training
-#  n_input = len(theta_bar)
-#  n_classes = len(enc2strategy)
-#  #  with mlopt.TensorFlowNeuralNet(n_input, n_layers, n_classes) as learner:
-#  #  with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
-#  with mlopt.OptimalTree() as learner:
-#      learner.train(theta_train, y_train)
-
-    #  Testing
-    #  results = mlopt.eval_performance(theta_test, learner, problem,
-    #                                   enc2strategy, k=1)
-    #  mlopt.store(results, 'output/')
-
 output_folder = "output/"
 for i in range(len(results)):
-    results[i].to_csv(output_folder + "%d.csv" % i)
+    results[i].to_csv(output_folder + "inv_cont%d.csv" % i)

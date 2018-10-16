@@ -1,5 +1,6 @@
 from mlopt.learners.learner import Learner
 from mlopt.settings import N_BEST
+from mlopt.utils import pandas2array
 import numpy as np
 import datetime
 import os

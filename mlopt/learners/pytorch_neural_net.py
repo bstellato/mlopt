@@ -1,5 +1,6 @@
 from mlopt.learners.learner import Learner
 from mlopt.settings import N_BEST
+from mlopt.utils import pandas2array
 from tqdm import trange
 import torch                                            # Basic utilities
 import torch.nn as nn                                   # Neural network tools
@@ -80,11 +81,10 @@ class PyTorchNeuralNet(Learner):
             Labels.
         """
 
-        import ipdb; ipdb.set_trace()
         self.n_train = len(X)
 
         # Convert data to tensor dataset
-        X = torch.tensor(self.pandas2array(X), dtype=torch.float)
+        X = torch.tensor(pandas2array(X), dtype=torch.float)
         y = torch.tensor(y, dtype=torch.long)
         dataset = TensorDataset(X, y)
 
@@ -118,7 +118,7 @@ class PyTorchNeuralNet(Learner):
     def predict(self, X):
 
         # Convert pandas df to array (unroll tuples)
-        X = torch.tensor(self.pandas2array(X), dtype=torch.float)
+        X = torch.tensor(pandas2array(X), dtype=torch.float)
         X.to(self.device)
 
         # Evaluate probabilities

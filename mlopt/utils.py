@@ -4,7 +4,7 @@ import numpy as np
 #  import scipy.sparse as spa
 
 
-def num_dataframe_features(df):
+def n_features(df):
     """
     Get number of features in dataframe
     where cells contain tuples.
@@ -26,6 +26,36 @@ def num_dataframe_features(df):
         else:  # If number add 1
             n += 1
     return n
+
+
+def pandas2array(X):
+    """
+    Unroll dataframe elements to construct 2d array in case of
+    cells containing tuples.
+    """
+
+    # get number of datapoints
+    n_data = len(X)
+    # Get dimensions by inspecting first row
+    n = n_features(X)
+
+    # Allocate full vector
+    X_new = np.empty((0, n))
+
+    # Unroll
+    # TODO: Speedup this process
+    for i in range(n_data):
+        x_temp = np.array([])
+        x_data = X.iloc[i, :].values
+        for i in x_data:
+            if isinstance(i, list):
+                x_temp = np.concatenate((x_temp, np.array(i)))
+            else:
+                x_temp = np.append(x_temp, i)
+
+        X_new = np.vstack((X_new, x_temp))
+
+    return X_new
 
 
 def accuracy(strategy_pred, strategy_test):

@@ -2,7 +2,7 @@ from mlopt.problem import Problem
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, TOL
 from mlopt.learners import LEARNER_MAP
 from mlopt.strategy import encode_strategies
-from mlopt.utils import num_dataframe_features, accuracy
+from mlopt.utils import n_features, accuracy
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -60,7 +60,7 @@ class Optimizer(object):
         self.y_train, self.enc2strategy = encode_strategies(train_strategies)
 
         # Define learner
-        self._learner = LEARNER_MAP[learner](n_input=len(self.X_train),
+        self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
                                              n_classes=len(self.enc2strategy),
                                              **learner_options)
 
@@ -175,8 +175,8 @@ class Optimizer(object):
         infeas = np.array([r['infeasibility'] for r in results_pred])
 
         n_test = len(theta)
-        n_train = self.learner.n_train  # Number of training samples
-        n_theta = num_dataframe_features(theta)  # Number of parameters
+        n_train = self._learner.n_train  # Number of training samples
+        n_theta = n_features(theta)  # Number of parameters
         n_strategies = len(self.enc2strategy)  # Number of strategies
 
         # Compute comparative statistics
@@ -219,7 +219,7 @@ class Optimizer(object):
 
         df_detail = pd.DataFrame(
             {
-                "problem": [self._name] * n_test,
+                "problem": [self.name] * n_test,
                 "correct": idx_correct,
                 "infeas": infeas,
                 "subopt": subopt,
