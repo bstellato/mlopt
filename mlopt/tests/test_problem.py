@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 import cvxpy as cp
-import mlopt as mo
+from mlopt.problem import Problem
 from mlopt.settings import DEFAULT_SOLVER
 from mlopt.tests.settings import TEST_TOL as TOL
 from copy import deepcopy
@@ -25,7 +25,7 @@ class TestProblem(unittest.TestCase):
         c = np.random.randn(n)
         A = np.random.randn(m, n)
         b = np.random.randn(m)
-        mlprob = mo.Problem(cp.Minimize(c * x), [A * x <= b])
+        mlprob = Problem(cp.Minimize(c * x), [A * x <= b])
 
         # Set variable value
         x_val = 10 * np.random.randn(n)
@@ -51,11 +51,11 @@ class TestProblem(unittest.TestCase):
         constraints = [A * x <= b]
 
         cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
-        cvxpy_problem.solve(solver=DEFAULT_SOLVER, verbose=True)
+        cvxpy_problem.solve(solver=DEFAULT_SOLVER)
         x_cvxpy = deepcopy(x.value)
         cost_cvxpy = cost.value
-        problem = mo.Problem(cp.Minimize(cost), constraints)
-        problem.solve(verbose=True)
+        problem = Problem(cp.Minimize(cost), constraints)
+        problem.solve()
         x_problem = deepcopy(x.value)
         cost_problem = cost.value
 

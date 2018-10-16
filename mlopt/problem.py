@@ -239,8 +239,7 @@ class Problem(object):
             if not self._is_var_mip(v):
                 raise int_var_error
 
-    def solve_with_strategy(self, strategy, solver=DEFAULT_SOLVER,
-                            **settings):
+    def solve_with_strategy(self, strategy):
         """
         Solve problem using strategy
 

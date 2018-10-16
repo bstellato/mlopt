@@ -4,7 +4,6 @@ import scipy.sparse as spa
 import numpy.testing as npt
 from mlopt.tests.settings import TEST_TOL as TOL
 from mlopt.problem import Problem
-from mlopt.settings import DEFAULT_SOLVER
 import cvxpy as cp
 
 
@@ -22,12 +21,11 @@ class TestSolveStrategy(unittest.TestCase):
         problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
-        results = problem.solve(solver='MOSEK')
+        results = problem.solve()
         violation1 = problem.infeasibility()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results['strategy'],
-                                                  solver='MOSEK')
+        results_new = problem.solve_with_strategy(results['strategy'])
         violation2 = problem.infeasibility()
 
         # Verify both solutions are equal
@@ -75,15 +73,10 @@ class TestSolveStrategy(unittest.TestCase):
         problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
-        results = problem.solve(solver='MOSEK',
-                                #  verbose=True
-                                )
+        results = problem.solve()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results['strategy'],
-                                                  solver='MOSEK',
-                                                  #  verbose=True
-                                                  )
+        results_new = problem.solve_with_strategy(results['strategy'])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results['x'],
@@ -130,15 +123,10 @@ class TestSolveStrategy(unittest.TestCase):
         problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
-        results = problem.solve(solver='MOSEK',
-                                verbose=True
-                                )
+        results = problem.solve()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results['strategy'],
-                                                  solver='MOSEK',
-                                                  verbose=True
-                                                  )
+        results_new = problem.solve_with_strategy(results['strategy'])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results['x'],
@@ -179,7 +167,7 @@ class TestSolveStrategy(unittest.TestCase):
 
         # Define problem
         problem = Problem(cp.Minimize(cost), constraints)
-        results = problem.solve(solver=DEFAULT_SOLVER)
+        results = problem.solve()
 
         # NB. This is the strategy that you would get if
         #     you do not perturb the cost.
@@ -208,5 +196,3 @@ class TestSolveStrategy(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-
