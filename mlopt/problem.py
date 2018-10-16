@@ -1,5 +1,4 @@
 from multiprocessing import Pool, cpu_count
-from itertools import repeat
 import numpy as np
 from mlopt.strategy import Strategy
 from mlopt.settings import TOL, DEFAULT_SOLVER, PERTURB_TOL
@@ -342,7 +341,6 @@ class Problem(object):
         """
         n = len(theta)  # Number of points
         n_proc = cpu_count()
-        #  n_proc = 2
 
         if parallel:
             print("Solving for all theta (parallel %i processors)..." %
@@ -353,7 +351,7 @@ class Problem(object):
                 # Solve in parallel
                 #  results = \
                     #  pool.map(self.populate_and_solve,
-                             #  zip([theta.iloc[i, :] for i in range(n)]))
+                    #           zip([theta.iloc[i, :] for i in range(n)]))
                 # Solve in parallel and print tqdm progress bar
                 results = list(tqdm(pool.imap(self.populate_and_solve,
                                               [theta.iloc[i, :]

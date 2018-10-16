@@ -10,7 +10,7 @@ class Sampler(object):
     """
 
     def __init__(self, problem, sampling_fn,
-                 n_samples_iter = 1000,
+                 n_samples_iter=1000,
                  max_iter=int(1e3)):
         self.problem = problem  # Optimization problem
         self.sampling_fn = sampling_fn
@@ -21,7 +21,8 @@ class Sampler(object):
         """
         Get frequency for each strategy
         """
-        return np.array([len(np.where(labels == i)[0]) for i in np.unique(labels)])
+        return np.array([len(np.where(labels == i)[0])
+                         for i in np.unique(labels)])
 
     def sample(self, epsilon=1e-02, beta=1e-02):
         """
@@ -56,7 +57,6 @@ class Sampler(object):
                 # Get frequency of frequencies
                 freq_freq = self.frequencies(freq)
                 n1 = freq_freq[0]
-
 
             # Get Good Turing estimator
             good_turing_est = n1/n_samples

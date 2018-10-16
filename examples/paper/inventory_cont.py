@@ -39,9 +39,7 @@ for t in range(T):
 constraints += [u >= 0, u <= M]
 
 # Objective
-#  cost = cp.sum(y) + c * cp.sum(u)
 cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
-
 
 # Define optimizer
 m = mlopt.Optimizer(cp.Minimize(cost), constraints)
