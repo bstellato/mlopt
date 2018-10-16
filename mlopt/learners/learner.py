@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
-from ..settings import TOL
 import numpy as np
-from tqdm import tqdm
-from ..utils import num_dataframe_features
+from mlopt.utils import num_dataframe_features
 
 
 class Learner(ABC):
@@ -13,7 +11,6 @@ class Learner(ABC):
     ----------
     n_train : int
         Number of training samples.
-
     """
     @property
     def n_train(self):
@@ -69,66 +66,22 @@ class Learner(ABC):
 
         return X_new
 
-    def predict_best_points(self, X, problem, k, enc2strategy,
-                            message="Predict binding constraints"):
+    def pick_best_probabilities(self, y):
         """
-        Predict best points by picking the best values when solving the problem
+        Sort predictions and pick best points.
+
+        Use n_best probabilities to choose classes that
+        are most likely.
         """
-        n_points = len(X)
+        n_points = y.shape[0]
+        n_best = self.n_best
 
-        # Define array of results to return
-        results = []
+        # Sort probabilities
+        idx_probs = np.empty((n_points, n_best), dtype='int')
+        for i in range(n_points):
+            # Get best k indices
+            # NB. Argsort sorts in reverse mode
+            idx_probs[i, :] = np.argsort(y[i, :])[-n_best:]
 
-        #  # Data to return for each point
-        #  strategy = []
-        #  x = []
-        #  time = []
+        return idx_probs
 
-        # Predict best classes for all the points
-        classes = self.predict_best(X, k=k)
-
-        for i in tqdm(range(n_points), desc=message):
-
-            # Populate problem
-            problem.populate(X.iloc[i, :])
-
-            # Encode strategies
-            strategy_classes = [enc2strategy[classes[i, j]] for j in range(k)]
-
-            # For each k classes get x, y, time and store the best one
-            x_temp = []
-            time_temp = []
-            infeas_temp = []
-            cost_temp = []
-
-            for j in range(k):
-                res = problem.solve_with_strategy(strategy_classes[j])
-                x_temp.append(res['x'])
-                time_temp.append(res['time'])
-                infeas_temp.append(res['infeasibility'])
-                cost_temp.append(res['cost'])
-
-            # Pick best class between k ones
-            infeas_temp = np.array(infeas_temp)
-            cost_temp = np.array(cost_temp)
-            idx_filter = np.where(infeas_temp <= TOL)[0]
-            if len(idx_filter) > 0:
-                # Case 1: Feasible points
-                # -> Get solution with minimum cost
-                #    between feasible ones
-                idx_pick = idx_filter[np.argmin(cost_temp[idx_filter])]
-            else:
-                # Case 2: No feasible points
-                # -> Get solution with minimum infeasibility
-                idx_pick = np.argmin(infeas_temp)
-
-            # Store values we are interested in
-            results_i = {}
-            results_i['x'] = x_temp[idx_pick]
-            results_i['time'] = np.sum(time_temp)
-            results_i['strategy'] = strategy_classes[idx_pick]
-            results_i['cost'] = cost_temp[idx_pick]
-            results_i['infeasibility'] = infeas_temp[idx_pick]
-            results.append(results_i)
-
-        return results

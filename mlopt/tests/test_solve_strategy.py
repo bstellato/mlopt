@@ -3,7 +3,7 @@ import numpy as np
 import scipy.sparse as spa
 import numpy.testing as npt
 from mlopt.tests.settings import TEST_TOL as TOL
-from mlopt.problem import OptimizationProblem
+from mlopt.problem import Problem
 from mlopt.settings import DEFAULT_SOLVER
 import cvxpy as cp
 
@@ -19,7 +19,7 @@ class TestSolveStrategy(unittest.TestCase):
         constraints = [x[1] <= 0.5 * x[0] + 1.5,
                        x[1] <= -0.5 * x[0] + 3.5,
                        x[1] <= -5.0 * x[0] + 10]
-        problem = OptimizationProblem(cp.Minimize(cost), constraints)
+        problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
         results = problem.solve(solver='MOSEK')
@@ -72,7 +72,7 @@ class TestSolveStrategy(unittest.TestCase):
                        A2 * x <= b2]
 
         # Problem
-        problem = OptimizationProblem(cp.Minimize(cost), constraints)
+        problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
         results = problem.solve(solver='MOSEK',
@@ -127,7 +127,7 @@ class TestSolveStrategy(unittest.TestCase):
                        A2 * x + y[int(m/2):] <= b2]
 
         # Problem
-        problem = OptimizationProblem(cp.Minimize(cost), constraints)
+        problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
         results = problem.solve(solver='MOSEK',
@@ -178,7 +178,7 @@ class TestSolveStrategy(unittest.TestCase):
         cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        problem = OptimizationProblem(cp.Minimize(cost), constraints)
+        problem = Problem(cp.Minimize(cost), constraints)
         results = problem.solve(solver=DEFAULT_SOLVER)
 
         # NB. This is the strategy that you would get if

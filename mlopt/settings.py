@@ -7,5 +7,13 @@ BINDING_CONSTRAINTS_TOL = 1e-05
 INFINITY = 1e15
 
 # Define default solver
-DEFAULT_SOLVER=cp.MOSEK
-#  DEFAULT_SOLVER=cp.GUROBI
+DEFAULT_SOLVER = cp.MOSEK
+
+# Define learners
+PYTORCH = "pytorch"
+TENSORFLOW = "tensorflow"
+OPTIMAL_TREE = "OPTIMAL_TREE"
+DEFAULT_LEARNER = PYTORCH
+
+# Learners settings
+N_BEST = 3

@@ -1,5 +1,5 @@
-from .learner import Learner
-import numpy as np
+from mlopt.learners.learner import Learner
+from mlopt.settings import N_BEST
 import tensorflow as tf
 from tqdm import trange
 
@@ -16,20 +16,23 @@ class TensorFlowNeuralNet(Learner):
         """Exit for context manager"""
         self.sess.close()  # Close tensorflow session
 
-    def __init__(self,
-                 n_input,
-                 n_layers,
-                 n_classes,
-                 learning_rate=0.01,
-                 training_epochs=1000,
-                 batch_size=200):
+    def __init__(self, **options):
+        """
+        Initialize Tensorflow neural network class.
 
-        # Assign settings
-        self.learning_rate = learning_rate
-        self.training_epochs = training_epochs
-        self.batch_size = batch_size
-        self.n_input = n_input
-        self.n_classes = n_classes
+        Parameters
+        ----------
+        options : dict
+            Learner options as a dictionary.
+        """
+
+        # Unpack settings
+        self.learning_rate = options.pop('learning_rate', 0.01)
+        self.n_epochs = options.pop('n_epochs', 1000)
+        self.batch_size = options.pop('batch_size', 100)
+        self.n_input = options.pop('n_input')
+        self.n_classes = options.pop('n_classes')
+        self.n_best = options.pop('n_best', N_BEST)
 
     def neural_network(self, x):
 
@@ -62,8 +65,8 @@ class TensorFlowNeuralNet(Learner):
         ds = tf.data.Dataset.from_tensor_slices((X_train, y_train))
 
         # Divide dataset in matches and repeat
-        ds = ds.batch(self.batch_size).repeat(self.training_epochs)
-        ds = ds.shuffle(buffer_size=100000000)  # Shuffle all the possible elements
+        ds = ds.batch(self.batch_size).repeat(self.n_epochs)
+        ds = ds.shuffle(buffer_size=100000000)  # Shuffle elements
         iterator = ds.make_one_shot_iterator()
 
         # Create dataset batch iterator
@@ -77,12 +80,12 @@ class TensorFlowNeuralNet(Learner):
         self.logits = self.neural_network(self.x)
 
         # Define loss and optimizer
-        self.cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-                                  logits=self.logits, labels=self.y))
+        self.cost = \
+            tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=self.logits, labels=self.y))
         #  self.cost = tf.losses.sparse_softmax_cross_entropy(self.y,
         #                                                     self.logits)
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-        #  optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
         minimize_step = optimizer.minimize(self.cost)
 
         # Initialize the variables (i.e. assign their default value)
@@ -92,8 +95,8 @@ class TensorFlowNeuralNet(Learner):
         self.sess.run(init)
 
         # Training cycle
-        #  for epoch in tqdm(range(self.training_epochs)):
-        with trange(self.training_epochs, desc="Training neural net") as t:
+        #  for epoch in tqdm(range(self.n_epochs)):
+        with trange(self.n_epochs, desc="Training neural net") as t:
             for epoch in t:
 
                 avg_cost = 0.
@@ -107,7 +110,7 @@ class TensorFlowNeuralNet(Learner):
                         break
 
                     #  t.write("Epoch %i/%i, batch %i/%i" % (epoch,
-                    #                                        self.training_epochs,
+                    #                                        self.n_epochs,
                     #                                        i, total_batch))
 
                     # Run optimization (backprop) and cost (loss value)
@@ -118,7 +121,9 @@ class TensorFlowNeuralNet(Learner):
                     avg_cost += cost_value / total_batch
 
                 # Display logs per epoch step
-                t.set_description("Training neural net (epoch %4i, cost %.2e)" % (epoch + 1, avg_cost))
+                t.set_description(
+                    "Training neural net (epoch %4i, cost %.2e)" %
+                    (epoch + 1, avg_cost))
 
         #  # Test model
         #  correct_prediction = tf.equal(tf.argmax(self.logits, 1), self.y)
@@ -135,31 +140,16 @@ class TensorFlowNeuralNet(Learner):
         # TODO: Save model!
         #  saver.save(sess, )
 
-    def predict(self, X_pred):
-
-        return self.predict_best(X_pred, k=1)
-
-    def predict_best(self, X_pred, k=1):
-
-        #  # Get right shape
-        #  x = np.array([x_pred])
-        n_points = len(X_pred)
+    def predict(self, X):
 
         # Unroll pandas df to array
-        X_pred = self.pandas2array(X_pred)
+        X = self.pandas2array(X)
 
         # Evaluate probabilities
         proba = tf.nn.softmax(self.logits)
-        proba_pred = self.sess.run([proba], feed_dict={self.x: X_pred})[0]
+        y = self.sess.run([proba], feed_dict={self.x: X})[0]
 
-        # Sort probabilities
-        idx_probs = np.empty((n_points, k), dtype='int')
-        for i in range(n_points):
-            # Get best k indices
-            # NB. Argsort sorts in reverse mode
-            idx_probs[i, :] = np.argsort(proba_pred[i, :])[-k:]
-
-        return idx_probs
+        return self.pick_best_probabilities(y)
 
         #  # Predict using internal model with data X
         #  # Test model

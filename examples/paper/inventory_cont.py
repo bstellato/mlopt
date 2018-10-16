@@ -41,10 +41,16 @@ constraints += [u >= 0, u <= M]
 #  cost = cp.sum(y) + c * cp.sum(u)
 cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
-# Define problem
-problem = mlopt.OptimizationProblem(cp.Minimize(cost),
-                                    constraints,
-                                    name="inventory")
+
+# Define optimizer
+m = mlopt.Optimizer(cp.Minimize(cost), constraints)
+
+
+#
+#  # Define problem
+#  problem = mlopt.Problem(cp.Minimize(cost),
+#                                      constraints,
+#                                      name="inventory")
 
 '''
 Sample points
@@ -74,23 +80,34 @@ n_test = 100
 theta_train = sample_inventory(theta_bar, radius, N=n_train)
 theta_test = sample_inventory(theta_bar, radius, N=n_test)
 
-# Encode training strategies
-results = problem.solve_parametric(
-    theta_train,
-    message="Compute binding constraints for training set"
-)
-y_train, enc2strategy = mlopt.encode_strategies(
-    [r['strategy'] for r in results])
+# Train solver
+m.train(theta_train)
 
-# Training
-n_input = len(theta_bar)
-n_classes = len(enc2strategy)
-#  with mlopt.TensorFlowNeuralNet(n_input, n_layers, n_classes) as learner:
-#  with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
-with mlopt.OptimalTree() as learner:
-    learner.train(theta_train, y_train)
+# Benchmark
+results = m.performance(theta_test)
+
+#
+#  # Encode training strategies
+#  results = problem.solve_parametric(
+#      theta_train,
+#      message="Compute binding constraints for training set"
+#  )
+#  y_train, enc2strategy = mlopt.encode_strategies(
+#      [r['strategy'] for r in results])
+#
+#  # Training
+#  n_input = len(theta_bar)
+#  n_classes = len(enc2strategy)
+#  #  with mlopt.TensorFlowNeuralNet(n_input, n_layers, n_classes) as learner:
+#  #  with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
+#  with mlopt.OptimalTree() as learner:
+#      learner.train(theta_train, y_train)
 
     #  Testing
-    results = mlopt.eval_performance(theta_test, learner, problem,
-                                     enc2strategy, k=1)
-    mlopt.store(results, 'output/')
+    #  results = mlopt.eval_performance(theta_test, learner, problem,
+    #                                   enc2strategy, k=1)
+    #  mlopt.store(results, 'output/')
+
+output_folder = "output/"
+for i in range(len(results)):
+    results[i].to_csv(output_folder + "%d.csv" % i)

@@ -48,7 +48,7 @@ if bin_vars:
     cost += K * cp.sum(v)
 
 # Define problem
-problem = mlopt.OptimizationProblem(cp.Problem(cp.Minimize(cost),
+problem = mlopt.Problem(cp.Problem(cp.Minimize(cost),
                                                constraints),
                                     name="inventory")
 

@@ -25,7 +25,7 @@ class TestProblem(unittest.TestCase):
         c = np.random.randn(n)
         A = np.random.randn(m, n)
         b = np.random.randn(m)
-        mlprob = mo.OptimizationProblem(cp.Minimize(c * x), [A * x <= b])
+        mlprob = mo.Problem(cp.Minimize(c * x), [A * x <= b])
 
         # Set variable value
         x_val = 10 * np.random.randn(n)
@@ -54,7 +54,7 @@ class TestProblem(unittest.TestCase):
         cvxpy_problem.solve(solver=DEFAULT_SOLVER, verbose=True)
         x_cvxpy = deepcopy(x.value)
         cost_cvxpy = cost.value
-        problem = mo.OptimizationProblem(cp.Minimize(cost), constraints)
+        problem = mo.Problem(cp.Minimize(cost), constraints)
         problem.solve(verbose=True)
         x_problem = deepcopy(x.value)
         cost_problem = cost.value

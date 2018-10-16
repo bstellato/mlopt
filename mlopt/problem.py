@@ -7,14 +7,19 @@ from mlopt.settings import TOL, DEFAULT_SOLVER, PERTURB_TOL
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos
 from cvxpy.constraints.zero import Zero
+from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
 from tqdm import tqdm
 
 
-class OptimizationProblem(object):
+class Problem(object):
 
-    def __init__(self, objective, constraints, name="problem"):
-        """Initialize Optimization problem
+    def __init__(self,
+                 objective, constraints,
+                 solver=DEFAULT_SOLVER,
+                 **solver_options):
+        """
+        Initialize optimization problem.
 
         The problem cost is perturbed to avoid degeneracy when the
         solution lies on a hyperplane.
@@ -25,10 +30,13 @@ class OptimizationProblem(object):
             Objective defined in CVXPY.
         constraints: cvxpy constraints
             Constraints defined in CVXPY.
-        name : string
-            Problem name for outputting learner.
+        solver : str
+            Solver to solve internal problem.
+        solver_options : dict, optional
+            A dict of options for the internal solver.
         """
-        self.name = name
+        # Assign solver
+        self.solver = solver
 
         # Perturb objective to avoid degeneracy
         cost_perturb = objective.args[0]
@@ -37,12 +45,20 @@ class OptimizationProblem(object):
             cost_perturb += perturb * v
         self.cvxpy_problem = cp.Problem(cp.Minimize(cost_perturb), constraints)
 
-    def populate(self, theta):
-        """
-        Populate problem using parameter theta
-        """
-        for p in self.cvxpy_problem.parameters():
-            p.value = theta[p.name()]
+        # Set options
+        self.solver_options = solver_options
+
+    @property
+    def solver(self):
+        """Internal optimization solver"""
+        return self._solver
+
+    @solver.setter
+    def solver(self, s):
+        """Set internal solver."""
+        if s not in INSTALLED_SOLVERS:
+            raise ValueError('Solver %s not installed.' % s)
+        self._solver = s
 
     @property
     def num_var(self):
@@ -51,8 +67,16 @@ class OptimizationProblem(object):
 
     @property
     def num_constraints(self):
-        """Number of variables"""
+        """Number of constraints"""
         return sum([x.size for x in self.cvxpy_problem.constraints])
+
+    def populate(self, theta):
+        """
+        Populate problem using parameter theta
+        """
+        for p in self.cvxpy_problem.parameters():
+            p.value = theta[p.name()]
+
 
     def cost(self):
         """Compute cost function value"""
@@ -65,27 +89,21 @@ class OptimizationProblem(object):
     #  def infeasibility(self, variables):
     def infeasibility(self):
         """
-        Compute infeasibility for variables
+        Compute infeasibility for variables.
         """
-        # Assign variables
-        #  for x in variables:
-        #      for v in self.cvxpy_problem.variables():
-        #          if v.id == x.id:
-        #              v.value = x.value
-
         # Compute violations
         violations = np.concatenate([np.atleast_1d(c.violation())
                                      for c in self.cvxpy_problem.constraints])
 
         return np.linalg.norm(violations)
 
-    def _solve(self, problem, solver, settings):
+    def _solve(self, problem):
         """
         Solve problem with CVXPY and return results dictionary
         """
-        problem.solve(solver=solver,
+        problem.solve(solver=self.solver,
                       #  verbose=True,
-                      **settings)
+                      **self.solver_options)
 
         results = {}
         results['time'] = problem.solver_stats.solve_time
@@ -104,14 +122,6 @@ class OptimizationProblem(object):
                         np.array([1 if abs(y) >= TOL else 0
                                   for y in np.atleast_1d(c.dual_value)])
                 results['binding_constraints'] = binding_constraints
-
-                # DEBUG
-                #  n_binding = sum([sum(x) for x in binding_constraints.values()])
-                #  n_var = sum([x.size for x in problem.variables()])
-                #  if n_binding < n_var:
-                #      print("Number of binding constraints: ", n_binding)
-                #      print("Number of variables: ", n_var)
-                #      #  import ipdb; ipdb.set_trace()
         else:
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
@@ -137,7 +147,7 @@ class OptimizationProblem(object):
         var.boolean_idx = []
         var.integer_idx = []
 
-    def solve(self, solver=DEFAULT_SOLVER, **settings):
+    def solve(self):
         """
         Solve optimization problem
 
@@ -154,7 +164,7 @@ class OptimizationProblem(object):
             Results dictionary.
         """
         # Solve complete problem with CVXPY
-        results = self._solve(self.cvxpy_problem, solver, settings)
+        results = self._solve(self.cvxpy_problem)
 
         # Get solution and integer variables
         x_int = dict()
@@ -175,15 +185,12 @@ class OptimizationProblem(object):
                 self._set_cont_var(x)  # Set continuous variable
                 int_vars_fix += [x == x_int[x.id]]
 
-            # Define new constraints to fix integer variables
-            #  prob_fix_vars = cp.Problem(cp.Minimize(0), int_vars_fix)
-            #  prob_cont = self.cvxpy_problem + prob_fix_vars
             prob_cont = cp.Problem(self.cvxpy_problem.objective,
                                    self.cvxpy_problem.constraints +
                                    int_vars_fix)
 
             # Solve
-            results_cont = self._solve(prob_cont, solver, settings)
+            results_cont = self._solve(prob_cont)
 
             # Get binding constraints from original problem
             binding_constraints = dict()
@@ -296,15 +303,7 @@ class OptimizationProblem(object):
 
         # Solve problem
         prob_red = cp.Problem(objective, constraints + int_fix)
-        results = self._solve(prob_red, solver, settings)
-        #  results = self._solve(prob_red, solver, {'verbose': True})
-
-        # Assign original problem variables to prob_red variables
-        # TODO: Needed?
-        #  prob_red_values = {v.id:v.value
-        #                     for v in prob_red.variables()}
-        #  for v in orig_variables:
-        #      v.value = prob_red_values[v.id]
+        results = self._solve(prob_red)
 
         # Make variables discrete again
         for v in self.cvxpy_problem.variables():
@@ -317,15 +316,9 @@ class OptimizationProblem(object):
         """Single function to populate the problem with
            theta and solve it with the solver. Useful for
            multiprocessing."""
-        theta, solver, settings = args
+        theta, solver = args
         self.populate(theta)
-        results = self.solve(solver, **settings)
-
-        # DEBUG. Solve with other solvers and check
-        #  res_gurobi = self.solve('GUROBI', settings)
-        #  if res_gurobi[2] != results[2]:
-        #      print("Wrong strategy")
-        #      import ipdb; ipdb.set_trace()
+        results = self.solve(solver)
 
         return results
 

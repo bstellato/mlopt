@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import numpy.testing as npt
-from mlopt.problem import OptimizationProblem
+from mlopt.problem import Problem
 from mlopt.tests.settings import TEST_TOL as TOL
 from mlopt.sampling import uniform_sphere_sample
 import pandas as pd
@@ -44,7 +44,7 @@ class TestParallel(unittest.TestCase):
         cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        problem = OptimizationProblem(cp.Minimize(cost), constraints)
+        problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve for all theta in serial
         results_serial = problem.solve_parametric(df,

@@ -1,5 +1,5 @@
-from .learner import Learner
-import numpy as np
+from mlopt.learners.learner import Learner
+from mlopt.settings import N_BEST
 from tqdm import trange
 import torch                                            # Basic utilities
 import torch.nn as nn                                   # Neural network tools
@@ -32,46 +32,41 @@ class PyTorchNeuralNet(Learner):
     PyTorch Neural Network learner.
     """
 
-    def __enter__(self):
-        """Enter for context manager"""
-        return self
+    def __init__(self, **options):
+        """
+        Initialize PyTorch neural network class.
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Exit for context manager"""
-        pass
+        Parameters
+        ----------
+        options : dict
+            Learner options as a dictionary.
+        """
 
-    def __init__(self,
-                 n_input,
-                 n_classes,
-                 n_epochs=1000,
-                 learning_rate=0.001,
-                 momentum=0.9,
-                 batch_size=100):
+        # Unpack settings
+        self.learning_rate = options.pop('learning_rate', 0.001)
+        self.n_epochs = options.pop('n_epochs', 1000)
+        self.batch_size = options.pop('batch_size', 100)
+        self.n_input = options.pop('n_input')
+        self.n_classes = options.pop('n_classes')
+        self.n_best = options.pop('n_best', N_BEST)
 
         # Reset torch seed
         torch.manual_seed(1)
 
-        # Assign settings
-        self.learning_rate = learning_rate
-        self.n_epochs = n_epochs
-        self.batch_size = batch_size
-        self.n_input = n_input
-        self.n_classes = n_classes
-
         # Define device
         self.device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu"
-            )
+        )
 
         # Create PyTorch Neural Network and port to to device
-        self.net = Net(n_input, n_classes).to(self.device)
+        self.net = Net(self.n_input, self.n_classes).to(self.device)
 
         # Define criterion
         self.criterion = nn.CrossEntropyLoss()
 
         # Define optimizer
         self.optimizer = optim.Adam(self.net.parameters(),
-                                    lr=learning_rate)
+                                    lr=self.learning_rate)
 
     def train(self, X, y):
         """
@@ -121,26 +116,13 @@ class PyTorchNeuralNet(Learner):
 
     def predict(self, X):
 
-        return self.predict_best(X, k=1)
-
-    def predict_best(self, X, k=1):
-
-        # Count number of points
-        n_points = len(X)
-
         # Convert pandas df to array (unroll tuples)
         X = torch.tensor(self.pandas2array(X), dtype=torch.float)
         X.to(self.device)
 
         # Evaluate probabilities
-        y_pred = F.softmax(self.net(X),
-                           dim=1).detach().numpy()
+        # TODO: Required?
+        y = F.softmax(self.net(X),
+                      dim=1).detach().numpy()
 
-        # Sort probabilities
-        idx_probs = np.empty((n_points, k), dtype='int')
-        for i in range(n_points):
-            # Get best k indices
-            # NB. Argsort sorts in reverse mode
-            idx_probs[i, :] = np.argsort(y_pred[i, :])[-k:]
-
-        return idx_probs
+        return self.pick_best_probabilities(y)

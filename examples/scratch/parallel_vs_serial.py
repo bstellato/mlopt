@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from mlopt.problem import OptimizationProblem
+from mlopt.problem import Problem
 from mlopt.sampling import uniform_sphere_sample
 import pandas as pd
 import cvxpy as cp
@@ -38,7 +38,7 @@ cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + \
 
 # Define problem
 cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
-problem = OptimizationProblem(cvxpy_problem)
+problem = Problem(cvxpy_problem)
 
 # Solve for all theta in serial
 results_serial = problem.solve_parametric(df,

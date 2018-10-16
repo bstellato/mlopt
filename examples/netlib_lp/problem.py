@@ -5,7 +5,7 @@ import importlib
 importlib.reload(mlopt)
 
 
-class Inventory(mlopt.OptimizationProblem):
+class Inventory(mlopt.Problem):
     def __init__(self, T, M, K, radius, bin_vars=False):
         self.name = "inventory"
         self.T = T  # Horizon

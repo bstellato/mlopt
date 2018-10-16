@@ -1,4 +1,4 @@
-#  import numpy as np
+import numpy as np
 #  import scipy.io as spio
 #  import cvxpy as cp
 #  import scipy.sparse as spa
@@ -21,14 +21,39 @@ def num_dataframe_features(df):
     """
     n = 0
     for c in df.columns.values:
-        if isinstance(df[c][0], list):
-            # If list add length
+        if isinstance(df[c][0], list):  # If list add length
             n += len(df[c][0])
-        else:
-            # If number add 1
+        else:  # If number add 1
             n += 1
-
     return n
+
+
+def accuracy(strategy_pred, strategy_test):
+    """
+    Accuracy comparison between predicted and test strategies
+
+    Parameters
+    ----------
+    strategy_pred : Strategy list
+        List of predicted strategies.
+    strategy_pred : Strategy list
+        List of test strategies.
+
+    Returns
+    -------
+    float:
+        Fraction of correct over total strategies compared.
+    numpy array:
+        Boolean vector indicating which strategy is correct.
+    """
+    assert len(strategy_pred) == len(strategy_test)
+    n_total = len(strategy_pred)
+    idx_correct = np.zeros(n_total, dtype=int)
+    for i in range(n_total):
+        if strategy_pred[i] == strategy_test[i]:
+            idx_correct[i] = 1
+
+    return np.sum(idx_correct) / n_total, idx_correct
 
 
 # TODO: Fix creation from matlab file
