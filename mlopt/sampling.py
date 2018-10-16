@@ -80,11 +80,10 @@ class Sampler(object):
             #  if bound < epsilon:
             #      break
 
-
         return theta, labels, enc2strategy
 
 
-def uniform_sphere_sample(center, radius, N=10):
+def uniform_sphere_sample(center, radius, n=1):
     """
     Generate a single vector sample to x
 
@@ -104,8 +103,8 @@ def uniform_sphere_sample(center, radius, N=10):
         Center of the sphere.
     radius : float
         Radius of the sphere.
-    N : int, optional
-        Number of samples. Default 100.
+    n : int, optional
+        Number of samples. Default 1.
 
     Returns
     -------
@@ -114,10 +113,10 @@ def uniform_sphere_sample(center, radius, N=10):
         m the dimension.
     """
     n_dim = len(center)
-    x = np.random.normal(size=(N, n_dim))
+    x = np.random.normal(size=(n, n_dim))
     ssq = np.sum(x ** 2, axis=1)
     fr = radius * gammainc(n_dim / 2, ssq / 2) ** (1 / n_dim) / np.sqrt(ssq)
-    frtiled = np.tile(fr.reshape(N, 1), (1, n_dim))
+    frtiled = np.tile(fr.reshape(n, 1), (1, n_dim))
     p = center + np.multiply(x, frtiled)
     return p
 

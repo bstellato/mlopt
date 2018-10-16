@@ -1,6 +1,7 @@
 from mlopt.problem import Problem
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, TOL
 from mlopt.learners import LEARNER_MAP
+from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy
 import pandas as pd
@@ -33,6 +34,19 @@ class Optimizer(object):
                                 solver=DEFAULT_SOLVER,
                                 **solver_options)
         self.name = name
+
+    def sample(self, sampling_fn):
+        """
+        Sample parameters.
+        """
+
+        # Create sampler
+        self._sampler = Sampler(self._problem, sampling_fn)
+
+        # Sample parameters
+        #TODO: CONTINUE FROM HERE
+
+
 
     def train(self, X, learner=DEFAULT_LEARNER, **learner_options):
         """

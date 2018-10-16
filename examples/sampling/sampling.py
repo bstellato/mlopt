@@ -67,11 +67,10 @@ def sample_inventory(n):
         5.,  # x_0
     ])
     theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
-
     radius = 3.0
 
     # Sample points from multivariate ball
-    X = uniform_sphere_sample(theta_bar, radius, N=N)
+    X = uniform_sphere_sample(theta_bar, radius, n=n)
 
     df = pd.DataFrame({'h': X[:, 0],
                        'p': X[:, 1],
