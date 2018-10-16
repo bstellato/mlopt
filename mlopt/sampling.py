@@ -7,10 +7,16 @@ from mlopt.strategy import encode_strategies
 class Sampler(object):
     """
     Optimization problem sampler.
+
+    Parameters
+    ----------
+
     """
 
-    def __init__(self, problem, sampling_fn,
-                 n_samples_iter=1000,
+    def __init__(self,
+                 problem,
+                 sampling_fn,
+                 n_samples_iter=100,
                  max_iter=int(1e3)):
         self.problem = problem  # Optimization problem
         self.sampling_fn = sampling_fn
@@ -37,7 +43,7 @@ class Sampler(object):
         # Start with 100 samples
         for i in range(self.max_iter):
             # Sample new points
-            theta_new = self.sampling_fn(N=self.n_samples_iter)
+            theta_new = self.sampling_fn(self.n_samples_iter)
             s_theta_new = self.problem.solve_parametric(theta_new)[2]
             theta = theta.append(theta_new)
             s_theta += s_theta_new
@@ -61,18 +67,21 @@ class Sampler(object):
             # Get Good Turing estimator
             good_turing_est = n1/n_samples
 
-            # Get bound
-            c = 2 * np.sqrt(2) + np.sqrt(3)
-            bound = good_turing_est
-            bound += c * np.sqrt((1 / n_samples) * np.log(3 / beta))
-
             print("Good-Turing Estimator ", good_turing_est)
-            print("Bound ", bound)
 
-            if bound < epsilon:
+            if good_turing_est < epsilon:
                 break
 
-        return theta, s_theta
+            #  # Get bound
+            #  c = 2 * np.sqrt(2) + np.sqrt(3)
+            #  bound = good_turing_est
+            #  bound += c * np.sqrt((1 / n_samples) * np.log(3 / beta))
+            #  print("Bound ", bound)
+            #  if bound < epsilon:
+            #      break
+
+
+        return theta, labels, enc2strategy
 
 
 def uniform_sphere_sample(center, radius, N=10):

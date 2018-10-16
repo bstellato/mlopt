@@ -3,6 +3,8 @@ import numpy as np
 import cvxpy as cp
 import pandas as pd
 import mlopt
+from mlopt.problem import Problem
+from mlopt.sampling import Sampler, uniform_sphere_sample
 
 '''
 Define Inventory problem
@@ -48,30 +50,28 @@ if bin_vars:
     cost += K * cp.sum(v)
 
 # Define problem
-problem = mlopt.Problem(cp.Problem(cp.Minimize(cost),
-                                               constraints),
-                                    name="inventory")
-
+problem = Problem(cp.Minimize(cost),
+                  constraints)
 
 '''
 Sample points
 '''
 
 
-def sample_inventory(N=10):
+def sample_inventory(n):
     # Operating point
     theta_bar = np.array([
         4.,  # h
         6.,  # p
         3.5,  # c
         5.,  # x_0
-        ])
+    ])
     theta_bar = np.concatenate((theta_bar, 5. * np.ones(T)))
 
     radius = 3.0
 
     # Sample points from multivariate ball
-    X = mlopt.uniform_sphere_sample(theta_bar, radius, N=N)
+    X = uniform_sphere_sample(theta_bar, radius, N=N)
 
     df = pd.DataFrame({'h': X[:, 0],
                        'p': X[:, 1],
@@ -85,7 +85,7 @@ def sample_inventory(N=10):
 Train and solve
 '''
 
-sampler = mlopt.Sampler(problem, sample_inventory)
+sampler = Sampler(problem, sample_inventory)
 theta, s_theta = sampler.sample()
 
 #  # Encode training strategies strategies = problem.solve_parametric(
