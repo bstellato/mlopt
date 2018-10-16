@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.special import gammainc
 import pandas as pd
-from .strategy import encode_strategies
+from mlopt.strategy import encode_strategies
 
 
 class Sampler(object):

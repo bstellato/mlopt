@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 from mlopt.problem import OptimizationProblem
-from .settings import TEST_TOL as TOL
+from mlopt.tests.settings import TEST_TOL as TOL
 from mlopt.sampling import uniform_sphere_sample
 import pandas as pd
 import cvxpy as cp
@@ -71,3 +71,7 @@ class TestParallel(unittest.TestCase):
 
             # Compare strategy
             self.assertTrue(serial['strategy'] == parallel['strategy'])
+
+
+if __name__ == '__main__':
+    unittest.main()

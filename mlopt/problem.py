@@ -1,8 +1,8 @@
 from multiprocessing import Pool, cpu_count
 from itertools import repeat
 import numpy as np
-from .strategy import Strategy
-from .settings import TOL, DEFAULT_SOLVER, PERTURB_TOL
+from mlopt.strategy import Strategy
+from mlopt.settings import TOL, DEFAULT_SOLVER, PERTURB_TOL
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos

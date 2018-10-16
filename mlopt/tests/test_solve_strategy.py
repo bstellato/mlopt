@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import scipy.sparse as spa
 import numpy.testing as npt
-from .settings import TEST_TOL as TOL
+from mlopt.tests.settings import TEST_TOL as TOL
 from mlopt.problem import OptimizationProblem
 from mlopt.settings import DEFAULT_SOLVER
 import cvxpy as cp
@@ -204,3 +204,9 @@ class TestSolveStrategy(unittest.TestCase):
         self.assertTrue(problem.infeasibility() >= 0)
         self.assertTrue(problem.infeasibility() <= TOL)
         self.assertTrue(abs(results['cost'] - results_strategy['cost']) <= TOL)
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+

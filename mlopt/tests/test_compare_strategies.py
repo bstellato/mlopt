@@ -73,3 +73,7 @@ class TestCompareStrategies(unittest.TestCase):
         y, unique = encode_strategies([s1, s2, s3, s4, s5, s6])
         npt.assert_array_equal(y, np.array([0, 1, 0, 1, 0, 2]))
         self.assertTrue(unique == [s1, s2, s6])
+
+
+if __name__ == '__main__':
+    unittest.main()

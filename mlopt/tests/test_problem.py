@@ -4,7 +4,7 @@ import numpy.testing as npt
 import cvxpy as cp
 import mlopt as mo
 from mlopt.settings import DEFAULT_SOLVER
-from .settings import TEST_TOL as TOL
+from mlopt.tests.settings import TEST_TOL as TOL
 from copy import deepcopy
 
 
@@ -65,3 +65,7 @@ class TestProblem(unittest.TestCase):
         npt.assert_almost_equal(cost_problem,
                                 cost_cvxpy,
                                 decimal=TOL)
+
+
+if __name__ == '__main__':
+    unittest.main()

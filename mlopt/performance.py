@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from .settings import TOL
-from .utils import num_dataframe_features
+from mlopt.settings import TOL
+from mlopt.utils import num_dataframe_features
 
 
 def accuracy(strategy_pred, strategy_test):
