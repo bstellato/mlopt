@@ -52,10 +52,10 @@ theta_bar = 3. * np.ones(T)
 radius = 2.0
 
 
-def sample_inventory(theta_bar, radius, N=100):
+def sample_inventory(theta_bar, radius, n=100):
 
     # Sample points from multivariate ball
-    X = uniform_sphere_sample(theta_bar, radius, N=N)
+    X = uniform_sphere_sample(theta_bar, radius, n=n)
 
     df = pd.DataFrame({'d': X.tolist()})
 
@@ -69,11 +69,11 @@ Train and solve
 # Training and testing data
 n_train = 1000
 n_test = 100
-theta_train = sample_inventory(theta_bar, radius, N=n_train)
-theta_test = sample_inventory(theta_bar, radius, N=n_test)
+theta_train = sample_inventory(theta_bar, radius, n=n_train)
+theta_test = sample_inventory(theta_bar, radius, n=n_test)
 
 # Train solver
-m.train(theta_train)
+m.train(theta_train, learner=mlopt.OPTIMAL_TREE)
 
 # Benchmark
 results = m.performance(theta_test)

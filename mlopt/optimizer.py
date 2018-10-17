@@ -45,8 +45,7 @@ class Optimizer(object):
 
         # Sample parameters
         #TODO: CONTINUE FROM HERE
-
-
+        # Move X_train and y_train computation here.
 
     def train(self, X, learner=DEFAULT_LEARNER, **learner_options):
         """

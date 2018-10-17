@@ -12,7 +12,7 @@ DEFAULT_SOLVER = cp.MOSEK
 # Define learners
 PYTORCH = "pytorch"
 TENSORFLOW = "tensorflow"
-OPTIMAL_TREE = "OPTIMAL_TREE"
+OPTIMAL_TREE = "optimaltree"
 DEFAULT_LEARNER = PYTORCH
 
 # Learners settings

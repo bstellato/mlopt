@@ -1,10 +1,11 @@
 from mlopt.learners.learner import Learner
 from mlopt.settings import N_BEST
 from mlopt.utils import pandas2array
-import numpy as np
-import datetime
-import os
-from subprocess import call
+
+# Used in file export
+#  import datetime
+#  import os
+#  from subprocess import call
 
 
 class OptimalTree(Learner):
@@ -22,13 +23,18 @@ class OptimalTree(Learner):
 
         # Load Julia
         import julia
-        from julia.Base import Array
-        import julia.OptimalTrees as OT
-        self.Array = Array
-        self.OT = OT
         jl = julia.Julia()
-        # Create sparsity symbol in python
-        self.SPARSITY = jl.eval('PyCall.pyjlwrap_new(:sparsity)')
+        # Add crypto library to path to check OptimalTrees license
+        jl.eval("push!(Base.DL_LOAD_PATH, " +
+                "joinpath(dirname(Base.find_package(\"MbedTLS\")), " +
+                "\"../deps/usr\", Sys.iswindows() ? \"bin\" : \"lib\"))")
+        # Define functions needed
+        self._array = jl.eval("Array")
+        self._convert = jl.eval("convert")
+        self._create_classifier = jl.eval("OptimalTrees.OptimalTreeClassifier")
+        self._fit = jl.eval("OptimalTrees.fit!")
+        self._predict = jl.eval("OptimalTrees.predict_proba")
+        self.SPARSITY = jl.eval('(sparsity=2,)')
 
         # Assign settings
         self.sparse = options.pop('sparse', True)
@@ -37,20 +43,20 @@ class OptimalTree(Learner):
             'max_depth': 10,
         }
         if self.sparse:
-            self.options['hyperplane_config'] = [{self.SPARSITY: 2}]
+            self.options['hyperplane_config'] = self.SPARSITY
             self.options['fast_num_support_restarts'] = 10
 
     def train(self, X, y):
 
         # Convert X to array
         self.n_train = len(X)
-        X = self.pandas2array(X)
+        X = pandas2array(X)
 
         # Create classifier
-        self.lnr = self.OT.OptimalTreeClassifier(**self.options)
+        self.lnr = self._create_classifier(**self.options)
 
         # Train classifier
-        self.OT.fit_b(self.lnr, X, y)
+        self._fit(self.lnr, X, y)
 
         # TODO: Move export tree to export function
         #  # Export tree
@@ -72,9 +78,10 @@ class OptimalTree(Learner):
     def predict(self, X):
 
         # Unroll pandas dataframes
-        X = self.pandas2array(X)
+        X = pandas2array(X)
 
         # Evaluate probabilities
-        y = self.Array(self.OT.predict_proba(self.lnr, X))
+        proba = self._predict(self.lnr, X)
+        y = self._convert(self._array, proba)
 
         return self.pick_best_probabilities(y)
