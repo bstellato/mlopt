@@ -31,7 +31,7 @@ class TestParallel(unittest.TestCase):
         # Define parameter and sampling points
         d = cp.Parameter(T, nonneg=True, name="d")
         d_bar = 3. * np.ones(T)
-        X_d = uniform_sphere_sample(d_bar, radius, n=100)
+        X_d = uniform_sphere_sample(d_bar, radius, n=N)
         df = pd.DataFrame({'d': X_d.tolist()})
 
         # Constaints

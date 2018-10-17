@@ -22,19 +22,19 @@ class Learner(ABC):
 
     @abstractmethod
     def train(self, X, y):
-        """Learn predictor form data"""
+        """Learn predictor form data."""
 
     @abstractmethod
     def predict(self, X):
-        """Predict strategy from data"""
+        """Predict strategies from data."""
 
-    #  @abstractmethod
-    #  def __enter__(self):
-    #      """Enter for context manager"""
-    #
-    #  @abstractmethod
-    #  def __exit__(self, exc_type, exc_value, traceback):
-    #      """Exit for context manager"""
+    @abstractmethod
+    def save(self, file_name):
+        """Save learner to file"""
+
+    @abstractmethod
+    def load(self, file_name):
+        """Load learner from file"""
 
     def pick_best_probabilities(self, y):
         """

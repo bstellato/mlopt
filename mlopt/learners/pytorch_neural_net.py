@@ -2,6 +2,7 @@ from mlopt.learners.learner import Learner
 from mlopt.settings import N_BEST
 from mlopt.utils import pandas2array
 from tqdm import trange
+import os
 import torch                                            # Basic utilities
 import torch.nn as nn                                   # Neural network tools
 import torch.nn.functional as F                         # nonlinearitis
@@ -127,3 +128,21 @@ class PyTorchNeuralNet(Learner):
                       dim=1).detach().numpy()
 
         return self.pick_best_probabilities(y)
+
+    def save(self, file_name):
+        # Save state dictionary to file
+        # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        torch.save(self.net.state_dict(), file_name + ".pkl")
+
+    def load(self, file_name):
+        # Check if file name exists
+        if not os.path.isfile(file_name + ".pkl"):
+            raise ValueError("PyTorch pkl file does not exist.")
+
+        # Load state dictionary from file
+        # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        self.net.load_state_dict(torch.load(file_name + ".pkl"))
+        self.net.eval()  # Necessary to set the model to evaluation mode
+
+
+

@@ -1,11 +1,10 @@
 from mlopt.learners.learner import Learner
 from mlopt.settings import N_BEST
 from mlopt.utils import pandas2array
-
-# Used in file export
-#  import datetime
-#  import os
-#  from subprocess import call
+import shutil
+from subprocess import call
+from warnings import warn
+import os
 
 
 class OptimalTree(Learner):
@@ -34,11 +33,17 @@ class OptimalTree(Learner):
         self._create_classifier = jl.eval("OptimalTrees.OptimalTreeClassifier")
         self._fit = jl.eval("OptimalTrees.fit!")
         self._predict = jl.eval("OptimalTrees.predict_proba")
+        self._write = jl.eval("OptimalTrees.writejson")
+        self._writedot = jl.eval("OptimalTrees.writedot")
+        self._read = jl.eval("OptimalTrees.readjson")
+        self._open = jl.eval("open")
+        self._close = jl.eval("close")
         self.SPARSITY = jl.eval('(sparsity=2,)')
 
         # Assign settings
         self.sparse = options.pop('sparse', True)
         self.n_best = options.pop('n_best', N_BEST)
+        self.save_pdf = options.pop('save_pdf', False)
         self.options = {
             'max_depth': 10,
         }
@@ -53,27 +58,10 @@ class OptimalTree(Learner):
         X = pandas2array(X)
 
         # Create classifier
-        self.lnr = self._create_classifier(**self.options)
+        self._lnr = self._create_classifier(**self.options)
 
         # Train classifier
-        self._fit(self.lnr, X, y)
-
-        # TODO: Move export tree to export function
-        #  # Export tree
-        #  if self.export_tree:
-        #      output_name = datetime.datetime.now().strftime("%y-%m-%d_%H:%M")
-        #      export_tree_name = os.path.join(self.output_folder, output_name)
-        #      if not os.path.exists(self.output_folder):
-        #          os.makedirs(self.output_folder)
-        #      print("Export tree to ", export_tree_name)
-        #      # NB Julia call with subfolder does not work
-        #      self.OT.writedot("%s.dot" % export_tree_name, self.lnr)
-        #      #  os.rename("%s.dot" % output_na export_tree_name % export_tree_name)
-        #
-        #      call(["dot", "-Tpdf", "-o",
-        #            "%s.pdf" % export_tree_name,
-        #            "%s.dot" % export_tree_name])
-        #
+        self._fit(self._lnr, X, y)
 
     def predict(self, X):
 
@@ -81,7 +69,36 @@ class OptimalTree(Learner):
         X = pandas2array(X)
 
         # Evaluate probabilities
-        proba = self._predict(self.lnr, X)
+        proba = self._predict(self._lnr, X)
         y = self._convert(self._array, proba)
 
         return self.pick_best_probabilities(y)
+
+    def save(self, file_name):
+        # Save tree as json file
+        io = self._open(file_name + ".json", 'w')
+        self._write(io, self._lnr)
+        self._close(io)
+
+        # Save tree to dot file and convert it to
+        # pdf for visualization purposes
+        if self.save_pdf and (shutil.which("dot") is not None):
+            self._writedot(file_name + ".dot", self._lnr)
+            call(["dot", "-Tpdf", "-o",
+                  file_name + ".pdf",
+                  file_name + ".dot"])
+        else:
+            warn("dot command not found in path")
+
+    def load(self, file_name):
+        # Check if file name exists
+        if not os.path.isfile(file_name + ".json"):
+            raise ValueError("Optimal Tree json file does not exist.")
+
+        # Load state dictionary from file
+        # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        #  self.net.load_state_dict(torch.load(file_name))
+        #  self.net.eval()  # Necessary to set the model to evaluation mode
+        io = self._open(file_name + ".json", 'r')
+        self._write(io, self._lnr)
+        self._close(io)

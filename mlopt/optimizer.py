@@ -6,6 +6,9 @@ from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy
 import pandas as pd
 import numpy as np
+import os
+import shutil
+import pickle as pkl
 from tqdm import tqdm
 
 
@@ -44,7 +47,7 @@ class Optimizer(object):
         self._sampler = Sampler(self._problem, sampling_fn)
 
         # Sample parameters
-        #TODO: CONTINUE FROM HERE
+        # TODO: CONTINUE FROM HERE
         # Move X_train and y_train computation here.
 
     def train(self, X, learner=DEFAULT_LEARNER, **learner_options):
@@ -127,6 +130,16 @@ class Optimizer(object):
               message="Predict optimal solution."):
         """
         Predict optimal solution given the parameters X.
+
+        Parameters
+        ----------
+        X : pandas dataframe
+            Data points.
+
+        Returns
+        -------
+        list
+            List of result dictionaries.
         """
         n_points = len(X)
         n_best = self._learner.n_best
@@ -149,6 +162,70 @@ class Optimizer(object):
             results.append(self.choose_best(strategies))
 
         return results
+
+    def save(self, folder_name):
+        """
+        Save optimizer to a specific folder.
+
+        The folder will be created if it does not exist.
+
+
+        Parameters
+        ----------
+        folder_name : string
+            Folder name where to store files.
+        """
+
+        # Create directory
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+        else:
+            p = None
+            while p not in ['y', 'n', 'N', '']:
+                p = input("Directory %s/ already exists. " % folder_name +
+                          "Would you like to delete it? [y/N] ")
+            if p == 'y':
+                shutil.rmtree(folder_name)
+            os.makedirs(folder_name)
+
+        # Save learner
+        self._learner.save(os.path.join(folder_name, "learner"))
+
+        # Save optimizer
+        optimizer = open(os.path.join(folder_name, "optimizer.pkl"), 'w')
+        file_dict = {'name': self.name,
+                     'enc2strategy': self.enc2strategy,
+                     'problem': self._problem}
+        pkl.dump(file_dict, optimizer)
+        optimizer.close()
+
+    def load(self, folder_name):
+        """
+        Load optimizer from a specific folder.
+
+        Parameters
+        ----------
+        folder_name : string
+            Folder name where to read files from.
+        """
+
+        # Check if folder exists
+        if not os.path.exists(folder_name):
+            raise ValueError("Folder does not exist.")
+
+        # Load learner
+        self._learner.load(os.path.join(folder_name, "learner"))
+
+        # Load optimizer
+        optimizer_file_name = os.path.join(folder_name, "optimizer.pkl")
+        if not optimizer_file_name:
+            raise ValueError("Optimizer pkl file does not exist.")
+        f = open(optimizer_file_name, "r")
+        optimizer_dict = pkl.load(f)
+        f.close()
+        self.name = optimizer_dict['name']
+        self._problem = optimizer_dict['problem']
+        self.enc2strategy = optimizer_dict['enc2strategy']
 
     def performance(self, theta):
         """
@@ -241,4 +318,3 @@ class Optimizer(object):
         )
 
         return df, df_detail
-
