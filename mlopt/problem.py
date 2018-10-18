@@ -16,6 +16,7 @@ class Problem(object):
     def __init__(self,
                  objective, constraints,
                  solver=DEFAULT_SOLVER,
+                 perturb=True,
                  **solver_options):
         """
         Initialize optimization problem.
@@ -25,12 +26,15 @@ class Problem(object):
 
         Parameters
         ----------
-        objective: cvxpy objective
+        objective : cvxpy objective
             Objective defined in CVXPY.
-        constraints: cvxpy constraints
+        constraints : cvxpy constraints
             Constraints defined in CVXPY.
-        solver : str
-            Solver to solve internal problem.
+        perturb : bool, optional
+            Do you want to slightly perturb the cost to avoid degeneracy?
+            Defaults to True.
+        solver : str, optional
+            Solver to solve internal problem. Defaults to DEFAULT_SOLVER.
         solver_options : dict, optional
             A dict of options for the internal solver.
         """
@@ -38,12 +42,17 @@ class Problem(object):
         self.solver = solver
 
         # Perturb objective to avoid degeneracy
-        cost_perturb = objective.args[0]
-        for v in objective.variables():
-            perturb = PERTURB_TOL * np.random.randn(*v.shape)
-            cost_perturb += perturb * v
-        self.cvxpy_problem = cp.Problem(cp.Minimize(cost_perturb), constraints)
+        cost = objective.args[0]
+        if perturb:
+            perturbed_cost = cost
+            for v in objective.variables():
+                perturbation = PERTURB_TOL * np.random.randn(*v.shape)
+                perturbed_cost += perturbation * v
+            cost = perturbed_cost
 
+        # Define problem
+        self.cvxpy_problem = cp.Problem(cp.Minimize(cost),
+                                        constraints)
         # Set options
         self.solver_options = solver_options
 
@@ -60,14 +69,19 @@ class Problem(object):
         self._solver = s
 
     @property
-    def num_var(self):
+    def n_var(self):
         """Number of variables"""
         return sum([x.size for x in self.cvxpy_problem.variables()])
 
     @property
-    def num_constraints(self):
+    def n_constraints(self):
         """Number of constraints"""
-        return sum([x.size for x in self.cvxpy_problem.constraints])
+        return sum([x.size for x in self.constraints])
+
+    @property
+    def n_parameters(self):
+        """Number of parameters."""
+        return sum([x.size for x in self.cvxpy_problem.parameters()])
 
     def populate(self, theta):
         """
@@ -76,9 +90,19 @@ class Problem(object):
         for p in self.cvxpy_problem.parameters():
             p.value = theta[p.name()]
 
+    @property
+    def objective(self):
+        """Inner problem objective"""
+        return self.cvxpy_problem.objective
+
+    @property
+    def constraints(self):
+        """Inner problem constraints"""
+        return self.cvxpy_problem.constraints
+
     def cost(self):
         """Compute cost function value"""
-        return self.cvxpy_problem.objective.value
+        return self.objective.value
 
     def is_mip(self):
         """Check if problem has integer variables."""
@@ -91,7 +115,7 @@ class Problem(object):
         """
         # Compute violations
         violations = np.concatenate([np.atleast_1d(c.violation())
-                                     for c in self.cvxpy_problem.constraints])
+                                     for c in self.constraints])
 
         return np.linalg.norm(violations)
 
@@ -183,8 +207,8 @@ class Problem(object):
                 self._set_cont_var(x)  # Set continuous variable
                 int_vars_fix += [x == x_int[x.id]]
 
-            prob_cont = cp.Problem(self.cvxpy_problem.objective,
-                                   self.cvxpy_problem.constraints +
+            prob_cont = cp.Problem(self.objective,
+                                   self.constraints +
                                    int_vars_fix)
 
             # Solve
@@ -192,7 +216,7 @@ class Problem(object):
 
             # Get binding constraints from original problem
             binding_constraints = dict()
-            for c in self.cvxpy_problem.constraints:
+            for c in self.constraints:
                 binding_constraints[c.id] = \
                     results_cont['binding_constraints'][c.id]
 
@@ -220,7 +244,7 @@ class Problem(object):
         # Compare keys for binding constraints and integer variables
         variables = {v.id: v
                      for v in self.cvxpy_problem.variables()}
-        con_keys = [c.id for c in self.cvxpy_problem.constraints]
+        con_keys = [c.id for c in self.constraints]
 
         for key in strategy.binding_constraints.keys():
             if key not in con_keys:
@@ -263,9 +287,9 @@ class Problem(object):
         int_vars = strategy.int_vars
 
         # Unpack original problem
-        orig_objective = self.cvxpy_problem.objective
+        orig_objective = self.objective
         orig_variables = self.cvxpy_problem.variables()
-        orig_constraints = self.cvxpy_problem.constraints
+        orig_constraints = self.constraints
 
         # Get same objective
         objective = orig_objective

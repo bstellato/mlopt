@@ -19,6 +19,7 @@ class Optimizer(object):
 
     def __init__(self,
                  objective, constraints,
+                 perturb_problem=True,
                  name="problem",
                  **solver_options):
         """
@@ -30,13 +31,20 @@ class Optimizer(object):
             Objective defined in CVXPY.
         constraints : cvxpy constraints
             Constraints defined in CVXPY.
+        name : str
+            Problem name.
+        perturb_problem : bool, optional
+            Perturb the cost of the optimization problem?
+            This avoids degeneracy. Defaults to true.
         solver_options : dict, optional
             A dict of options for the internal solver.
         """
         self._problem = Problem(objective, constraints,
                                 solver=DEFAULT_SOLVER,
+                                perturb=perturb_problem,
                                 **solver_options)
         self.name = name
+        self._learner = None
 
     def sample(self, sampling_fn):
         """
@@ -87,7 +95,7 @@ class Optimizer(object):
         """
         Choose best strategy between provided ones.
         """
-        n_best = self._learner.n_best
+        n_best = self._learner.options['n_best']
 
         # For each n_best classes get x, y, time and store the best one
         x = []
@@ -127,7 +135,7 @@ class Optimizer(object):
         return result
 
     def solve(self, X,
-              message="Predict optimal solution."):
+              message="Predict optimal solution"):
         """
         Predict optimal solution given the parameters X.
 
@@ -142,7 +150,7 @@ class Optimizer(object):
             List of result dictionaries.
         """
         n_points = len(X)
-        n_best = self._learner.n_best
+        n_best = self._learner.options['n_best']
 
         # Define array of results to return
         results = []
@@ -163,7 +171,7 @@ class Optimizer(object):
 
         return results
 
-    def save(self, folder_name):
+    def save(self, folder_name, delete_dir=False):
         """
         Save optimizer to a specific folder.
 
@@ -174,34 +182,48 @@ class Optimizer(object):
         ----------
         folder_name : string
             Folder name where to store files.
+        delete_dir : bool
+            Delete folder if already existing?
         """
+
+        if self._learner is None:
+            raise ValueError("You cannot save the optimizer without " +
+                             "training it before.")
 
         # Create directory
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
         else:
-            p = None
-            while p not in ['y', 'n', 'N', '']:
-                p = input("Directory %s/ already exists. " % folder_name +
-                          "Would you like to delete it? [y/N] ")
-            if p == 'y':
+            if not delete_dir:
+                p = None
+                while p not in ['y', 'n', 'N', '']:
+                    p = input("Directory %s/ already exists. " % folder_name +
+                              "Would you like to delete it? [y/N] ")
+                if p == 'y':
+                    shutil.rmtree(folder_name)
+                    os.makedirs(folder_name)
+            else:
                 shutil.rmtree(folder_name)
-            os.makedirs(folder_name)
+                os.makedirs(folder_name)
 
         # Save learner
         self._learner.save(os.path.join(folder_name, "learner"))
 
         # Save optimizer
-        optimizer = open(os.path.join(folder_name, "optimizer.pkl"), 'w')
+        optimizer = open(os.path.join(folder_name, "optimizer.pkl"), 'wb')
         file_dict = {'name': self.name,
+                     'learner_name': self._learner.name,
+                     'learner_options': self._learner.options,
                      'enc2strategy': self.enc2strategy,
-                     'problem': self._problem}
+                     'objective': self._problem.objective,
+                     'constraints': self._problem.constraints}
         pkl.dump(file_dict, optimizer)
         optimizer.close()
 
-    def load(self, folder_name):
+    @classmethod
+    def from_file(cls, folder_name):
         """
-        Load optimizer from a specific folder.
+        Create optimizer from a specific folder.
 
         Parameters
         ----------
@@ -213,19 +235,34 @@ class Optimizer(object):
         if not os.path.exists(folder_name):
             raise ValueError("Folder does not exist.")
 
-        # Load learner
-        self._learner.load(os.path.join(folder_name, "learner"))
-
         # Load optimizer
         optimizer_file_name = os.path.join(folder_name, "optimizer.pkl")
         if not optimizer_file_name:
             raise ValueError("Optimizer pkl file does not exist.")
-        f = open(optimizer_file_name, "r")
+        f = open(optimizer_file_name, "rb")
         optimizer_dict = pkl.load(f)
         f.close()
-        self.name = optimizer_dict['name']
-        self._problem = optimizer_dict['problem']
-        self.enc2strategy = optimizer_dict['enc2strategy']
+
+        # Create optimizer using loaded dict
+        # Assume perturbation already happened
+        optimizer = cls(optimizer_dict['objective'],
+                        optimizer_dict['constraints'],
+                        name=optimizer_dict['name'],
+                        perturb_problem=False)
+
+        # Assign strategies encoding
+        optimizer.enc2strategy = optimizer_dict['enc2strategy']
+        learner_name = optimizer_dict['learner_name']
+        learner_options = optimizer_dict['learner_options']
+
+        # Load learner
+        optimizer._learner = \
+            LEARNER_MAP[learner_name](n_input=optimizer._problem.n_parameters,
+                                      n_classes=len(optimizer.enc2strategy),
+                                      **learner_options)
+        optimizer._learner.load(os.path.join(folder_name, "learner"))
+
+        return optimizer
 
     def performance(self, theta):
         """
@@ -282,9 +319,9 @@ class Optimizer(object):
         df = pd.DataFrame(
             {
                 "problem": [self.name],
-                "n_best": [self._learner.n_best],
-                "num_var": [self._problem.num_var],
-                "num_constr": [self._problem.num_constraints],
+                "n_best": [self._learner.options['n_best']],
+                "n_var": [self._problem.n_var],
+                "nm_constr": [self._problem.n_constraints],
                 "n_test": [n_test],
                 "n_train": [n_train],
                 "n_theta": [n_theta],

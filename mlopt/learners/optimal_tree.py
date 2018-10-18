@@ -1,5 +1,5 @@
 from mlopt.learners.learner import Learner
-from mlopt.settings import N_BEST
+from mlopt.settings import N_BEST, OPTIMAL_TREE
 from mlopt.utils import pandas2array
 import shutil
 from subprocess import call
@@ -19,6 +19,8 @@ class OptimalTree(Learner):
         options : dict
             Learner options as a dictionary.
         """
+        # Define name
+        self.name = OPTIMAL_TREE
 
         # Load Julia
         import julia
@@ -41,15 +43,16 @@ class OptimalTree(Learner):
         self.SPARSITY = jl.eval('(sparsity=2,)')
 
         # Assign settings
-        self.sparse = options.pop('sparse', True)
-        self.n_best = options.pop('n_best', N_BEST)
-        self.save_pdf = options.pop('save_pdf', False)
-        self.options = {
+        self.options = options
+        self.options['sparse'] = options.pop('sparse', True)
+        self.options['n_best'] = options.pop('n_best', N_BEST)
+        self.options['save_pdf'] = options.pop('save_pdf', False)
+        self.optimaltrees_options = {
             'max_depth': 10,
         }
-        if self.sparse:
-            self.options['hyperplane_config'] = self.SPARSITY
-            self.options['fast_num_support_restarts'] = 10
+        if self.options['sparse']:
+            self.optimaltrees_options['hyperplane_config'] = self.SPARSITY
+            self.optimaltrees_options['fast_num_support_restarts'] = 10
 
     def train(self, X, y):
 
@@ -58,7 +61,7 @@ class OptimalTree(Learner):
         X = pandas2array(X)
 
         # Create classifier
-        self._lnr = self._create_classifier(**self.options)
+        self._lnr = self._create_classifier(**self.optimaltrees_options)
 
         # Train classifier
         self._fit(self._lnr, X, y)
@@ -82,7 +85,7 @@ class OptimalTree(Learner):
 
         # Save tree to dot file and convert it to
         # pdf for visualization purposes
-        if self.save_pdf and (shutil.which("dot") is not None):
+        if self.options['save_pdf'] and (shutil.which("dot") is not None):
             self._writedot(file_name + ".dot", self._lnr)
             call(["dot", "-Tpdf", "-o",
                   file_name + ".pdf",

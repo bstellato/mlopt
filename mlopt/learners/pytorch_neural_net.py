@@ -1,5 +1,5 @@
 from mlopt.learners.learner import Learner
-from mlopt.settings import N_BEST
+from mlopt.settings import N_BEST, PYTORCH
 from mlopt.utils import pandas2array
 from tqdm import trange
 import os
@@ -43,14 +43,17 @@ class PyTorchNeuralNet(Learner):
         options : dict
             Learner options as a dictionary.
         """
+        # Define learner name
+        self.name = PYTORCH
 
         # Unpack settings
-        self.learning_rate = options.pop('learning_rate', 0.001)
-        self.n_epochs = options.pop('n_epochs', 1000)
-        self.batch_size = options.pop('batch_size', 100)
+        self.options = {}
+        self.options['learning_rate'] = options.pop('learning_rate', 0.001)
+        self.options['n_epochs'] = options.pop('n_epochs', 1000)
+        self.options['batch_size'] = options.pop('batch_size', 100)
         self.n_input = options.pop('n_input')
         self.n_classes = options.pop('n_classes')
-        self.n_best = options.pop('n_best', N_BEST)
+        self.options['n_best'] = options.pop('n_best', N_BEST)
 
         # Reset torch seed
         torch.manual_seed(1)
@@ -61,14 +64,15 @@ class PyTorchNeuralNet(Learner):
         )
 
         # Create PyTorch Neural Network and port to to device
-        self.net = Net(self.n_input, self.n_classes).to(self.device)
+        self.net = Net(self.n_input,
+                       self.n_classes).to(self.device)
 
         # Define criterion
         self.criterion = nn.CrossEntropyLoss()
 
         # Define optimizer
         self.optimizer = optim.Adam(self.net.parameters(),
-                                    lr=self.learning_rate)
+                                    lr=self.options['learning_rate'])
 
     def train(self, X, y):
         """
@@ -82,7 +86,7 @@ class PyTorchNeuralNet(Learner):
             Labels.
         """
 
-        self.n_train = len(X)
+        self.options['n_train'] = len(X)
 
         # Convert data to tensor dataset
         X = torch.tensor(pandas2array(X), dtype=torch.float)
@@ -90,12 +94,14 @@ class PyTorchNeuralNet(Learner):
         dataset = TensorDataset(X, y)
 
         # Define loader for batches
-        data_loader = DataLoader(dataset, batch_size=self.batch_size,
+        data_loader = DataLoader(dataset,
+                                 batch_size=self.options['batch_size'],
                                  #  shuffle=True
                                  )
 
-        n_batches_per_epoch = int(self.n_train / self.batch_size)
-        with trange(self.n_epochs, desc="Training neural net") as t:
+        n_batches_per_epoch = \
+            int(self.options['n_train'] / self.options['batch_size'])
+        with trange(self.options['n_epochs'], desc="Training neural net") as t:
             for epoch in t:  # loop over dataset multiple times
 
                 avg_cost = 0.0
@@ -143,6 +149,3 @@ class PyTorchNeuralNet(Learner):
         # https://pytorch.org/tutorials/beginner/saving_loading_models.html
         self.net.load_state_dict(torch.load(file_name + ".pkl"))
         self.net.eval()  # Necessary to set the model to evaluation mode
-
-
-
