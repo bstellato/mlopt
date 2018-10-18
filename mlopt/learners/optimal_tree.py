@@ -24,26 +24,28 @@ class OptimalTree(Learner):
 
         # Load Julia
         import julia
-        jl = julia.Julia()
+        self.jl = julia.Julia()
         # Add crypto library to path to check OptimalTrees license
-        jl.eval("push!(Base.DL_LOAD_PATH, " +
-                "joinpath(dirname(Base.find_package(\"MbedTLS\")), " +
-                "\"../deps/usr\", Sys.iswindows() ? \"bin\" : \"lib\"))")
+        self.jl.eval("push!(Base.DL_LOAD_PATH, " +
+                     "joinpath(dirname(Base.find_package(\"MbedTLS\")), " +
+                     "\"../deps/usr\", Sys.iswindows() ? \"bin\" : \"lib\"))")
         # Define functions needed
-        self._array = jl.eval("Array")
-        self._convert = jl.eval("convert")
-        self._create_classifier = jl.eval("OptimalTrees.OptimalTreeClassifier")
-        self._fit = jl.eval("OptimalTrees.fit!")
-        self._predict = jl.eval("OptimalTrees.predict_proba")
-        self._write = jl.eval("OptimalTrees.writejson")
-        self._writedot = jl.eval("OptimalTrees.writedot")
-        self._read = jl.eval("OptimalTrees.readjson")
-        self._open = jl.eval("open")
-        self._close = jl.eval("close")
-        self.SPARSITY = jl.eval('(sparsity=2,)')
+        self._array = self.jl.eval("Array")
+        self._convert = self.jl.eval("convert")
+        self._create_classifier = \
+            self.jl.eval("OptimalTrees.OptimalTreeClassifier")
+        self._fit = self.jl.eval("OptimalTrees.fit!")
+        self._predict = self.jl.eval("OptimalTrees.predict_proba")
+        self._write = self.jl.eval("OptimalTrees.writejson")
+        self._writedot = self.jl.eval("OptimalTrees.writedot")
+        self._read = self.jl.eval("OptimalTrees.readjson")
+        # NB _open function defined separately
+        # to preserve consistency
+        self._close = self.jl.eval("close")
+        self.SPARSITY = self.jl.eval('(sparsity=2,)')
 
         # Assign settings
-        self.options = options
+        self.options = {}
         self.options['sparse'] = options.pop('sparse', True)
         self.options['n_best'] = options.pop('n_best', N_BEST)
         self.options['save_pdf'] = options.pop('save_pdf', False)
@@ -53,6 +55,14 @@ class OptimalTree(Learner):
         if self.options['sparse']:
             self.optimaltrees_options['hyperplane_config'] = self.SPARSITY
             self.optimaltrees_options['fast_num_support_restarts'] = 10
+
+    def _open(self, file_name, option):
+        """
+        Define this function separately to keep consistency
+        of IOBuffer julia type.
+        """
+        return self.jl.eval("PyCall.pyjlwrap_new(open(\"%s\", \"%s\"))"
+                            % (file_name, option))
 
     def train(self, X, y):
 
@@ -79,29 +89,27 @@ class OptimalTree(Learner):
 
     def save(self, file_name):
         # Save tree as json file
-        io = self._open(file_name + ".json", 'w')
+        io = self._open(file_name + ".json", "w")
         self._write(io, self._lnr)
         self._close(io)
 
         # Save tree to dot file and convert it to
         # pdf for visualization purposes
-        if self.options['save_pdf'] and (shutil.which("dot") is not None):
-            self._writedot(file_name + ".dot", self._lnr)
-            call(["dot", "-Tpdf", "-o",
-                  file_name + ".pdf",
-                  file_name + ".dot"])
-        else:
-            warn("dot command not found in path")
+        if self.options['save_pdf']:
+            if shutil.which("dot") is not None:
+                self._writedot(file_name + ".dot", self._lnr)
+                call(["dot", "-Tpdf", "-o",
+                      file_name + ".pdf",
+                      file_name + ".dot"])
+            else:
+                warn("dot command not found in path")
 
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".json"):
             raise ValueError("Optimal Tree json file does not exist.")
 
-        # Load state dictionary from file
-        # https://pytorch.org/tutorials/beginner/saving_loading_models.html
-        #  self.net.load_state_dict(torch.load(file_name))
-        #  self.net.eval()  # Necessary to set the model to evaluation mode
-        io = self._open(file_name + ".json", 'r')
-        self._write(io, self._lnr)
+        # Load tree from file
+        io = self._open(file_name + ".json", "r")
+        self._lnr = self._read(io)
         self._close(io)
