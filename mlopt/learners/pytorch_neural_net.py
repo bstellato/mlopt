@@ -53,7 +53,9 @@ class PyTorchNeuralNet(Learner):
         self.options['batch_size'] = options.pop('batch_size', 100)
         self.n_input = options.pop('n_input')
         self.n_classes = options.pop('n_classes')
-        self.options['n_best'] = options.pop('n_best', N_BEST)
+        # Pick minimum between n_best and n_classes
+        self.options['n_best'] = min(options.pop('n_best', N_BEST),
+                                     self.n_classes)
 
         # Reset torch seed
         torch.manual_seed(1)

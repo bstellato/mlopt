@@ -183,7 +183,7 @@ class Optimizer(object):
 
         return results
 
-    def save(self, folder_name, delete_dir=False):
+    def save(self, folder_name, delete_existing=False):
         """
         Save optimizer to a specific folder.
 
@@ -194,7 +194,7 @@ class Optimizer(object):
         ----------
         folder_name : string
             Folder name where to store files.
-        delete_dir : bool
+        delete_existing : bool
             Delete folder if already existing?
         """
 
@@ -206,7 +206,7 @@ class Optimizer(object):
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
         else:
-            if not delete_dir:
+            if not delete_existing:
                 p = None
                 while p not in ['y', 'n', 'N', '']:
                     p = input("Directory %s/ already exists. " % folder_name +

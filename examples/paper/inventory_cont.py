@@ -17,7 +17,7 @@ bin_vars = False
 # Generate data
 np.random.seed(1)
 T = 5
-M = 2.
+M = 1.
 K = 1.
 h = 1.
 c = 1.
@@ -48,7 +48,7 @@ Sample points
 '''
 # Average request
 theta_bar = 2. * np.ones(T)
-radius = 0.5
+radius = 1.0
 
 
 def sample_inventory(theta_bar, radius, n=100):
@@ -72,10 +72,10 @@ theta_train = sample_inventory(theta_bar, radius, n=n_train)
 theta_test = sample_inventory(theta_bar, radius, n=n_test)
 
 # Train solver
-m.train(theta_train, learner=mlopt.OPTIMAL_TREE, save_pdf=True)
+m.train(theta_train, learner=mlopt.OPTIMAL_TREE, cp=0.1, save_pdf=True)
 
 # Save solver
-m.save("output/optimal_tree_inv_cont")
+m.save("output/optimal_tree_inv_cont", delete_existing=True)
 
 # Benchmark
 results = m.performance(theta_test)

@@ -46,14 +46,21 @@ class OptimalTree(Learner):
         self._close = self.jl.eval("close")
 
         # Assign settings
+        self.n_input = options.pop('n_input')
+        self.n_classes = options.pop('n_classes')
         self.options = {}
         self.options['hyperplanes'] = options.pop('hyperplanes', False)
-        self.options['n_best'] = options.pop('n_best', N_BEST)
+        self.options['cp'] = options.pop('cp', None)
+        # Pick minimum between n_best and n_classes
+        self.options['n_best'] = min(options.pop('n_best', N_BEST),
+                                     self.n_classes)
         self.options['save_pdf'] = options.pop('save_pdf', False)
         self.optimaltrees_options = {'max_depth': 10}
         if self.options['hyperplanes']:
             self.optimaltrees_options['hyperplane_config'] = \
                 self.jl.eval('(sparsity=:all,)')
+        if self.options['cp']:
+            self.optimaltrees_options['cp'] = self.options['cp']
 
     def _open(self, file_name, option):
         """
