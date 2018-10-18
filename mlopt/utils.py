@@ -34,26 +34,29 @@ def pandas2array(X):
     cells containing tuples.
     """
 
-    # get number of datapoints
-    n_data = len(X)
-    # Get dimensions by inspecting first row
-    n = n_features(X)
+    if isinstance(X, np.ndarray):
+        # Already numpy array. Return it.
+        return X
+    else:
+        # get number of datapoints
+        n_data = len(X)
+        # Get dimensions by inspecting first row
+        n = n_features(X)
 
-    # Allocate full vector
-    X_new = np.empty((0, n))
+        # Allocate full vector
+        X_new = np.empty((0, n))
 
-    # Unroll
-    # TODO: Speedup this process
-    for i in range(n_data):
-        x_temp = np.array([])
-        x_data = X.iloc[i, :].values
-        for i in x_data:
-            if isinstance(i, list):
-                x_temp = np.concatenate((x_temp, np.array(i)))
-            else:
-                x_temp = np.append(x_temp, i)
-
-        X_new = np.vstack((X_new, x_temp))
+        # Unroll
+        # TODO: Speedup this process
+        for i in range(n_data):
+            x_temp = np.array([])
+            x_data = X.iloc[i, :].values
+            for i in x_data:
+                if isinstance(i, list):
+                    x_temp = np.concatenate((x_temp, np.array(i)))
+                else:
+                    x_temp = np.append(x_temp, i)
+            X_new = np.vstack((X_new, x_temp))
 
     return X_new
 

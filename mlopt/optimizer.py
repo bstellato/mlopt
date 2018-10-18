@@ -58,22 +58,34 @@ class Optimizer(object):
         # TODO: CONTINUE FROM HERE
         # Move X_train and y_train computation here.
 
-    def train(self, X, learner=DEFAULT_LEARNER, **learner_options):
+    def train(self, X=None, sampling_fn=None,
+              learner=DEFAULT_LEARNER, **learner_options):
         """
         Train optimizer using parameter X.
 
+        This function needs one argument between data points X
+        or sampling function sampling_fn. It will raise an error
+        otherwise because there is no way to sample data.
+
         Parameters
         ----------
-        X : pandas dataframe or numpy array
+        X : pandas dataframe or numpy array, optional
             Data samples. Each row is a new sample points.
+        sampling_fn : function
+            Function to sample data taking one argument being
+            the number of data points to be sampled and returning
+            a structure of the same type as X.
         learner : str
             Learner to use. Learners are defined in :mod:`mlopt.settings`
         learner_options : dict, optional
             A dict of options for the learner.
         """
 
-        # Save training data internally
-        self.X_train = X
+        # Check if data is passed, otherwise train
+        if X is not None:
+            self.X_train = X
+        elif sampling_fn is not None:
+            self.X_train = self.sample(sampling_fn)
 
         # Encode training strategies by solving
         # the problem for all the points

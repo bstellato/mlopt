@@ -29,6 +29,8 @@ class OptimalTree(Learner):
         self.jl.eval("push!(Base.DL_LOAD_PATH, " +
                      "joinpath(dirname(Base.find_package(\"MbedTLS\")), " +
                      "\"../deps/usr\", Sys.iswindows() ? \"bin\" : \"lib\"))")
+        # Reset random seed for repeatability
+        self.jl.eval("using Random; Random.seed!(1)")
         # Define functions needed
         self._array = self.jl.eval("Array")
         self._convert = self.jl.eval("convert")
@@ -79,6 +81,9 @@ class OptimalTree(Learner):
         X = pandas2array(X)
 
         # Evaluate probabilities
+        # NB. They are returned as a DataFrame of DataFrames.jl
+        #     and we convert them to an array which in python
+        #     becomes a numpy array
         proba = self._predict(self._lnr, X)
         y = self._convert(self._array, proba)
 
