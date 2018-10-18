@@ -73,7 +73,10 @@ theta_train = sample_inventory(theta_bar, radius, n=n_train)
 theta_test = sample_inventory(theta_bar, radius, n=n_test)
 
 # Train solver
-m.train(theta_train, learner=mlopt.OPTIMAL_TREE)
+m.train(theta_train, learner=mlopt.OPTIMAL_TREE, hyperplanes=True, save_pdf=True)
+
+# Save solver
+m.save("output/optimal_tree_inv_cont")
 
 # Benchmark
 results = m.performance(theta_test)
