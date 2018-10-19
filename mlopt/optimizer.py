@@ -19,7 +19,6 @@ class Optimizer(object):
 
     def __init__(self,
                  objective, constraints,
-                 perturb_problem=True,
                  name="problem",
                  **solver_options):
         """
@@ -33,15 +32,11 @@ class Optimizer(object):
             Constraints defined in CVXPY.
         name : str
             Problem name.
-        perturb_problem : bool, optional
-            Perturb the cost of the optimization problem?
-            This avoids degeneracy. Defaults to true.
         solver_options : dict, optional
             A dict of options for the internal solver.
         """
         self._problem = Problem(objective, constraints,
                                 solver=DEFAULT_SOLVER,
-                                perturb=perturb_problem,
                                 **solver_options)
         self.name = name
         self._learner = None

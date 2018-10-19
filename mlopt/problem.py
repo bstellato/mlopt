@@ -2,7 +2,7 @@ from multiprocessing import Pool, cpu_count
 import numpy as np
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
-    DEFAULT_SOLVER, PERTURB_TOL
+    DEFAULT_SOLVER
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos
@@ -17,13 +17,10 @@ class Problem(object):
     def __init__(self,
                  objective, constraints,
                  solver=DEFAULT_SOLVER,
-                 perturb=True,
                  **solver_options):
         """
         Initialize optimization problem.
 
-        The problem cost is perturbed to avoid degeneracy when the
-        solution lies on a hyperplane.
 
         Parameters
         ----------
@@ -31,9 +28,6 @@ class Problem(object):
             Objective defined in CVXPY.
         constraints : cvxpy constraints
             Constraints defined in CVXPY.
-        perturb : bool, optional
-            Do you want to slightly perturb the cost to avoid degeneracy?
-            Defaults to True.
         solver : str, optional
             Solver to solve internal problem. Defaults to DEFAULT_SOLVER.
         solver_options : dict, optional
@@ -42,14 +36,8 @@ class Problem(object):
         # Assign solver
         self.solver = solver
 
-        # Perturb objective to avoid degeneracy
+        # Get problem cost
         cost = objective.args[0]
-        if perturb:
-            perturbed_cost = cost
-            for v in objective.variables():
-                perturbation = PERTURB_TOL * np.random.randn(*v.shape)
-                perturbed_cost += perturbation * v
-            cost = perturbed_cost
 
         # Define problem
         self.cvxpy_problem = cp.Problem(cp.Minimize(cost),
