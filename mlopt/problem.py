@@ -125,16 +125,11 @@ class Problem(object):
         if problem.status in cp.settings.SOLUTION_PRESENT:
             results['cost'] = self.cost()
             results['infeasibility'] = self.infeasibility()
-
-            if not problem.is_mixed_integer():
-                tight_constraints = dict()
-                for c in problem.constraints:
-                    val = c.args[0].value
-                    tight_constraints[c.id] = np.abs(val) <= TIGHT_CONSTRAINTS_TOL
-                    #  tight_constraints[c.id] = \
-                    #      np.array([1 if abs(y) >= TIGHT_CONSTRAINTS_TOL else 0
-                    #                for y in np.atleast_1d(c.dual_value)])
-                results['tight_constraints'] = tight_constraints
+            tight_constraints = dict()
+            for c in problem.constraints:
+                val = c.args[0].value
+                tight_constraints[c.id] = np.abs(val) <= TIGHT_CONSTRAINTS_TOL
+            results['tight_constraints'] = tight_constraints
         else:
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
@@ -152,6 +147,11 @@ class Problem(object):
         """Set variable to be boolean"""
         var.attributes['boolean'] = True
         var.boolean_idx = list(np.ndindex(max(var.shape, (1,))))
+
+    def _set_int_var(self, var):
+        """Set variable to be integer"""
+        var.attributes['integer'] = True
+        var.integer_idx = list(np.ndindex(max(var.shape, (1,))))
 
     def _set_cont_var(self, var):
         """Set variable to be continuous"""
@@ -179,6 +179,9 @@ class Problem(object):
         # Solve complete problem with CVXPY
         results = self._solve(self.cvxpy_problem)
 
+        # Get tight constraints
+        tight_constraints = results['tight_constraints']
+
         # Get solution and integer variables
         x_int = dict()
 
@@ -188,34 +191,8 @@ class Problem(object):
                         if self._is_var_mip(v)]
 
             # Get value of integer variables
-            x_int = dict()
             for x in int_vars:
-                x_int[x.id] = np.array(x.value)
-
-            # Change attributes to continuous
-            int_vars_fix = []
-            for x in int_vars:
-                self._set_cont_var(x)  # Set continuous variable
-                int_vars_fix += [x == x_int[x.id]]
-
-            prob_cont = cp.Problem(self.objective,
-                                   self.constraints +
-                                   int_vars_fix)
-
-            # Solve
-            results_cont = self._solve(prob_cont)
-
-            # Get tight constraints from original problem
-            tight_constraints = dict()
-            for c in self.constraints:
-                tight_constraints[c.id] = \
-                    results_cont['tight_constraints'][c.id]
-
-            # Restore integer variables
-            for x in int_vars:
-                self._set_bool_var(x)
-        else:
-            tight_constraints = results['tight_constraints']
+                x_int[x.id] = np.array(x.value, copy=True)
 
         # Get strategy
         strategy = Strategy(tight_constraints, x_int)
@@ -281,6 +258,8 @@ class Problem(object):
         orig_objective = self.objective
         orig_variables = self.cvxpy_problem.variables()
         orig_constraints = self.constraints
+        orig_int_vars = [v for v in orig_variables if v.attributes['integer']]
+        orig_bool_vars = [v for v in orig_variables if v.attributes['boolean']]
 
         # Get same objective
         objective = orig_objective
@@ -304,23 +283,25 @@ class Problem(object):
                 if type(con) == NonPos:
                     new_type = Zero
 
+                # Add constraints
                 constraints += [new_type(tight_expr)]
 
-        # Fix integer variables
-        int_fix = []
-        for v in orig_variables:
-            if self._is_var_mip(v):
-                self._set_cont_var(v)
-                int_fix += [v == int_vars[v.id]]
+        # Fix discrete variables and
+        # set them to continuous.
+        discrete_fix = []
+        for var in orig_int_vars + orig_bool_vars:
+            self._set_cont_var(var)
+            discrete_fix += [var == int_vars[var.id]]
 
         # Solve problem
-        prob_red = cp.Problem(objective, constraints + int_fix)
+        prob_red = cp.Problem(objective, constraints + discrete_fix)
         results = self._solve(prob_red)
 
         # Make variables discrete again
-        for v in self.cvxpy_problem.variables():
-            if v.id in int_vars.keys():
-                self._set_bool_var(v)
+        for var in orig_int_vars:  # Integer
+            self._set_int_var(var)
+        for var in orig_bool_vars:  # Boolean
+            self._set_bool_var(var)
 
         return results
 
