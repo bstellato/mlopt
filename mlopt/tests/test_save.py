@@ -69,7 +69,7 @@ class TestSave(unittest.TestCase):
                 print("Using temporary directory ", tmpdir)
 
                 # Save optimizer
-                self.optimizer.save(tmpdir, delete_dir=True)
+                self.optimizer.save(tmpdir, delete_existing=True)
 
                 # Create new optimizer and load
                 new_optimizer = Optimizer.from_file(tmpdir)

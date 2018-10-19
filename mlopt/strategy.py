@@ -8,19 +8,19 @@ class Strategy(object):
 
     Parameters
     ----------
-    binding_constraints : dict of numpy int arrays
-        Set of binding constraints. The keys are the CVXPY constraint ids.
-        The values are numpy int arrays (1/0 for binding/non binding).
+    tight_constraints : dict of numpy int arrays
+        Set of tight constraints. The keys are the CVXPY constraint ids.
+        The values are numpy bool arrays (True/False for tight/non tight).
     int_vars : dict of numpy int arrays
         Value of the integer variables. The keys are CVXPY variable id.
         The values are numpy int arrays.
     """
 
-    def __init__(self, binding_constraints, int_vars):
+    def __init__(self, tight_constraints, int_vars):
         # Check that integer variables are non negative
-        for _, v in binding_constraints.items():
+        for _, v in tight_constraints.items():
             if np.any(np.logical_or(v < 0, v > 1)):
-                raise ValueError("Binding constraints vector "
+                raise ValueError("Tight constraints vector "
                                  "does not contain only 0-1.")
 
         for _, v in int_vars.items():
@@ -28,8 +28,8 @@ class Strategy(object):
                 raise ValueError("Integer variables vector " +
                                  "has negative entries.")
 
-        # Check that binding constraints are not
-        self.binding_constraints = binding_constraints
+        # Check that tight constraints are not
+        self.tight_constraints = tight_constraints
         self.int_vars = int_vars
 
     def _compare_arrays_dict(self, d1, d2):
@@ -53,9 +53,9 @@ class Strategy(object):
 
     def __repr__(self):
         string = "Strategy\n"
-        string += "  - Binding constraints:\n"
+        string += "  - Tight constraints:\n"
         string += "         id: elements\n"
-        string += self.__sprint_dict(self.binding_constraints)
+        string += self.__sprint_dict(self.tight_constraints)
         string += "\n"
         if len(self.int_vars) > 0:
             string += "  - Integer variables values:\n"
@@ -67,23 +67,23 @@ class Strategy(object):
     #  def __hash__(self):
     #      """Overrides default hash implementation"""
     #      f_int_vars = frozenset(self.int_vars)
-    #      f_binding_constraints = frozenset(self.binding_constraints)
-    #      return hash((f_binding_constraints, f_int_vars))
+    #      f_tight_constraints = frozenset(self.tight_constraints)
+    #      return hash((f_tight_constraints, f_int_vars))
 
     def __eq__(self, other):
         """Overrides the default equality implementation"""
         if isinstance(other, Strategy):
 
-            # Compare binding constraints
-            same_binding_constraints = \
-                self._compare_arrays_dict(self.binding_constraints,
-                                          other.binding_constraints)
+            # Compare tight constraints
+            same_tight_constraints = \
+                self._compare_arrays_dict(self.tight_constraints,
+                                          other.tight_constraints)
 
             # Compare integer variables
             same_int_vars = self._compare_arrays_dict(self.int_vars,
                                                       other.int_vars)
 
-            return same_binding_constraints and same_int_vars
+            return same_tight_constraints and same_int_vars
         else:
             return False
 

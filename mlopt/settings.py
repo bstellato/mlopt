@@ -3,7 +3,7 @@ import cvxpy as cp
 # Define constants
 TOL = 1e-06
 PERTURB_TOL = 1e-05
-BINDING_CONSTRAINTS_TOL = 1e-06
+TIGHT_CONSTRAINTS_TOL = 1e-06
 INFINITY = 1e15
 
 # Define default solver

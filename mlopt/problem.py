@@ -1,7 +1,7 @@
 from multiprocessing import Pool, cpu_count
 import numpy as np
 from mlopt.strategy import Strategy
-from mlopt.settings import BINDING_CONSTRAINTS_TOL, \
+from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
     DEFAULT_SOLVER, PERTURB_TOL
 # Import cvxpy and constraint types
 import cvxpy as cp
@@ -139,16 +139,18 @@ class Problem(object):
             results['infeasibility'] = self.infeasibility()
 
             if not problem.is_mixed_integer():
-                binding_constraints = dict()
+                tight_constraints = dict()
                 for c in problem.constraints:
-                    binding_constraints[c.id] = \
-                        np.array([1 if abs(y) >= BINDING_CONSTRAINTS_TOL else 0
-                                  for y in np.atleast_1d(c.dual_value)])
-                results['binding_constraints'] = binding_constraints
+                    val = c.args[0].value
+                    tight_constraints[c.id] = np.abs(val) <= TIGHT_CONSTRAINTS_TOL
+                    #  tight_constraints[c.id] = \
+                    #      np.array([1 if abs(y) >= TIGHT_CONSTRAINTS_TOL else 0
+                    #                for y in np.atleast_1d(c.dual_value)])
+                results['tight_constraints'] = tight_constraints
         else:
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
-            results['binding_constraints'] = dict()
+            results['tight_constraints'] = dict()
 
         return results
 
@@ -215,20 +217,20 @@ class Problem(object):
             # Solve
             results_cont = self._solve(prob_cont)
 
-            # Get binding constraints from original problem
-            binding_constraints = dict()
+            # Get tight constraints from original problem
+            tight_constraints = dict()
             for c in self.constraints:
-                binding_constraints[c.id] = \
-                    results_cont['binding_constraints'][c.id]
+                tight_constraints[c.id] = \
+                    results_cont['tight_constraints'][c.id]
 
             # Restore integer variables
             for x in int_vars:
                 self._set_bool_var(x)
         else:
-            binding_constraints = results['binding_constraints']
+            tight_constraints = results['tight_constraints']
 
         # Get strategy
-        strategy = Strategy(binding_constraints, x_int)
+        strategy = Strategy(tight_constraints, x_int)
 
         # Define return dictionary
         return_dict = {}
@@ -242,14 +244,14 @@ class Problem(object):
 
     def _verify_strategy(self, strategy):
         """Verify that strategy is compatible with current problem."""
-        # Compare keys for binding constraints and integer variables
+        # Compare keys for tight constraints and integer variables
         variables = {v.id: v
                      for v in self.cvxpy_problem.variables()}
         con_keys = [c.id for c in self.constraints]
 
-        for key in strategy.binding_constraints.keys():
+        for key in strategy.tight_constraints.keys():
             if key not in con_keys:
-                raise ValueError("Binding constraints not compatible " +
+                raise ValueError("Tight constraints not compatible " +
                                  "with problem. Constaint IDs not matching.")
 
         int_var_error = ValueError("Integer variables not compatible " +
@@ -284,7 +286,7 @@ class Problem(object):
         self._verify_strategy(strategy)
 
         # Unpack strategy
-        binding_constraints = strategy.binding_constraints
+        tight_constraints = strategy.tight_constraints
         int_vars = strategy.int_vars
 
         # Unpack original problem
@@ -298,23 +300,23 @@ class Problem(object):
         # Get only constraints in strategy
         constraints = []
         for con in orig_constraints:
-            idx_binding = np.where(binding_constraints[con.id])[0]
-            if len(idx_binding) > 0:
-                # Binding constraints in expression
+            idx_tight = np.where(tight_constraints[con.id])[0]
+            if len(idx_tight) > 0:
+                # Tight constraints in expression
                 con_expr = con.args[0]
                 if con_expr.shape == ():
                     # Scalar case no slicing
-                    binding_expr = con_expr
+                    tight_expr = con_expr
                 else:
-                    # Get binding constraints
-                    binding_expr = con.args[0][idx_binding]
+                    # Get tight constraints
+                    tight_expr = con.args[0][idx_tight]
 
                 # Set linear inequalities as equalities
                 new_type = type(con)
                 if type(con) == NonPos:
                     new_type = Zero
 
-                constraints += [new_type(binding_expr)]
+                constraints += [new_type(tight_expr)]
 
         # Fix integer variables
         int_fix = []

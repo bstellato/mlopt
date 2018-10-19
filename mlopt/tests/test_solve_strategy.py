@@ -172,7 +172,7 @@ class TestSolveStrategy(unittest.TestCase):
         # NB. This is the strategy that you would get if
         #     you do not perturb the cost.
         #  int_vars = {}
-        #  binding_constraints = {constraints[0].id: np.array([1]),
+        #  tight_constraints = {constraints[0].id: np.array([1]),
         #                         constraints[1].id: np.array([1]),
         #                         constraints[2].id: np.array([1]),
         #                         constraints[3].id: np.array([1]),
@@ -181,7 +181,7 @@ class TestSolveStrategy(unittest.TestCase):
         #                         constraints[6].id: np.array([0, 0, 0, 0, 0]),
         #                         constraints[7].id: np.array([1, 1, 1, 1, 0])
         #                         }
-        #  strategy = Strategy(binding_constraints, int_vars)
+        #  strategy = Strategy(tight_constraints, int_vars)
 
         # Solve with strategy!
         results_strategy = problem.solve_with_strategy(results['strategy'])

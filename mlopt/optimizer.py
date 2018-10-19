@@ -90,7 +90,7 @@ class Optimizer(object):
         # Encode training strategies by solving
         # the problem for all the points
         results = self._problem.solve_parametric(X, message="Compute " +
-                                                 "binding constraints " +
+                                                 "tight constraints " +
                                                  "for training set")
         train_strategies = [r['strategy'] for r in results]
         self.y_train, self.encoding = encode_strategies(train_strategies)
@@ -298,7 +298,7 @@ class Optimizer(object):
         # Get strategy for each point
         results_test = self._problem.solve_parametric(theta,
                                                       message="Compute " +
-                                                      "binding constraints " +
+                                                      "tight constraints " +
                                                       "for test set")
         time_test = [r['time'] for r in results_test]
         strategy_test = [r['strategy'] for r in results_test]
@@ -306,7 +306,7 @@ class Optimizer(object):
 
         # Get predicted strategy for each point
         results_pred = self.solve(theta,
-                                  message="Predict binding constraints for " +
+                                  message="Predict tight constraints for " +
                                   "test set")
         time_pred = [r['time'] for r in results_pred]
         strategy_pred = [r['strategy'] for r in results_pred]
