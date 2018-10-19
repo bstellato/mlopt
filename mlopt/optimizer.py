@@ -1,5 +1,5 @@
 from mlopt.problem import Problem
-from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, TOL
+from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
@@ -120,7 +120,7 @@ class Optimizer(object):
         # Pick best class between k ones
         infeas = np.array(infeas)
         cost = np.array(cost)
-        idx_filter = np.where(infeas <= TOL)[0]
+        idx_filter = np.where(infeas <= INFEAS_TOL)[0]
         if len(idx_filter) > 0:
             # Case 1: Feasible points
             # -> Get solution with minimum cost
@@ -335,9 +335,10 @@ class Optimizer(object):
                 "n_corect": [np.sum(idx_correct)],
                 "n_strategies": [n_strategies],
                 "accuracy": [test_accuracy],
-                "n_infeas": [np.sum(infeas >= TOL)],
+                "n_infeas": [np.sum(infeas >= INFEAS_TOL)],
                 "avg_infeas": [np.mean(infeas)],
-                "avg_subopt": [np.mean(subopt[np.where(infeas <= TOL)[0]])],
+                "avg_subopt": [np.mean(subopt[np.where(infeas <=
+                                                       INFEAS_TOL)[0]])],
                 "max_infeas": [np.max(infeas)],
                 "max_subopt": [np.max(subopt)],
                 "avg_time_improv": [np.mean(time_comp)],

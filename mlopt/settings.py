@@ -1,9 +1,8 @@
 import cvxpy as cp
 
 # Define constants
-TOL = 1e-06
+INFEAS_TOL = 1e-06
 TIGHT_CONSTRAINTS_TOL = 1e-06
-INFINITY = 1e15
 
 # Define default solver
 DEFAULT_SOLVER = cp.GUROBI
