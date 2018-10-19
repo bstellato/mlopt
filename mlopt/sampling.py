@@ -50,7 +50,7 @@ class Sampler(object):
             n_samples += self.n_samples_iter
 
             # Get unique strategies
-            labels, enc2strategy = encode_strategies(s_theta)
+            labels, encoding = encode_strategies(s_theta)
 
             # Get frequencies
             freq = self.frequencies(labels)
@@ -80,7 +80,7 @@ class Sampler(object):
             #  if bound < epsilon:
             #      break
 
-        return theta, labels, enc2strategy
+        return theta, labels, encoding
 
 
 def uniform_sphere_sample(center, radius, n=1):

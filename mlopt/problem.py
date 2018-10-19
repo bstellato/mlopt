@@ -1,7 +1,8 @@
 from multiprocessing import Pool, cpu_count
 import numpy as np
 from mlopt.strategy import Strategy
-from mlopt.settings import TOL, DEFAULT_SOLVER, PERTURB_TOL
+from mlopt.settings import BINDING_CONSTRAINTS_TOL, \
+    DEFAULT_SOLVER, PERTURB_TOL
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos
@@ -141,7 +142,7 @@ class Problem(object):
                 binding_constraints = dict()
                 for c in problem.constraints:
                     binding_constraints[c.id] = \
-                        np.array([1 if abs(y) >= TOL else 0
+                        np.array([1 if abs(y) >= BINDING_CONSTRAINTS_TOL else 0
                                   for y in np.atleast_1d(c.dual_value)])
                 results['binding_constraints'] = binding_constraints
         else:

@@ -103,11 +103,11 @@ results = problem.solve_parametric(
     theta_train,
     message="Compute binding constraints for training set"
 )
-y_train, enc2strategy = mlopt.encode_strategies([r['strategy'] for r in results])
+y_train, encoding = mlopt.encode_strategies([r['strategy'] for r in results])
 
 # Training
 n_input = len(theta_bar)
-n_classes = len(enc2strategy)
+n_classes = len(encoding)
 #  with mlopt.TensorFlowNeuralNet(n_input, n_layers, n_classes) as learner:
 with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
 #  with mlopt.OptimalTree() as learner:
@@ -115,6 +115,6 @@ with mlopt.PyTorchNeuralNet(n_input, n_classes) as learner:
 
     #  Testing
     results = mlopt.eval_performance(theta_test, learner, problem,
-                                     enc2strategy, k=3)
+                                     encoding, k=3)
 
     mlopt.store(results, 'output/')

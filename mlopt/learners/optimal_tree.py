@@ -51,11 +51,13 @@ class OptimalTree(Learner):
         self.options = {}
         self.options['hyperplanes'] = options.pop('hyperplanes', False)
         self.options['cp'] = options.pop('cp', None)
+        self.options['max_depth'] = options.pop('max_depth', 10)
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', N_BEST),
                                      self.n_classes)
         self.options['save_pdf'] = options.pop('save_pdf', False)
-        self.optimaltrees_options = {'max_depth': 10}
+        self.optimaltrees_options = {}
+        self.optimaltrees_options['max_depth'] = self.options['max_depth']
         if self.options['hyperplanes']:
             self.optimaltrees_options['hyperplane_config'] = \
                 self.jl.eval('(sparsity=:all,)')

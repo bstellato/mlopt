@@ -93,11 +93,11 @@ class Optimizer(object):
                                                  "binding constraints " +
                                                  "for training set")
         train_strategies = [r['strategy'] for r in results]
-        self.y_train, self.enc2strategy = encode_strategies(train_strategies)
+        self.y_train, self.encoding = encode_strategies(train_strategies)
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
-                                             n_classes=len(self.enc2strategy),
+                                             n_classes=len(self.encoding),
                                              **learner_options)
 
         # Train learner
@@ -176,7 +176,7 @@ class Optimizer(object):
             self._problem.populate(X.iloc[i, :])
 
             # Pick strategies from encoding
-            strategies = [self.enc2strategy[classes[i, j]]
+            strategies = [self.encoding[classes[i, j]]
                           for j in range(n_best)]
 
             results.append(self.choose_best(strategies))
@@ -226,7 +226,7 @@ class Optimizer(object):
         file_dict = {'name': self.name,
                      'learner_name': self._learner.name,
                      'learner_options': self._learner.options,
-                     'enc2strategy': self.enc2strategy,
+                     'encoding': self.encoding,
                      'objective': self._problem.objective,
                      'constraints': self._problem.constraints}
         pkl.dump(file_dict, optimizer)
@@ -263,14 +263,14 @@ class Optimizer(object):
                         perturb_problem=False)
 
         # Assign strategies encoding
-        optimizer.enc2strategy = optimizer_dict['enc2strategy']
+        optimizer.encoding = optimizer_dict['encoding']
         learner_name = optimizer_dict['learner_name']
         learner_options = optimizer_dict['learner_options']
 
         # Load learner
         optimizer._learner = \
             LEARNER_MAP[learner_name](n_input=optimizer._problem.n_parameters,
-                                      n_classes=len(optimizer.enc2strategy),
+                                      n_classes=len(optimizer.encoding),
                                       **learner_options)
         optimizer._learner.load(os.path.join(folder_name, "learner"))
 
@@ -316,7 +316,7 @@ class Optimizer(object):
         n_test = len(theta)
         n_train = self._learner.n_train  # Number of training samples
         n_theta = n_features(theta)  # Number of parameters
-        n_strategies = len(self.enc2strategy)  # Number of strategies
+        n_strategies = len(self.encoding)  # Number of strategies
 
         # Compute comparative statistics
         time_comp = np.array([(1 - time_pred[i] / time_test[i])

@@ -88,7 +88,7 @@ class PyTorchNeuralNet(Learner):
             Labels.
         """
 
-        self.options['n_train'] = len(X)
+        self.n_train = len(X)
 
         # Convert data to tensor dataset
         X = torch.tensor(pandas2array(X), dtype=torch.float)
@@ -102,7 +102,7 @@ class PyTorchNeuralNet(Learner):
                                  )
 
         n_batches_per_epoch = \
-            int(self.options['n_train'] / self.options['batch_size'])
+            int(self.n_train / self.options['batch_size'])
         with trange(self.options['n_epochs'], desc="Training neural net") as t:
             for epoch in t:  # loop over dataset multiple times
 

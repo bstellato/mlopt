@@ -91,4 +91,4 @@ theta, s_theta = sampler.sample()
 #      theta_train,
 #      message="Compute binding constraints for training set"
 #  )[2]
-#  y_train, enc2strategy = mlopt.encode_strategies(strategies)
+#  y_train, encoding = mlopt.encode_strategies(strategies)

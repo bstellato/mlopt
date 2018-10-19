@@ -48,16 +48,16 @@ files = files[2]  # Afiro
 #      theta_train,
 #      message="Compute binding constraints for training set"
 #  )
-#  y_train, enc2strategy = mlopt.encode_strategies(strategies)
+#  y_train, encoding = mlopt.encode_strategies(strategies)
 #
 #  # Training
 #  n_input = len(theta_bar)
 #  n_layers = [15, 15]
-#  n_classes = len(enc2strategy)
+#  n_classes = len(encoding)
 #  with mlopt.NeuralNet(n_input, n_layers, n_classes) as learner:
 #      learner.train(theta_train, y_train)
 #
 #      #  Testing
 #      results = mlopt.eval_performance(theta_test, learner, problem,
-#                                     enc2strategy, k=3)
+#                                     encoding, k=3)
 #      mlopt.store(results, 'examples/output/inventory')

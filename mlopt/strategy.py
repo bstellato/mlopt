@@ -48,16 +48,18 @@ class Strategy(object):
     def __sprint_dict(self, d):
         s = ""
         for attribute, value in d.items():
-            s += '      {} : {}\n'.format(attribute, value)
+            s += '      {:>5}: {}\n'.format(attribute, value)
         return s.rstrip()
 
     def __repr__(self):
         string = "Strategy\n"
         string += "  - Binding constraints:\n"
+        string += "         id: elements\n"
         string += self.__sprint_dict(self.binding_constraints)
         string += "\n"
         if len(self.int_vars) > 0:
             string += "  - Integer variables values:\n"
+            string += "         id: elements\n"
             string += self.__sprint_dict(self.int_vars)
         return string
 
