@@ -6,6 +6,7 @@ from mlopt.tests.settings import TEST_TOL as TOL
 from mlopt.sampling import uniform_sphere_sample
 import mlopt.settings as s
 import tempfile
+import os
 import pandas as pd
 import cvxpy as cp
 
@@ -55,7 +56,7 @@ class TestSave(unittest.TestCase):
         """Test save load"""
 
         learners = [
-            #  s.PYTORCH,
+            s.PYTORCH,
             s.OPTIMAL_TREE
         ]
 
@@ -64,15 +65,18 @@ class TestSave(unittest.TestCase):
             # Train optimizer
             self.optimizer.train(self.df, learner=learner)
 
+            # Create temporary directory where
+            # to do stuff
             with tempfile.TemporaryDirectory() as tmpdir:
 
-                print("Using temporary directory ", tmpdir)
+                # Archive name
+                file_name = os.path.join(tmpdir, learner + ".tar.gz")
 
                 # Save optimizer
-                self.optimizer.save(tmpdir, delete_existing=True)
+                self.optimizer.save(file_name)
 
                 # Create new optimizer and load
-                new_optimizer = Optimizer.from_file(tmpdir)
+                new_optimizer = Optimizer.from_file(file_name)
 
                 # Predict with optimizer
                 res = self.optimizer.solve(self.df_test)

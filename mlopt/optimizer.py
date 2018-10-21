@@ -7,7 +7,9 @@ from mlopt.utils import n_features, accuracy
 import pandas as pd
 import numpy as np
 import os
-import shutil
+from glob import glob
+import tempfile
+import tarfile
 import pickle as pkl
 from tqdm import tqdm
 
@@ -40,6 +42,11 @@ class Optimizer(object):
                                 **solver_options)
         self.name = name
         self._learner = None
+
+    @property
+    def n_parameters(self):
+        """Number of parameters."""
+        return self._problem.n_parameters
 
     def sample(self, sampling_fn):
         """
@@ -178,96 +185,107 @@ class Optimizer(object):
 
         return results
 
-    def save(self, folder_name, delete_existing=False):
+    def save(self, file_name, delete_existing=False):
         """
-        Save optimizer to a specific folder.
-
-        The folder will be created if it does not exist.
-
+        Save optimizer to a specific tar.gz file.
 
         Parameters
         ----------
-        folder_name : string
-            Folder name where to store files.
-        delete_existing : bool
-            Delete folder if already existing?
+        file_name : string
+            File name of the compressed optimizer.
+        delete_existing : bool, optional
+            Delete existing file with the same name?
+            Defaults to False.
         """
 
         if self._learner is None:
             raise ValueError("You cannot save the optimizer without " +
                              "training it before.")
 
-        # Create directory
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
-        else:
+        # Check if file already exists
+        if os.path.isfile(file_name):
             if not delete_existing:
                 p = None
                 while p not in ['y', 'n', 'N', '']:
-                    p = input("Directory %s/ already exists. " % folder_name +
+                    p = input("File %s already exists. " % file_name +
                               "Would you like to delete it? [y/N] ")
                 if p == 'y':
-                    shutil.rmtree(folder_name)
-                    os.makedirs(folder_name)
+                    os.remove(file_name)
+                else:
+                    return
             else:
-                shutil.rmtree(folder_name)
-                os.makedirs(folder_name)
+                os.remove(file_name)
 
-        # Save learner
-        self._learner.save(os.path.join(folder_name, "learner"))
+        # Create temporary directory to create the archive
+        # and store relevant files
+        with tempfile.TemporaryDirectory() as tmpdir:
 
-        # Save optimizer
-        optimizer = open(os.path.join(folder_name, "optimizer.pkl"), 'wb')
-        file_dict = {'name': self.name,
-                     'learner_name': self._learner.name,
-                     'learner_options': self._learner.options,
-                     'encoding': self.encoding,
-                     'objective': self._problem.objective,
-                     'constraints': self._problem.constraints}
-        pkl.dump(file_dict, optimizer)
-        optimizer.close()
+            # Save learner
+            self._learner.save(os.path.join(tmpdir, "learner"))
+
+            # Save optimizer
+            optimizer = open(os.path.join(tmpdir, "optimizer.pkl"), 'wb')
+            file_dict = {'name': self.name,
+                         'learner_name': self._learner.name,
+                         'learner_options': self._learner.options,
+                         'encoding': self.encoding,
+                         'objective': self._problem.objective,
+                         'constraints': self._problem.constraints}
+            pkl.dump(file_dict, optimizer)
+            optimizer.close()
+
+            # Create archive with the files
+            tar = tarfile.open(file_name, "w:gz")
+            for f in glob(os.path.join(tmpdir, "*")):
+                tar.add(f, os.path.basename(f))
+            tar.close()
 
     @classmethod
-    def from_file(cls, folder_name):
+    def from_file(cls, file_name):
         """
-        Create optimizer from a specific folder.
+        Create optimizer from a specific compressed tar.gz file.
 
         Parameters
         ----------
-        folder_name : string
-            Folder name where to read files from.
+        file_name : string
+            File name of the exported optimizer.
         """
 
-        # Check if folder exists
-        if not os.path.exists(folder_name):
-            raise ValueError("Folder does not exist.")
+        # Check if file exists
+        if not os.path.isfile(file_name):
+            raise ValueError("File %s does not exist." % file_name)
 
-        # Load optimizer
-        optimizer_file_name = os.path.join(folder_name, "optimizer.pkl")
-        if not optimizer_file_name:
-            raise ValueError("Optimizer pkl file does not exist.")
-        f = open(optimizer_file_name, "rb")
-        optimizer_dict = pkl.load(f)
-        f.close()
+        # Extract file to temporary directory and read it
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with tarfile.open(file_name) as tar:
+                tar.extractall(path=tmpdir)
 
-        # Create optimizer using loaded dict
-        # Assume perturbation already happened
-        optimizer = cls(optimizer_dict['objective'],
-                        optimizer_dict['constraints'],
-                        name=optimizer_dict['name'],
-                        perturb_problem=False)
+            # Load optimizer
+            optimizer_file_name = os.path.join(tmpdir, "optimizer.pkl")
+            if not optimizer_file_name:
+                raise ValueError("Optimizer pkl file does not exist.")
+            f = open(optimizer_file_name, "rb")
+            optimizer_dict = pkl.load(f)
+            f.close()
 
-        # Assign strategies encoding
-        optimizer.encoding = optimizer_dict['encoding']
-        learner_name = optimizer_dict['learner_name']
-        learner_options = optimizer_dict['learner_options']
+            # Create optimizer using loaded dict
+            # Assume perturbation already happened
+            optimizer = cls(optimizer_dict['objective'],
+                            optimizer_dict['constraints'],
+                            name=optimizer_dict['name'],
+                            perturb_problem=False)
 
-        # Load learner
-        optimizer._learner = \
-            LEARNER_MAP[learner_name](n_input=optimizer._problem.n_parameters,
-                                      n_classes=len(optimizer.encoding),
-                                      **learner_options)
-        optimizer._learner.load(os.path.join(folder_name, "learner"))
+            # Assign strategies encoding
+            optimizer.encoding = optimizer_dict['encoding']
+            learner_name = optimizer_dict['learner_name']
+            learner_options = optimizer_dict['learner_options']
+
+            # Load learner
+            optimizer._learner = \
+                LEARNER_MAP[learner_name](n_input=optimizer.n_parameters,
+                                          n_classes=len(optimizer.encoding),
+                                          **learner_options)
+            optimizer._learner.load(os.path.join(tmpdir, "learner"))
 
         return optimizer
 
