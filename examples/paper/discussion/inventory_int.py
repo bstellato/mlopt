@@ -84,7 +84,7 @@ m.train(theta_train, learner=mlopt.OPTIMAL_TREE,
 #  m.train(theta_train, learner=mlopt.PYTORCH)
 
 # Save solver
-m.save("output/optimal_tree_inv_int", delete_existing=True)
+m.save("output/optimal_tree_inv_int.tar.gz", delete_existing=True)
 
 # Benchmark
 results = m.performance(theta_test)

@@ -202,6 +202,10 @@ class Optimizer(object):
             raise ValueError("You cannot save the optimizer without " +
                              "training it before.")
 
+        # Add .tar.gz if the file has no extension
+        if not file_name.endswith('.tar.gz'):
+            file_name += ".tar.gz"
+
         # Check if file already exists
         if os.path.isfile(file_name):
             if not delete_existing:
@@ -250,6 +254,10 @@ class Optimizer(object):
         file_name : string
             File name of the exported optimizer.
         """
+
+        # Add .tar.gz if the file has no extension
+        if not file_name.endswith('.tar.gz'):
+            file_name += ".tar.gz"
 
         # Check if file exists
         if not os.path.isfile(file_name):
