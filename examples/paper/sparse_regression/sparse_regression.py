@@ -9,10 +9,13 @@ from mlopt.sampling import uniform_sphere_sample
 '''
 Define Sparse Regression problem
 '''
-# TODO: This needs to work for different
-# n = ... points
-# p = ... parameters
-# k = ... sparsity
+# This needs to work for different
+n = 10000
+p = 50000
+k = 10
+
+
+
 
 '''
 Sample points
