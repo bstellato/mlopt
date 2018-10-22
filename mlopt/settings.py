@@ -2,10 +2,12 @@ import cvxpy as cp
 
 # Define constants
 INFEAS_TOL = 1e-06
-TIGHT_CONSTRAINTS_TOL = 1e-06
+TIGHT_CONSTRAINTS_TOL = 1e-05
 
 # Define default solver
-DEFAULT_SOLVER = cp.GUROBI
+#  DEFAULT_SOLVER = cp.GUROBI
+DEFAULT_SOLVER = cp.MOSEK
+#  DEFAULT_SOLVER = cp.ECOS
 
 # Define learners
 PYTORCH = "pytorch"

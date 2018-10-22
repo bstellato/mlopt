@@ -42,6 +42,7 @@ class Optimizer(object):
                                 **solver_options)
         self.name = name
         self._learner = None
+        self.encoding = None
 
     @property
     def n_parameters(self):
@@ -61,7 +62,9 @@ class Optimizer(object):
         # Move X_train and y_train computation here.
 
     def train(self, X=None, sampling_fn=None,
-              learner=DEFAULT_LEARNER, **learner_options):
+              parallel=True,
+              learner=DEFAULT_LEARNER,
+              **learner_options):
         """
         Train optimizer using parameter X.
 
@@ -77,6 +80,8 @@ class Optimizer(object):
             Function to sample data taking one argument being
             the number of data points to be sampled and returning
             a structure of the same type as X.
+        parallel : bool
+            Perform training in parallel.
         learner : str
             Learner to use. Learners are defined in :mod:`mlopt.settings`
         learner_options : dict, optional
@@ -89,13 +94,16 @@ class Optimizer(object):
         elif sampling_fn is not None:
             self.X_train = self.sample(sampling_fn)
 
-        # Encode training strategies by solving
-        # the problem for all the points
-        results = self._problem.solve_parametric(X, message="Compute " +
-                                                 "tight constraints " +
-                                                 "for training set")
-        train_strategies = [r['strategy'] for r in results]
-        self.y_train, self.encoding = encode_strategies(train_strategies)
+        if self.encoding is None:
+            # Encode training strategies by solving
+            # the problem for all the points
+            results = self._problem.solve_parametric(X,
+                                                     parallel=parallel,
+                                                     message="Compute " +
+                                                     "tight constraints " +
+                                                     "for training set")
+            train_strategies = [r['strategy'] for r in results]
+            self.y_train, self.encoding = encode_strategies(train_strategies)
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
@@ -352,9 +360,10 @@ class Optimizer(object):
         df = pd.DataFrame(
             {
                 "problem": [self.name],
+                "learner": [self._learner.name],
                 "n_best": [self._learner.options['n_best']],
                 "n_var": [self._problem.n_var],
-                "nm_constr": [self._problem.n_constraints],
+                "n_constr": [self._problem.n_constraints],
                 "n_test": [n_test],
                 "n_train": [n_train],
                 "n_theta": [n_theta],
@@ -381,6 +390,7 @@ class Optimizer(object):
         df_detail = pd.DataFrame(
             {
                 "problem": [self.name] * n_test,
+                "learner": [self._learner.name] * n_test,
                 "correct": idx_correct,
                 "infeas": infeas,
                 "subopt": subopt,

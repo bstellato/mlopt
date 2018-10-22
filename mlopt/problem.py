@@ -343,16 +343,19 @@ class Problem(object):
                   cpu_count())
             #  self.pbar = tqdm(total=n, desc=message + " (parallel)")
             #  with tqdm(total=n, desc=message + " (parallel)") as self.pbar:
-            with Pool(processes=min(n, n_proc)) as pool:
-                # Solve in parallel
-                #  results = \
-                    #  pool.map(self.populate_and_solve,
-                    #           zip([theta.iloc[i, :] for i in range(n)]))
-                # Solve in parallel and print tqdm progress bar
-                results = list(tqdm(pool.imap(self.populate_and_solve,
-                                              [theta.iloc[i, :]
-                                               for i in range(n)]),
-                                    total=n))
+            pool = Pool(processes=min(n, n_proc))
+            # Solve in parallel
+            #  results = \
+                #  pool.map(self.populate_and_solve,
+                         #  [theta.iloc[i, :] for i in range(n)])
+            # Solve in parallel and print tqdm progress bar
+            results = list(tqdm(pool.imap(self.populate_and_solve,
+                                          [theta.iloc[i, :]
+                                           for i in range(n)]),
+                                total=n))
+            pool.close()
+            pool.join()
+            pool.terminate()
         else:
             # Preallocate solutions
             results = []

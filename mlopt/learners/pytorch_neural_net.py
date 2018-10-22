@@ -20,12 +20,14 @@ class Net(nn.Module):
         n_hidden = int((n_classes + n_input) / 2)
         self.f1 = nn.Linear(n_input, n_hidden)
         self.f2 = nn.Linear(n_hidden, n_hidden)
-        self.f3 = nn.Linear(n_hidden, n_classes)
+        self.f3 = nn.Linear(n_hidden, n_hidden)
+        self.f4 = nn.Linear(n_hidden, n_classes)
 
     def forward(self, x):
         x = F.relu(self.f1(x))  # First layer
         x = F.relu(self.f2(x))  # Second layer
-        x = self.f3(x)          # Third layer
+        x = F.relu(self.f3(x))  # Third layer
+        x = self.f3(x)          # Fourth layer
         return x
 
 
