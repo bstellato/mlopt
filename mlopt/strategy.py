@@ -23,10 +23,12 @@ class Strategy(object):
                 raise ValueError("Tight constraints vector "
                                  "does not contain only 0-1.")
 
-        for _, v in int_vars.items():
-            if np.any(v < 0):
-                raise ValueError("Integer variables vector " +
-                                 "has negative entries.")
+        # OLD: We can have integer variables with
+        # negative values.
+        #  for _, v in int_vars.items():
+        #      if np.any(v < 0):
+        #          raise ValueError("Integer variables vector " +
+        #                           "has negative entries.")
 
         # Check that tight constraints are not
         self.tight_constraints = tight_constraints

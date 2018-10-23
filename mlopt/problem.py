@@ -191,8 +191,9 @@ class Problem(object):
                         if self._is_var_mip(v)]
 
             # Get value of integer variables
+            # by rounding them to the nearest integer
             for x in int_vars:
-                x_int[x.id] = np.array(x.value, copy=True)
+                x_int[x.id] = np.rint(x.value).astype(int)
 
         # Get strategy
         strategy = Strategy(tight_constraints, x_int)
@@ -346,8 +347,8 @@ class Problem(object):
             pool = Pool(processes=min(n, n_proc))
             # Solve in parallel
             #  results = \
-                #  pool.map(self.populate_and_solve,
-                         #  [theta.iloc[i, :] for i in range(n)])
+            #  pool.map(self.populate_and_solve,
+            #  [theta.iloc[i, :] for i in range(n)])
             # Solve in parallel and print tqdm progress bar
             results = list(tqdm(pool.imap(self.populate_and_solve,
                                           [theta.iloc[i, :]
@@ -355,7 +356,7 @@ class Problem(object):
                                 total=n))
             pool.close()
             pool.join()
-            pool.terminate()
+
         else:
             # Preallocate solutions
             results = []

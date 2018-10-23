@@ -305,7 +305,7 @@ class Optimizer(object):
 
         return optimizer
 
-    def performance(self, theta):
+    def performance(self, theta, parallel=True):
         """
         Evaluate optimizer performance on data theta by comparing the
         solution to the optimal one.
@@ -314,6 +314,8 @@ class Optimizer(object):
         ----------
         theta : DataFrame
             Data to predict.
+        parallel : bool, optional
+            Solve problems in parallel? Defaults to True.
 
         Returns
         -------
@@ -326,6 +328,7 @@ class Optimizer(object):
         print("Performance evaluation")
         # Get strategy for each point
         results_test = self._problem.solve_parametric(theta,
+                                                      parallel=parallel,
                                                       message="Compute " +
                                                       "tight constraints " +
                                                       "for test set")
@@ -350,7 +353,7 @@ class Optimizer(object):
         # Compute comparative statistics
         time_comp = np.array([(1 - time_pred[i] / time_test[i])
                               for i in range(n_test)])
-        subopt = np.array([(cost_pred[i] - cost_test[i])/(cost_test[i] + 1e-10)
+        subopt = np.array([(cost_pred[i] - cost_test[i])/(np.abs(cost_test[i]) + 1e-10)
                            for i in range(n_test)])
 
         # accuracy
