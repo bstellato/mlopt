@@ -9,8 +9,7 @@ np.random.seed(1)
 
 
 # Define loop to train
-#  p_vec = np.array([10, 20, 30])
-p_vec = np.array([10, 20])
+p_vec = np.array([10, 20, 30])
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
@@ -19,7 +18,7 @@ output_folder = "output/portfolio"
 
 
 # Function to sample points
-def sample_portfolio(theta_bar, radius, n=100):
+def sample(theta_bar, radius, n=100):
 
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, radius, n=n)
@@ -68,18 +67,18 @@ for p in p_vec:
     '''
 
     # Training and testing data
-    n_train = 1000
-    n_test = 100
+    n_train = 500
+    n_test = 10
     theta_train = sample_portfolio(theta_bar, radius, n=n_train)
     theta_test = sample_portfolio(theta_bar, radius, n=n_test)
 
     # Train and test using pytorch
     m.train(theta_train,
-            parallel=True,
+            parallel=False,
             learner=mlopt.PYTORCH)
     m.save(os.path.join(output_folder, "pytorch_portfolio_%d" % p),
            delete_existing=True)
-    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=True)
+    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=False)
 
     # Fix dataframe by adding elements
     add_details(pytorch_general, n=n, p=p)
@@ -99,7 +98,7 @@ for p in p_vec:
 
     #  Train and test using optimal trees
     m.train(theta_train,
-            parallel=True,
+            parallel=False,
             learner=mlopt.OPTIMAL_TREE,
             max_depth=10,
             #  cp=0.1,
@@ -108,7 +107,7 @@ for p in p_vec:
     m.save(os.path.join(output_folder, "optimaltrees_portfolio_%d" % p),
            delete_existing=True)
     optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
-                                                              parallel=True)
+                                                              parallel=False)
     add_details(optimaltrees_general, n=n, p=p)
     add_details(optimaltrees_detail, n=n, p=p)
     results_general = results_general.append(optimaltrees_general)

@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
 import numpy.testing as npt
+from mlopt.optimizer import Optimizer
+from mlopt.settings import PYTORCH
 from mlopt.problem import Problem
 from mlopt.tests.settings import TEST_TOL as TOL
 from mlopt.sampling import uniform_sphere_sample
@@ -71,6 +73,62 @@ class TestParallel(unittest.TestCase):
 
             # Compare strategy
             self.assertTrue(serial['strategy'] == parallel['strategy'])
+
+    def test_parallel_resolve(self):
+        """Test parallel resolve (to avoid hanging)"""
+
+        # This needs to work for different
+        p = 10
+        n = p * 10
+        F = np.random.randn(n, p)
+        D = np.diag(np.random.rand(n)*np.sqrt(p))
+        Sigma = F.dot(F.T) + D
+        gamma = 1.0
+        mu = cp.Parameter(n, name='mu')
+        x = cp.Variable(n)
+        cost = - mu * x + gamma * cp.quad_form(x, Sigma)
+        constraints = [cp.sum(x) == 1, x >= 0]
+
+        # Define optimizer
+        m = Optimizer(cp.Minimize(cost), constraints,
+                      name="portfolio")
+
+        '''
+        Sample points
+        '''
+        theta_bar = np.random.randn(n)
+        radius = 0.3
+
+        '''
+        Train and solve
+        '''
+
+        # Training and testing data
+        n_train = 1000
+        n_test = 100
+        # Sample points from multivariate ball
+        X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
+        X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
+        df = pd.DataFrame({'mu': X_d.tolist()})
+        df_test = pd.DataFrame({'mu': X_d_test.tolist()})
+
+        # Train and test using pytorch
+        m.train(df,
+                parallel=True,
+                learner=PYTORCH)
+        pytorch_general, pytorch_detail = m.performance(df_test, parallel=True)
+
+        # DEBUG. DEFINE OPTIMIZER AGAIn
+        #  mu = cp.Parameter(n, name='mu')
+        #  x = cp.Variable(n)
+        #  cost = - mu * x + gamma * cp.quad_form(x, Sigma)
+        #  constraints = [cp.sum(x) == 1, x >= 0]
+        #  m = mlopt.Optimizer(cp.Minimize(cost), constraints,
+        #                      name="portfolio")
+        #  m.train(theta_train, learner=mlopt.PYTORCH)
+        results_pytorch = m.performance(df_test)
+
+        # Train again
 
 
 if __name__ == '__main__':

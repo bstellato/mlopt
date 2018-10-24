@@ -27,7 +27,7 @@ class Net(nn.Module):
         x = F.relu(self.f1(x))  # First layer
         x = F.relu(self.f2(x))  # Second layer
         x = F.relu(self.f3(x))  # Third layer
-        x = self.f3(x)          # Fourth layer
+        x = self.f4(x)          # Fourth layer
         return x
 
 
@@ -105,6 +105,7 @@ class PyTorchNeuralNet(Learner):
 
         n_batches_per_epoch = \
             int(self.n_train / self.options['batch_size'])
+
         with trange(self.options['n_epochs'], desc="Training neural net") as t:
             for epoch in t:  # loop over dataset multiple times
 

@@ -13,6 +13,7 @@ mosek = {file = "https://download.mosek.com/stable/wheel/Mosek-8.1.63-cp37-cp37m
 torch = "==0.4.1"
 torchvision = "*"
 cvxpy = {editable = true, path = "./../cvxpy"}
+line-profiler = {editable = true, path = "./../cloned/line_profiler"}
 
 [dev-packages]
 pytest = "*"
@@ -25,6 +26,10 @@ ipdb = "*"
 neovim = "*"
 python-language-server = {extras = ["all"], version = "*"}
 pytest-cov = "*"
+nose = "*"
+snakeviz = "*"
+"flake8" = "*"
+cython = "*"
 
 [requires]
 python_version = "3.7"
