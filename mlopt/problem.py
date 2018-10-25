@@ -26,6 +26,7 @@ def populate_and_solve(args):
 
     return results
 
+
 class Problem(object):
 
     def __init__(self,
@@ -367,7 +368,7 @@ class Problem(object):
             # Solve in parallel and print tqdm progress bar
             results = list(tqdm(pool.imap(populate_and_solve,
                                           zip(repeat(self), [theta.iloc[i, :]
-                                           for i in range(n)])),
+                                                             for i in range(n)])),
                                 total=n))
             pool.close()
             pool.join()

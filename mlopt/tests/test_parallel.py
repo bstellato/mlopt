@@ -117,13 +117,13 @@ class TestParallel(unittest.TestCase):
         m.train(df,
                 parallel=True,
                 learner=PYTORCH)
-        pytorch_general, pytorch_detail = m.performance(df_test, parallel=True)
+        m.performance(df_test, parallel=True)
 
         # Run parallel loop again to enforce instability
         # in multiprocessing
-        results_pytorch = m.performance(df_test)
+        m.performance(df_test, parallel=True)
 
-        # Train again
+        return
 
 
 if __name__ == '__main__':

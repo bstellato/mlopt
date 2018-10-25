@@ -169,8 +169,6 @@ class TestSolveStrategy(unittest.TestCase):
         problem = Problem(cp.Minimize(cost), constraints)
         results = problem.solve()
 
-        # NB. This is the strategy that you would get if
-        #     you do not perturb the cost.
         #  int_vars = {}
         #  tight_constraints = {constraints[0].id: np.array([1]),
         #                         constraints[1].id: np.array([1]),

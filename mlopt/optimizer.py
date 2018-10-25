@@ -285,11 +285,9 @@ class Optimizer(object):
             f.close()
 
             # Create optimizer using loaded dict
-            # Assume perturbation already happened
             optimizer = cls(optimizer_dict['objective'],
                             optimizer_dict['constraints'],
-                            name=optimizer_dict['name'],
-                            perturb_problem=False)
+                            name=optimizer_dict['name'])
 
             # Assign strategies encoding
             optimizer.encoding = optimizer_dict['encoding']

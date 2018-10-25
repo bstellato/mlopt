@@ -37,8 +37,8 @@ class TestProblem(unittest.TestCase):
                                                 0))
         self.assertTrue(abs(viol_cvxpy - viol_manual) <= TOL)
 
-    def test_solve_perturbation(self):
-        """Solve cvxpy problem vs perturbed problem.
+    def test_solve_cvxpy(self):
+        """Solve cvxpy problem vs optimizer problem.
            Expect similar solutions."""
         np.random.seed(1)
         n = 5

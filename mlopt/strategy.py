@@ -17,14 +17,13 @@ class Strategy(object):
     """
 
     def __init__(self, tight_constraints, int_vars):
-        # Check that integer variables are non negative
+        # Check tight constraints
         for _, v in tight_constraints.items():
             if np.any(np.logical_or(v < 0, v > 1)):
                 raise ValueError("Tight constraints vector "
-                                 "does not contain only 0-1.")
+                                 "is not boolean.")
 
-        # OLD: We can have integer variables with
-        # negative values.
+        # Check that integer variables are non negative
         #  for _, v in int_vars.items():
         #      if np.any(v < 0):
         #          raise ValueError("Integer variables vector " +
