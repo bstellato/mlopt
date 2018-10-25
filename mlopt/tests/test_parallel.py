@@ -77,6 +77,7 @@ class TestParallel(unittest.TestCase):
     def test_parallel_resolve(self):
         """Test parallel resolve (to avoid hanging)"""
 
+        np.random.seed(1)
         # This needs to work for different
         p = 10
         n = p * 10
@@ -118,14 +119,8 @@ class TestParallel(unittest.TestCase):
                 learner=PYTORCH)
         pytorch_general, pytorch_detail = m.performance(df_test, parallel=True)
 
-        # DEBUG. DEFINE OPTIMIZER AGAIn
-        #  mu = cp.Parameter(n, name='mu')
-        #  x = cp.Variable(n)
-        #  cost = - mu * x + gamma * cp.quad_form(x, Sigma)
-        #  constraints = [cp.sum(x) == 1, x >= 0]
-        #  m = mlopt.Optimizer(cp.Minimize(cost), constraints,
-        #                      name="portfolio")
-        #  m.train(theta_train, learner=mlopt.PYTORCH)
+        # Run parallel loop again to enforce instability
+        # in multiprocessing
         results_pytorch = m.performance(df_test)
 
         # Train again

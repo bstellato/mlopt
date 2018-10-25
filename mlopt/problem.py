@@ -1,4 +1,8 @@
 from multiprocessing import Pool, cpu_count
+import multiprocessing, logging
+logger = multiprocessing.log_to_stderr()
+logger.setLevel(multiprocessing.SUBDEBUG)
+from itertools import repeat
 import numpy as np
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
@@ -11,6 +15,16 @@ from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
 from tqdm import tqdm
 
+
+def populate_and_solve(args):
+    """Single function to populate the problem with
+       theta and solve it with the solver. Useful for
+       multiprocessing."""
+    problem, theta = args
+    problem.populate(theta)
+    results = problem.solve()
+
+    return results
 
 class Problem(object):
 
@@ -306,14 +320,14 @@ class Problem(object):
 
         return results
 
-    def populate_and_solve(self, theta):
-        """Single function to populate the problem with
-           theta and solve it with the solver. Useful for
-           multiprocessing."""
-        self.populate(theta)
-        results = self.solve()
-
-        return results
+    #  def populate_and_solve(self, theta):
+    #      """Single function to populate the problem with
+    #         theta and solve it with the solver. Useful for
+    #         multiprocessing."""
+    #      self.populate(theta)
+    #      results = self.solve()
+    #
+    #      return results
 
     def solve_parametric(self, theta,
                          parallel=True,  # Solve problems in parallel
@@ -337,22 +351,23 @@ class Problem(object):
             Results dictionary.
         """
         n = len(theta)  # Number of points
-        n_proc = cpu_count()
+        n_proc = min(n, cpu_count())
+        n_proc = 2
 
         if parallel:
             print("Solving for all theta (parallel %i processors)..." %
                   cpu_count())
             #  self.pbar = tqdm(total=n, desc=message + " (parallel)")
             #  with tqdm(total=n, desc=message + " (parallel)") as self.pbar:
-            pool = Pool(processes=min(n, n_proc))
+            pool = Pool(processes=n_proc)
             # Solve in parallel
             #  results = \
             #  pool.map(self.populate_and_solve,
             #  [theta.iloc[i, :] for i in range(n)])
             # Solve in parallel and print tqdm progress bar
-            results = list(tqdm(pool.imap(self.populate_and_solve,
-                                          [theta.iloc[i, :]
-                                           for i in range(n)]),
+            results = list(tqdm(pool.imap(populate_and_solve,
+                                          zip(repeat(self), [theta.iloc[i, :]
+                                           for i in range(n)])),
                                 total=n))
             pool.close()
             pool.join()
