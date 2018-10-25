@@ -377,6 +377,6 @@ class Problem(object):
             # Preallocate solutions
             results = []
             for i in tqdm(range(n), desc=message + " (serial)"):
-                results.append(self.populate_and_solve(theta.iloc[i, :]))
+                results.append(populate_and_solve((self, theta.iloc[i, :])))
 
         return results

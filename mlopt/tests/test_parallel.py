@@ -92,7 +92,7 @@ class TestParallel(unittest.TestCase):
 
         # Define optimizer
         m = Optimizer(cp.Minimize(cost), constraints,
-                      name="portfolio")
+                name="portfolio", mosek_params={'MSK_IPAR_INTPNT_MULTI_THREAD': 0})
 
         '''
         Sample points
