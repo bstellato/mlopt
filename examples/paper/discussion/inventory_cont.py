@@ -1,3 +1,8 @@
+# Necessary to add cwd to path when script run
+# by SLURM (since it executes a copy)
+import sys, os
+sys.path.append(os.getcwd())
+
 # Inventory example script
 import numpy as np
 import cvxpy as cp
@@ -71,12 +76,10 @@ theta_train = sample_inventory(theta_bar, radius, n=n_train)
 theta_test = sample_inventory(theta_bar, radius, n=n_test)
 
 # Train solver
-m.train(theta_train, learner=mlopt.OPTIMAL_TREE,
-        max_depth=2,
-        #  cp=0.1,
-        #  hyperplanes=True,
-        save_pdf=True)
-#  m.train(theta_train, learner=mlopt.PYTORCH)
+#  m.train(theta_train, learner=mlopt.OPTIMAL_TREE,
+#          max_depth=2,
+#          save_pdf=True)
+m.train(theta_train, learner=mlopt.PYTORCH)
 
 # Save solver
 m.save("output/optimal_tree_inv_cont", delete_existing=True)

@@ -1,7 +1,8 @@
+import os
 from multiprocessing import Pool, cpu_count
-import multiprocessing, logging
-logger = multiprocessing.log_to_stderr()
-logger.setLevel(multiprocessing.SUBDEBUG)
+#  import multiprocessing, logging
+#  logger = multiprocessing.log_to_stderr()
+#  logger.setLevel(multiprocessing.SUBDEBUG)
 from itertools import repeat
 import numpy as np
 from mlopt.strategy import Strategy
@@ -15,17 +16,16 @@ from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
 from tqdm import tqdm
 
-
-def populate_and_solve(args):
-    """Single function to populate the problem with
-       theta and solve it with the solver. Useful for
-       multiprocessing."""
-    problem, theta = args
-    problem.populate(theta)
-    results = problem.solve()
-
-    return results
-
+#  def populate_and_solve(args):
+#      """Single function to populate the problem with
+#         theta and solve it with the solver. Useful for
+#         multiprocessing."""
+#      problem, theta = args
+#      problem.populate(theta)
+#      results = problem.solve()
+#
+#      return results
+#
 
 class Problem(object):
 
@@ -321,14 +321,14 @@ class Problem(object):
 
         return results
 
-    #  def populate_and_solve(self, theta):
-    #      """Single function to populate the problem with
-    #         theta and solve it with the solver. Useful for
-    #         multiprocessing."""
-    #      self.populate(theta)
-    #      results = self.solve()
-    #
-    #      return results
+    def populate_and_solve(self, theta):
+        """Single function to populate the problem with
+           theta and solve it with the solver. Useful for
+           multiprocessing."""
+        self.populate(theta)
+        results = self.solve()
+
+        return results
 
     def solve_parametric(self, theta,
                          parallel=True,  # Solve problems in parallel
@@ -352,23 +352,38 @@ class Problem(object):
             Results dictionary.
         """
         n = len(theta)  # Number of points
-        n_proc = min(n, cpu_count())
-        n_proc = 2
+        #  with open('txt.txt', 'a') as f:
+        #      f.write(str(os.environ))
+        try:
+            n_cpus = int(os.environ["SLURM_CPUS_PER_NODE"])
+        except KeyError:
+            n_cpus = cpu_count()
+
+        # DEBUG: TODO: Remove!
+        #  n_cpus = 28
+        #  parallel = False
+        n_proc = min(n, n_cpus)
 
         if parallel:
             print("Solving for all theta (parallel %i processors)..." %
-                  cpu_count())
+                  n_proc)
             #  self.pbar = tqdm(total=n, desc=message + " (parallel)")
             #  with tqdm(total=n, desc=message + " (parallel)") as self.pbar:
             pool = Pool(processes=n_proc)
             # Solve in parallel
             #  results = \
-            #  pool.map(self.populate_and_solve,
-            #  [theta.iloc[i, :] for i in range(n)])
+            #      pool.map(populate_and_solve,
+            #               zip(repeat(self), [theta.iloc[i, :]
+            #                                  for i in range(n)]))
+            # SEPARATE FUNCTION
             # Solve in parallel and print tqdm progress bar
-            results = list(tqdm(pool.imap(populate_and_solve,
-                                          zip(repeat(self), [theta.iloc[i, :]
-                                                             for i in range(n)])),
+            #  results = list(tqdm(pool.imap(populate_and_solve,
+            #                                zip(repeat(self), [theta.iloc[i, :]
+            #                                                   for i in range(n)])),
+            #                      total=n))
+            results = list(tqdm(pool.imap(self.populate_and_solve,
+                                          [theta.iloc[i, :]
+                                           for i in range(n)]),
                                 total=n))
             pool.close()
             pool.join()
@@ -377,6 +392,7 @@ class Problem(object):
             # Preallocate solutions
             results = []
             for i in tqdm(range(n), desc=message + " (serial)"):
-                results.append(populate_and_solve((self, theta.iloc[i, :])))
+                #  results.append(populate_and_solve((self, theta.iloc[i, :])))
+                results.append(self.populate_and_solve(theta.iloc[i, :]))
 
         return results

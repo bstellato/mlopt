@@ -50,9 +50,9 @@ class PyTorchNeuralNet(Learner):
 
         # Unpack settings
         self.options = {}
-        self.options['learning_rate'] = options.pop('learning_rate', 0.001)
+        self.options['learning_rate'] = options.pop('learning_rate', 0.01)
         self.options['n_epochs'] = options.pop('n_epochs', 1000)
-        self.options['batch_size'] = options.pop('batch_size', 100)
+        self.options['batch_size'] = options.pop('batch_size', 32)
         self.n_input = options.pop('n_input')
         self.n_classes = options.pop('n_classes')
         # Pick minimum between n_best and n_classes
@@ -75,8 +75,12 @@ class PyTorchNeuralNet(Learner):
         self.criterion = nn.CrossEntropyLoss()
 
         # Define optimizer
-        self.optimizer = optim.Adam(self.net.parameters(),
-                                    lr=self.options['learning_rate'])
+        #  self.optimizer = optim.Adam(self.net.parameters(),
+                                    #  lr=self.options['learning_rate'])
+        self.optimizer = torch.optim.SGD(self.net.parameters(),
+                                         lr=self.options['learning_rate'],
+                                         momentum = 0.9)
+
 
     def train(self, X, y):
         """
@@ -131,12 +135,12 @@ class PyTorchNeuralNet(Learner):
 
         # Convert pandas df to array (unroll tuples)
         X = torch.tensor(pandas2array(X), dtype=torch.float)
-        X.to(self.device)
+        X = X.to(self.device)
 
         # Evaluate probabilities
         # TODO: Required? Maybe we do not need softmax
         y = F.softmax(self.net(X),
-                      dim=1).detach().numpy()
+                      dim=1).detach().cpu().numpy()
 
         return self.pick_best_probabilities(y)
 

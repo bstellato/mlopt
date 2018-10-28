@@ -2,20 +2,26 @@ import numpy as np
 import scipy.sparse as spa
 import cvxpy as cp
 import pandas as pd
+
+# Needed for slurm
 import os
+import sys
+sys.path.append(os.getcwd())
+
 import mlopt
 from mlopt.sampling import uniform_sphere_sample
 np.random.seed(1)
 
 
 # Define loop to train
-#  p_vec = np.array([10, 20, 30])
-p_vec = np.array([10, 20])
+p_vec = np.array([10, 20, 30])
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
 # Output folder
-output_folder = "output/portfolio"
+output_folder = "output/portfolio_gpu"
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
 
 
 # Function to sample points
@@ -68,7 +74,7 @@ for p in p_vec:
     '''
 
     # Training and testing data
-    n_train = 1000
+    n_train = 10000
     n_test = 100
     theta_train = sample_portfolio(theta_bar, radius, n=n_train)
     theta_test = sample_portfolio(theta_bar, radius, n=n_test)
@@ -98,22 +104,22 @@ for p in p_vec:
     #  results_pytorch = m.performance(theta_test)
 
     #  Train and test using optimal trees
-    m.train(theta_train,
-            parallel=True,
-            learner=mlopt.OPTIMAL_TREE,
-            max_depth=10,
-            #  cp=0.1,
-            #  hyperplanes=True,
-            save_pdf=True)
-    m.save(os.path.join(output_folder, "optimaltrees_portfolio_%d" % p),
-           delete_existing=True)
-    optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
-                                                              parallel=True)
-    add_details(optimaltrees_general, n=n, p=p)
-    add_details(optimaltrees_detail, n=n, p=p)
-    results_general = results_general.append(optimaltrees_general)
-    results_detail = results_detail.append(optimaltrees_detail)
-
+    #  m.train(theta_train,
+    #          parallel=True,
+    #          learner=mlopt.OPTIMAL_TREE,
+    #          max_depth=10,
+    #          #  cp=0.1,
+    #          #  hyperplanes=True,
+    #          save_pdf=True)
+    #  m.save(os.path.join(output_folder, "optimaltrees_portfolio_%d" % p),
+    #         delete_existing=True)
+    #  optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
+    #                                                            parallel=True)
+    #  add_details(optimaltrees_general, n=n, p=p)
+    #  add_details(optimaltrees_detail, n=n, p=p)
+    #  results_general = results_general.append(optimaltrees_general)
+    #  results_detail = results_detail.append(optimaltrees_detail)
+    #
 
 # Create cumulative results
 results_general.to_csv(os.path.join(output_folder,
