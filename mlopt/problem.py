@@ -3,7 +3,7 @@ from multiprocessing import Pool, cpu_count
 #  import multiprocessing, logging
 #  logger = multiprocessing.log_to_stderr()
 #  logger.setLevel(multiprocessing.SUBDEBUG)
-from itertools import repeat
+#  from itertools import repeat
 import numpy as np
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
@@ -26,6 +26,7 @@ from tqdm import tqdm
 #
 #      return results
 #
+
 
 class Problem(object):
 
@@ -121,7 +122,7 @@ class Problem(object):
         violations = np.concatenate([np.atleast_1d(c.violation())
                                      for c in self.constraints])
 
-        return np.linalg.norm(violations)
+        return np.linalg.norm(violations, np.inf)
 
     def _solve(self, problem):
         """

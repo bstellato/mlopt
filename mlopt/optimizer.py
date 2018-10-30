@@ -3,7 +3,7 @@ from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
-from mlopt.utils import n_features, accuracy
+from mlopt.utils import n_features, accuracy, suboptimality
 import pandas as pd
 import numpy as np
 import os
@@ -43,6 +43,8 @@ class Optimizer(object):
         self.name = name
         self._learner = None
         self.encoding = None
+        self.X_train = None
+        self.y_train = None
 
     @property
     def n_parameters(self):
@@ -61,6 +63,73 @@ class Optimizer(object):
         # TODO: CONTINUE FROM HERE
         # Move X_train and y_train computation here.
 
+
+    def save_data(self, file_name, delete_existing=False):
+        """
+        Save data points to file.
+
+
+        Avoids the need to recompute data.
+
+        Parameters
+        ----------
+        file_name : string
+            File name of the compressed optimizer.
+        delete_existing : bool, optional
+            Delete existing file with the same name?
+            Defaults to False.
+        """
+        # Check if file already exists
+        if os.path.isfile(file_name):
+            if not delete_existing:
+                p = None
+                while p not in ['y', 'n', 'N', '']:
+                    p = input("File %s already exists. " % file_name +
+                              "Would you like to delete it? [y/N] ")
+                if p == 'y':
+                    os.remove(file_name)
+                else:
+                    return
+            else:
+                os.remove(file_name)
+
+        if (self.X_train is None) or \
+            (self.y_train is None) or \
+                (self.encoding is None):
+            raise ValueError("You need to get the strategies " +
+                             "from the data first by training the model.")
+
+        # Save to file
+        with open(file_name, 'wb') \
+                as data:
+            data_dict = {'X_train': self.X_train,
+                         'y_train': self.y_train,
+                         'encoding': self.encoding}
+            pkl.dump(data_dict, data)
+
+    def load_data(self, file_name):
+        """
+        Load pickled data from file name.
+
+        Parameters
+        ----------
+        file_name : string
+            File name of the data.
+        """
+
+        # Check if file exists
+        if not os.path.isfile(file_name):
+            raise ValueError("File %s does not exist." % file_name)
+
+        # Load optimizer
+        with open(file_name, "rb") as f:
+            data_dict = pkl.load(f)
+
+        # Store data internally
+        self.X_train = data_dict['X_train']
+        self.y_train = data_dict['y_train']
+        self.encoding = data_dict['encoding']
+
     def train(self, X=None, sampling_fn=None,
               parallel=True,
               learner=DEFAULT_LEARNER,
@@ -76,7 +145,7 @@ class Optimizer(object):
         ----------
         X : pandas dataframe or numpy array, optional
             Data samples. Each row is a new sample points.
-        sampling_fn : function
+        sampling_fn : function, optional
             Function to sample data taking one argument being
             the number of data points to be sampled and returning
             a structure of the same type as X.
@@ -205,7 +274,6 @@ class Optimizer(object):
             Delete existing file with the same name?
             Defaults to False.
         """
-
         if self._learner is None:
             raise ValueError("You cannot save the optimizer without " +
                              "training it before.")
@@ -236,15 +304,15 @@ class Optimizer(object):
             self._learner.save(os.path.join(tmpdir, "learner"))
 
             # Save optimizer
-            optimizer = open(os.path.join(tmpdir, "optimizer.pkl"), 'wb')
-            file_dict = {'name': self.name,
-                         'learner_name': self._learner.name,
-                         'learner_options': self._learner.options,
-                         'encoding': self.encoding,
-                         'objective': self._problem.objective,
-                         'constraints': self._problem.constraints}
-            pkl.dump(file_dict, optimizer)
-            optimizer.close()
+            with open(os.path.join(tmpdir, "optimizer.pkl"), 'wb') \
+                    as optimizer:
+                file_dict = {'name': self.name,
+                             'learner_name': self._learner.name,
+                             'learner_options': self._learner.options,
+                             'encoding': self.encoding,
+                             'objective': self._problem.objective,
+                             'constraints': self._problem.constraints}
+                pkl.dump(file_dict, optimizer)
 
             # Create archive with the files
             tar = tarfile.open(file_name, "w:gz")
@@ -331,7 +399,7 @@ class Optimizer(object):
                                                       "tight constraints " +
                                                       "for test set")
         time_test = [r['time'] for r in results_test]
-        strategy_test = [r['strategy'] for r in results_test]
+        #  strategy_test = [r['strategy'] for r in results_test]
         cost_test = [r['cost'] for r in results_test]
 
         # Get predicted strategy for each point
@@ -339,7 +407,7 @@ class Optimizer(object):
                                   message="Predict tight constraints for " +
                                   "test set")
         time_pred = [r['time'] for r in results_pred]
-        strategy_pred = [r['strategy'] for r in results_pred]
+        #  strategy_pred = [r['strategy'] for r in results_pred]
         cost_pred = [r['cost'] for r in results_pred]
         infeas = np.array([r['infeasibility'] for r in results_pred])
 
@@ -351,11 +419,11 @@ class Optimizer(object):
         # Compute comparative statistics
         time_comp = np.array([(1 - time_pred[i] / time_test[i])
                               for i in range(n_test)])
-        subopt = np.array([(cost_pred[i] - cost_test[i])/(np.abs(cost_test[i]) + 1e-10)
+        subopt = np.array([suboptimality(cost_pred[i], cost_test[i])
                            for i in range(n_test)])
 
         # accuracy
-        test_accuracy, idx_correct = accuracy(strategy_pred, strategy_test)
+        test_accuracy, idx_correct = accuracy(results_pred, results_test)
 
         # Create dataframes to return
         df = pd.DataFrame(
@@ -368,17 +436,17 @@ class Optimizer(object):
                 "n_test": [n_test],
                 "n_train": [n_train],
                 "n_theta": [n_theta],
-                "n_corect": [np.sum(idx_correct)],
+                "n_correct": [np.sum(idx_correct)],
                 "n_strategies": [n_strategies],
-                "accuracy": [test_accuracy],
+                "accuracy": [100 * test_accuracy],
                 "n_infeas": [np.sum(infeas >= INFEAS_TOL)],
                 "avg_infeas": [np.mean(infeas)],
                 "avg_subopt": [np.mean(subopt[np.where(infeas <=
                                                        INFEAS_TOL)[0]])],
                 "max_infeas": [np.max(infeas)],
                 "max_subopt": [np.max(subopt)],
-                "avg_time_improv": [np.mean(time_comp)],
-                "max_time_improv": [np.max(time_comp)],
+                "avg_time_improv": [100 * np.mean(time_comp)],
+                "max_time_improv": [100 * np.max(time_comp)],
             }
         )
         # Add radius info if problem has it.

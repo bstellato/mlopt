@@ -5,7 +5,7 @@
 #SBATCH --mem-per-cpu=4G
 #SBATCH --partition=sched_mit_sloan_batch
 #SBATCH --time=0-24:00
-#SBATCH -o /home/stellato/projects/mlopt/output/output_$j.txt
+#SBATCH -o /home/stellato/projects/mlopt/output/output_%j.txt
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 

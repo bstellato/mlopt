@@ -1,4 +1,5 @@
 import numpy as np
+from mlopt.settings import INFEAS_TOL, SUBOPT_TOL
 #  import scipy.io as spio
 #  import cvxpy as cp
 #  import scipy.sparse as spa
@@ -61,16 +62,21 @@ def pandas2array(X):
     return X_new
 
 
-def accuracy(strategy_pred, strategy_test):
+def suboptimality(cost_pred, cost_test):
+    """Compute suboptimality"""
+    return (cost_pred - cost_test)/(np.abs(cost_test) + 1e-10)
+
+
+def accuracy(results_pred, results_test):
     """
-    Accuracy comparison between predicted and test strategies
+    Accuracy comparison between predicted and test results.
 
     Parameters
     ----------
-    strategy_pred : Strategy list
-        List of predicted strategies.
-    strategy_pred : Strategy list
-        List of test strategies.
+    results_red : dictionary of predict results.
+        List of predicted results.
+    results_test : dictionary of test results.
+        List of test results.
 
     Returns
     -------
@@ -78,15 +84,30 @@ def accuracy(strategy_pred, strategy_test):
         Fraction of correct over total strategies compared.
     numpy array:
         Boolean vector indicating which strategy is correct.
+    numpy array:
+        Boolean vector indicating which strategy is exact.
     """
-    assert len(strategy_pred) == len(strategy_test)
-    n_total = len(strategy_pred)
-    idx_correct = np.zeros(n_total, dtype=int)
-    for i in range(n_total):
-        if strategy_pred[i] == strategy_test[i]:
-            idx_correct[i] = 1
 
-    return np.sum(idx_correct) / n_total, idx_correct
+    # Assert correctness by compariing solution cost and infeasibility
+    n_points = len(results_pred)
+    assert n_points == len(results_test)
+
+    idx_correct = np.zeros(n_points, dtype=int)
+    for i in range(n_points):
+        r_pred = results_pred[i]
+        r_test = results_test[i]
+        # Check if prediction is correct
+        if r_pred['strategy'] == r_test['strategy']:
+            idx_correct[i] = 1
+        else:
+            # Check feasibility
+            if r_pred['infeasibility'] <= INFEAS_TOL:
+                # Check cost function value
+                subopt = suboptimality(r_pred['cost'], r_test['cost'])
+                if subopt <= SUBOPT_TOL:
+                    idx_correct[i] = 1
+
+    return np.sum(idx_correct) / n_points, idx_correct
 
 
 # TODO: Fix creation from matlab file

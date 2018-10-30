@@ -50,7 +50,7 @@ class PyTorchNeuralNet(Learner):
 
         # Unpack settings
         self.options = {}
-        self.options['learning_rate'] = options.pop('learning_rate', 0.01)
+        self.options['learning_rate'] = options.pop('learning_rate', 0.001)
         self.options['n_epochs'] = options.pop('n_epochs', 1000)
         self.options['batch_size'] = options.pop('batch_size', 32)
         self.n_input = options.pop('n_input')
@@ -75,11 +75,11 @@ class PyTorchNeuralNet(Learner):
         self.criterion = nn.CrossEntropyLoss()
 
         # Define optimizer
-        #  self.optimizer = optim.Adam(self.net.parameters(),
-                                    #  lr=self.options['learning_rate'])
-        self.optimizer = torch.optim.SGD(self.net.parameters(),
-                                         lr=self.options['learning_rate'],
-                                         momentum = 0.9)
+        self.optimizer = optim.Adam(self.net.parameters(),
+                                    lr=self.options['learning_rate'])
+        #  self.optimizer = torch.optim.SGD(self.net.parameters(),
+                                         #  lr=self.options['learning_rate'],
+                                         #  momentum = 0.9)
 
 
     def train(self, X, y):

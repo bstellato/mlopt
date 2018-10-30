@@ -1,9 +1,11 @@
 from mlopt.learners.learner import Learner
 from mlopt.settings import N_BEST, OPTIMAL_TREE
 from mlopt.utils import pandas2array
+import multiprocessing
 import shutil
 from subprocess import call
 from warnings import warn
+import time
 import os
 
 
@@ -25,10 +27,26 @@ class OptimalTree(Learner):
         # Load Julia
         import julia
         self.jl = julia.Julia()
+        # Check if we are running on a multi-core machine
+        try:
+            n_cpus = int(os.environ["SLURM_CPUS_PER_TASK"])
+        except KeyError:
+            n_cpus = multiprocessing.cpu_count()
+
+        n_cur_procs = self.jl.eval("using Distributed; nprocs()")
+        if n_cur_procs < n_cpus:
+            # Add processors to match number of cpus
+            self.jl.eval("addprocs(%d)" % (n_cpus - n_cur_procs))
+
         # Add crypto library to path to check OptimalTrees license
-        self.jl.eval("push!(Base.DL_LOAD_PATH, " +
-                     "joinpath(dirname(Base.find_package(\"MbedTLS\")), " +
-                     "\"../deps/usr\", Sys.iswindows() ? \"bin\" : \"lib\"))")
+        path_string = "push!(Base.DL_LOAD_PATH, " + \
+                      "joinpath(dirname(Base.find_package(\"MbedTLS\")), " + \
+                      "\"../deps/usr\", Sys.iswindows() ? \"bin\" : \"lib\"))"
+        #  if n_cpus > 1:
+        #      # Add @everywhere if we are on a multiprocess machine
+        #      # It seems necessary only on OSX
+        #      path_string = "@everywhere " + path_string
+        self.jl.eval(path_string)
         # Reset random seed for repeatability
         self.jl.eval("using Random; Random.seed!(1)")
         # Define functions needed
@@ -78,11 +96,20 @@ class OptimalTree(Learner):
         self.n_train = len(X)
         X = pandas2array(X)
 
+        print("Training trees on %d processors" % self.jl.eval("nprocs()"))
+
+        # Start time
+        start_time = time.time()
+
         # Create classifier
         self._lnr = self._create_classifier(**self.optimaltrees_options)
 
         # Train classifier
         self._fit(self._lnr, X, y)
+
+        # End time
+        end_time = time.time()
+        print("Elapsed time %.2f" % (end_time - start_time))
 
     def predict(self, X):
 
@@ -109,7 +136,7 @@ class OptimalTree(Learner):
         if self.options['save_pdf']:
             if shutil.which("dot") is not None:
                 self._writedot(file_name + ".dot", self._lnr)
-                call(["dot", "-Tpdf", "-o",
+                call(["dot", "-Tsvg", "-o",
                       file_name + ".pdf",
                       file_name + ".dot"])
             else:
