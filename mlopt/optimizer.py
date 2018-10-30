@@ -104,6 +104,7 @@ class Optimizer(object):
                 as data:
             data_dict = {'X_train': self.X_train,
                          'y_train': self.y_train,
+                         'problem': self._problem,
                          'encoding': self.encoding}
             pkl.dump(data_dict, data)
 
@@ -128,6 +129,7 @@ class Optimizer(object):
         # Store data internally
         self.X_train = data_dict['X_train']
         self.y_train = data_dict['y_train']
+        self._problem = data_dict['problem']
         self.encoding = data_dict['encoding']
 
     def train(self, X=None, sampling_fn=None,
