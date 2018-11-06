@@ -1,17 +1,18 @@
-import numpy as np
-import scipy.sparse as spa
-import cvxpy as cp
-import pandas as pd
-
 # Needed for slurm
 import os
 import sys
 sys.path.append(os.getcwd())
 
-import mlopt
 from mlopt.sampling import uniform_sphere_sample
-np.random.seed(1)
+import mlopt
+import numpy as np
+import scipy.sparse as spa
+import cvxpy as cp
+import pandas as pd
 
+
+
+np.random.seed(1)
 
 # Define loop to train
 p_vec = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
@@ -93,7 +94,8 @@ for p in p_vec:
     m.train(theta_train,
             parallel=True,
             learner=mlopt.PYTORCH)
-    m.save(os.path.join(output_folder, "pytorch_portfolio_p%d_n%d" % (p, n_train)),
+    m.save(os.path.join(output_folder,
+                        "pytorch_portfolio_p%d_n%d" % (p, n_train)),
            delete_existing=True)
     pytorch_general, pytorch_detail = m.performance(theta_test, parallel=True)
 
@@ -107,7 +109,7 @@ for p in p_vec:
     m.train(theta_train,
             parallel=True,
             learner=mlopt.OPTIMAL_TREE,
-            hyperplanes=True,
+            hyperplanes=False,
             max_depth=15,
             save_pdf=True)
     m.save(os.path.join(output_folder, "optimaltrees_portfolio_p%d_n%d" % (p, n_train)),

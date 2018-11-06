@@ -91,6 +91,7 @@ class TestParallel(unittest.TestCase):
         constraints = [cp.sum(x) == 1, x >= 0]
 
         # Define optimizer
+        # Force mosek to be single threaded
         m = Optimizer(cp.Minimize(cost), constraints,
                 name="portfolio", mosek_params={'MSK_IPAR_INTPNT_MULTI_THREAD': 0})
 
