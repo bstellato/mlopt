@@ -63,7 +63,6 @@ class Optimizer(object):
         # TODO: CONTINUE FROM HERE
         # Move X_train and y_train computation here.
 
-
     def save_data(self, file_name, delete_existing=False):
         """
         Save data points to file.

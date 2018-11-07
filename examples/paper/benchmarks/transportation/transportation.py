@@ -3,6 +3,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 
+# Standard imports
 from mlopt.sampling import uniform_sphere_sample
 import mlopt
 import numpy as np
@@ -11,17 +12,23 @@ import cvxpy as cp
 import pandas as pd
 
 
-
 np.random.seed(1)
 
-# Define loop to train
-p_vec = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
-#  p_vec = np.array([10, 20])
+# Define data
+n_vec = np.array([], dtype=int)
+m_vec = np.array([], dtype=int)
+for i in np.arange(100, 600, 100):
+    n_vec = np.append(n_vec, [i] * 3)
+    m_vec = np.append(m_vec, [i, int(i/2), 2 * i])
+n_train = 10000
+n_test = 100
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
+name = "transportation"
+
 # Output folder
-output_folder = "output/portfolio_gpu"
+output_folder = "output/" + name
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
@@ -32,58 +39,68 @@ def sample(theta_bar, radius, n=100):
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, radius, n=n)
 
-    df = pd.DataFrame({'mu': X.tolist()})
+    df = pd.DataFrame({'d': X.tolist()})
 
     return df
 
 
-def add_details(df, p=None, n=None):
+def add_details(df, n=None, m=None):
     len_df = len(df)
 
     df['n'] = [n] * len_df
-    df['p'] = [p] * len_df
+    df['m'] = [m] * len_df
 
 
-for p in p_vec:
+# Main script
+for i in range(len(n_vec)):
     '''
-    Define Sparse Regression problem
+    Define Transportation problem
     '''
-    # This needs to work for different
-    n = p * 10
-    F = spa.random(n, p, density=0.5,
-                   data_rvs=np.random.randn, format='csc')
-    D = spa.diags(np.random.rand(n) *
-                  np.sqrt(p), format='csc')
-    Sigma = (F.dot(F.T) + D).todense()   # TODO: Add Constant(Sigma)?
-    gamma = 1.0
-    mu = cp.Parameter(n, name='mu')
-    x = cp.Variable(n)
-    cost = - mu * x + gamma * cp.quad_form(x, Sigma)
-    constraints = [cp.sum(x) == 1, x >= 0]
+    n_dim = n_vec[i]
+    m_dim = m_vec[i]
+
+    # Define transportation cost
+    c = [5 * np.random.rand(m_dim)
+         for _ in range(n_dim)]  # c_i for each warehouse
+    s = 10 * np.random.rand(n_dim)  # Supply for each warehouse (scalar)
+
+    # Variables
+    x = [cp.Variable(m_dim) for _ in range(n_dim)]  # x_i for each earehouse
+
+    # Parameters
+    d = cp.Parameter(m_dim, name='d')
+
+    # Constraints
+    constraints = [cp.sum(x[i]) <= s[i] for i in range(n_dim)]
+    constraints += [cp.sum(x) >= d]
+    constraints += [x[i] >= 0 for i in range(n_dim)]
+
+    # Objective
+    cost = 0
+    for i in range(n_dim):
+        cost += c[i] * x[i]
 
     # Define optimizer
     m = mlopt.Optimizer(cp.Minimize(cost), constraints,
-                        name="portfolio")
+                        name=name)
 
     '''
     Sample points
     '''
-    theta_bar = np.random.randn(n)
-    radius = 0.3
+    theta_bar = 10 * np.random.rand(m_dim)
+    radius = 0.2
 
     '''
     Train and solve
     '''
 
     # Training and testing data
-    n_train = 10000
-    n_test = 100
     theta_train = sample(theta_bar, radius, n=n_train)
     theta_test = sample(theta_bar, radius, n=n_test)
 
     # Train and test using pytorch
     data_file = os.path.join(output_folder,
-                             "portfolio_p%d_n%d_data.pkl" % (p, n_train))
+                             name + "_n%d_m%d_data.pkl" % (n_dim, m_dim))
 
     # Loading data points
     if os.path.isfile(data_file):
@@ -95,13 +112,13 @@ for p in p_vec:
             parallel=True,
             learner=mlopt.PYTORCH)
     m.save(os.path.join(output_folder,
-                        "pytorch_portfolio_p%d_n%d" % (p, n_train)),
+                        "pytorch_" + name + "_n%d_m%d" % (n_dim, m_dim)),
            delete_existing=True)
     pytorch_general, pytorch_detail = m.performance(theta_test, parallel=True)
 
     # Fix dataframe by adding elements
-    add_details(pytorch_general, n=n, p=p)
-    add_details(pytorch_detail, n=n, p=p)
+    add_details(pytorch_general, n=n_dim, m=m_dim)
+    add_details(pytorch_detail, n=n_dim, m=m_dim)
     results_general = results_general.append(pytorch_general)
     results_detail = results_detail.append(pytorch_detail)
 
@@ -112,12 +129,13 @@ for p in p_vec:
             hyperplanes=False,
             max_depth=15,
             save_pdf=True)
-    m.save(os.path.join(output_folder, "optimaltrees_portfolio_p%d_n%d" % (p, n_train)),
+    m.save(os.path.join(output_folder,
+                        "optimaltrees_" + name + "_n%d_m%d" % (n_dim, m_dim)),
            delete_existing=True)
     optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
                                                               parallel=True)
-    add_details(optimaltrees_general, n=n, p=p)
-    add_details(optimaltrees_detail, n=n, p=p)
+    add_details(optimaltrees_general, n=n_dim, m=m_dim)
+    add_details(optimaltrees_detail, n=n_dim, m=m_dim)
     results_general = results_general.append(optimaltrees_general)
     results_detail = results_detail.append(optimaltrees_detail)
 
@@ -128,6 +146,6 @@ for p in p_vec:
 
     # Store cumulative results at each iteration
     results_general.to_csv(os.path.join(output_folder,
-                                        "portfolio_cont_general.csv"))
+                                        name + "_general.csv"))
     results_detail.to_csv(os.path.join(output_folder,
-                                       "portfolio_cont_detail.csv"))
+                                       name + "_detail.csv"))

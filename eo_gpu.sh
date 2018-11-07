@@ -14,4 +14,5 @@
 source activate python36
 
 # Include script
-python examples/paper/portfolio/portfolio_cont.py
+# python examples/paper/benchmarks/portfolio/portfolio_cont.py
+python examples/paper/benchmarks/transportation/transportation.py
