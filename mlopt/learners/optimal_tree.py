@@ -7,6 +7,7 @@ from subprocess import call
 from warnings import warn
 import time
 import os
+import sys
 
 
 class OptimalTree(Learner):
@@ -24,6 +25,19 @@ class OptimalTree(Learner):
         # Define name
         self.name = OPTIMAL_TREE
 
+        # Assign settings
+        self.n_input = options.pop('n_input')
+        self.n_classes = options.pop('n_classes')
+        self.options = {}
+        self.options['hyperplanes'] = options.pop('hyperplanes', False)
+        self.options['parallel'] = options.pop('parallel', False)
+        self.options['cp'] = options.pop('cp', None)
+        self.options['max_depth'] = options.pop('max_depth', 10)
+        # Pick minimum between n_best and n_classes
+        self.options['n_best'] = min(options.pop('n_best', N_BEST),
+                                     self.n_classes)
+        self.options['save_pdf'] = options.pop('save_pdf', False)
+
         # Load Julia
         import julia
         self.jl = julia.Julia()
@@ -34,7 +48,7 @@ class OptimalTree(Learner):
             n_cpus = multiprocessing.cpu_count()
 
         n_cur_procs = self.jl.eval("using Distributed; nprocs()")
-        if n_cur_procs < n_cpus:
+        if n_cur_procs < n_cpus and self.options['parallel']:
             # Add processors to match number of cpus
             self.jl.eval("addprocs(%d)" % (n_cpus - n_cur_procs))
 
@@ -42,10 +56,11 @@ class OptimalTree(Learner):
         path_string = "push!(Base.DL_LOAD_PATH, " + \
                       "joinpath(dirname(Base.find_package(\"MbedTLS\")), " + \
                       "\"../deps/usr\", Sys.iswindows() ? \"bin\" : \"lib\"))"
-        #  if n_cpus > 1:
-        #      # Add @everywhere if we are on a multiprocess machine
-        #      # It seems necessary only on OSX
-        #      path_string = "@everywhere " + path_string
+        if n_cpus > 1 and sys.platform == 'darwin' and \
+                self.options['parallel']:
+            # Add @everywhere if we are on a multiprocess machine
+            # It seems necessary only on OSX
+            path_string = "@everywhere " + path_string
         self.jl.eval(path_string)
         # Reset random seed for repeatability
         self.jl.eval("using Random; Random.seed!(1)")
@@ -63,17 +78,7 @@ class OptimalTree(Learner):
         # to preserve consistency
         self._close = self.jl.eval("close")
 
-        # Assign settings
-        self.n_input = options.pop('n_input')
-        self.n_classes = options.pop('n_classes')
-        self.options = {}
-        self.options['hyperplanes'] = options.pop('hyperplanes', False)
-        self.options['cp'] = options.pop('cp', None)
-        self.options['max_depth'] = options.pop('max_depth', 10)
-        # Pick minimum between n_best and n_classes
-        self.options['n_best'] = min(options.pop('n_best', N_BEST),
-                                     self.n_classes)
-        self.options['save_pdf'] = options.pop('save_pdf', False)
+        # Assign optimaltrees options
         self.optimaltrees_options = {}
         self.optimaltrees_options['max_depth'] = self.options['max_depth']
         if self.options['hyperplanes']:
@@ -96,7 +101,11 @@ class OptimalTree(Learner):
         self.n_train = len(X)
         X = pandas2array(X)
 
-        print("Training trees on %d processors" % self.jl.eval("nprocs()"))
+        print("Training trees ", end='')
+        if self.options['parallel']:
+            print("on %d processors" % self.jl.eval("nprocs()"))
+        else:
+            print("")
 
         # Start time
         start_time = time.time()
@@ -137,7 +146,7 @@ class OptimalTree(Learner):
             if shutil.which("dot") is not None:
                 self._writedot(file_name + ".dot", self._lnr)
                 call(["dot", "-Tsvg", "-o",
-                      file_name + ".pdf",
+                      file_name + ".svg",
                       file_name + ".dot"])
             else:
                 warn("dot command not found in path")
