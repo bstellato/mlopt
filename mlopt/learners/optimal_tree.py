@@ -30,7 +30,7 @@ class OptimalTree(Learner):
         self.n_classes = options.pop('n_classes')
         self.options = {}
         self.options['hyperplanes'] = options.pop('hyperplanes', False)
-        self.options['parallel'] = options.pop('parallel', False)
+        self.options['parallel'] = options.pop('parallel_trees', False)
         self.options['cp'] = options.pop('cp', None)
         self.options['max_depth'] = options.pop('max_depth', 10)
         # Pick minimum between n_best and n_classes
