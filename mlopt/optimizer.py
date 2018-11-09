@@ -4,6 +4,7 @@ from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy, suboptimality
+import cvxpy.settings as cps
 import pandas as pd
 import numpy as np
 import os
@@ -173,6 +174,13 @@ class Optimizer(object):
                                                      "tight constraints " +
                                                      "for training set")
             train_strategies = [r['strategy'] for r in results]
+
+            # Check if the problems are solvable
+            for r in results:
+                assert r['status'] in cps.SOLUTION_PRESENT, \
+                    "The training points must be feasible"
+
+            # Encode strategies
             self.y_train, self.encoding = encode_strategies(train_strategies)
 
         # Define learner

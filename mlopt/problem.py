@@ -4,6 +4,7 @@ from multiprocessing import Pool, cpu_count
 #  logger = multiprocessing.log_to_stderr()
 #  logger.setLevel(multiprocessing.SUBDEBUG)
 #  from itertools import repeat
+from warnings import warn
 import numpy as np
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
@@ -137,8 +138,9 @@ class Problem(object):
         results['x'] = np.concatenate([np.atleast_1d(v.value)
                                        for v in problem.variables()])
         results['cost'] = np.inf
+        results['status'] = problem.status
 
-        if problem.status in cp.settings.SOLUTION_PRESENT:
+        if results['status'] in cp.settings.SOLUTION_PRESENT:
             results['cost'] = self.cost()
             results['infeasibility'] = self.infeasibility()
             tight_constraints = dict()
@@ -284,7 +286,10 @@ class Problem(object):
         # Get only constraints in strategy
         constraints = []
         for con in orig_constraints:
-            idx_tight = np.where(tight_constraints[con.id])[0]
+            try:
+                idx_tight = np.where(tight_constraints[con.id])[0]
+            except KeyError:
+                import ipdb; ipdb.set_trace()
             if len(idx_tight) > 0:
                 # Tight constraints in expression
                 con_expr = con.args[0]
