@@ -17,13 +17,18 @@ np.random.seed(1)
 # Define data
 n_vec = np.array([], dtype=int)
 m_vec = np.array([], dtype=int)
-for i in np.arange(100, 600, 100):
+for i in np.arange(10, 100, 100):
     n_vec = np.append(n_vec, [i] * 3)
     m_vec = np.append(m_vec, [i, int(i/2), 2 * i])
 n_train = 10000
 n_test = 100
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
+
+
+# DEBUG
+#  n_vec = n_vec[2:]
+#  m_vec = m_vec[2:]
 
 name = "transportation"
 
@@ -62,7 +67,8 @@ for i in range(len(n_vec)):
     # Define transportation cost
     c = [5 * np.random.rand(m_dim)
          for _ in range(n_dim)]  # c_i for each warehouse
-    s = 10 * np.random.rand(n_dim)  # Supply for each warehouse (scalar)
+    # Supply for each warehouse (scalar)
+    s = 2 * np.ones(n_dim) + 10 * np.random.rand(n_dim)
 
     # Variables
     x = [cp.Variable(m_dim) for _ in range(n_dim)]  # x_i for each earehouse
@@ -87,8 +93,8 @@ for i in range(len(n_vec)):
     '''
     Sample points
     '''
-    theta_bar = 10 * np.random.rand(m_dim)
-    radius = 0.2
+    theta_bar = 5 * np.ones(m_dim) + np.random.randn(m_dim)
+    radius = 0.25
 
     '''
     Train and solve
@@ -114,7 +120,7 @@ for i in range(len(n_vec)):
     m.save(os.path.join(output_folder,
                         "pytorch_" + name + "_n%d_m%d" % (n_dim, m_dim)),
            delete_existing=True)
-    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=True)
+    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=False)
 
     # Fix dataframe by adding elements
     add_details(pytorch_general, n=n_dim, m=m_dim)
