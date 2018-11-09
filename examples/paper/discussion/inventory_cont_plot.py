@@ -52,7 +52,7 @@ Sample points
 '''
 # Average request
 theta_bar = 2 * np.ones(T)
-radius = 1.5
+radius = 1
 
 
 def sample_inventory(theta_bar, radius, n=100):
@@ -112,3 +112,11 @@ ax[1].set_ylabel('u')
 ax[2].step(t, theta_plot['d'][0], where="post")
 ax[2].set_ylabel('d')
 plt.show(block=False)
+
+
+# Store values for plotting
+df_plot = pd.DataFrame({'t': t,
+                        'x': x.value[:-1],
+                        'u': u.value,
+                        'd': theta_plot['d'][0]})
+df_plot.to_csv(output + "inventory_plot.csv")
