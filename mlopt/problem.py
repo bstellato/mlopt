@@ -223,6 +223,7 @@ class Problem(object):
         return_dict['cost'] = results['cost']
         return_dict['infeasibility'] = results['infeasibility']
         return_dict['strategy'] = strategy
+        return_dict['status'] = results['status']
 
         return return_dict
 
