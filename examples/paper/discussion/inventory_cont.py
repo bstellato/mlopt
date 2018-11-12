@@ -80,7 +80,7 @@ m.train(theta_train,
         learner=mlopt.OPTIMAL_TREE,
         max_depth=2,
         parallel=False,
-        save_pdf=True)
+        save_svg=True)
 #  m.train(theta_train, learner=mlopt.PYTORCH)
 
 # Save solver

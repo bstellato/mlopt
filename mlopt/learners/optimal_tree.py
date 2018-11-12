@@ -36,7 +36,7 @@ class OptimalTree(Learner):
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', N_BEST),
                                      self.n_classes)
-        self.options['save_pdf'] = options.pop('save_pdf', False)
+        self.options['save_svg'] = options.pop('save_svg', False)
 
         # Load Julia
         import julia
@@ -142,7 +142,7 @@ class OptimalTree(Learner):
 
         # Save tree to dot file and convert it to
         # pdf for visualization purposes
-        if self.options['save_pdf']:
+        if self.options['save_svg']:
             if shutil.which("dot") is not None:
                 self._writedot(file_name + ".dot", self._lnr)
                 call(["dot", "-Tsvg", "-o",

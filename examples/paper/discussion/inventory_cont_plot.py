@@ -1,17 +1,19 @@
 # Necessary to add cwd to path when script run
 # by SLURM (since it executes a copy)
-import sys, os
+import matplotlib.pyplot as plt
+import importlib
+from mlopt.sampling import uniform_sphere_sample
+import mlopt
+import pandas as pd
+import cvxpy as cp
+import numpy as np
+import sys
+import os
 sys.path.append(os.getcwd())
 
 # Inventory example script
-import numpy as np
-import cvxpy as cp
-import pandas as pd
 
 # Development
-import mlopt
-from mlopt.sampling import uniform_sphere_sample
-import importlib
 importlib.reload(mlopt)
 
 '''
@@ -26,7 +28,7 @@ M = 3.
 h = 1.
 c = 2.
 p = 3.
-x_init = 10.
+#  x_init = 10.
 
 # Define problem
 x = cp.Variable(T+1)
@@ -34,6 +36,7 @@ u = cp.Variable(T)
 
 # Define parameters
 d = cp.Parameter(T, nonneg=True, name="d")
+x_init = cp.Parameter(name="x_init")
 
 # Constaints
 constraints = [x[0] == x_init]
@@ -51,16 +54,21 @@ m = mlopt.Optimizer(cp.Minimize(cost), constraints)
 Sample points
 '''
 # Average request
-theta_bar = 2 * np.ones(T)
+theta_bar = np.concatenate(( 2 * np.ones(T),  # d
+    [10]               # x_init
+))
 radius = 1
 
 
 def sample_inventory(theta_bar, radius, n=100):
 
     # Sample points from multivariate ball
-    X = uniform_sphere_sample(theta_bar, radius, n=n)
+    X_d = uniform_sphere_sample(theta_bar[:-1], radius, n=n)
+    X_x_init = uniform_sphere_sample([theta_bar[-1]], 3 * radius,
+                                     n=n)
 
-    df = pd.DataFrame({'d': X.tolist()})
+    df = pd.DataFrame({'d': X_d.tolist(),
+                       'x_init': X_x_init.tolist()})
 
     return df
 
@@ -80,7 +88,7 @@ m.train(theta_train,
         learner=mlopt.OPTIMAL_TREE,
         max_depth=3,
         parallel_trees=False,
-        save_pdf=True)
+        save_svg=True)
 #  m.train(theta_train, learner=mlopt.PYTORCH)
 
 output = "output/optimal_tree_inv_cont"
@@ -100,7 +108,6 @@ theta_plot = sample_inventory(theta_bar, radius, n=1)
 result_plot = m.solve(theta_plot)
 
 # Plot behavior
-import matplotlib.pyplot as plt
 
 # Write normally
 t = np.arange(0, T, 1)

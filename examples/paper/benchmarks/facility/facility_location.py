@@ -103,7 +103,7 @@ for p in p_vec:
             max_depth=10,
             #  cp=0.1,
             #  hyperplanes=True,
-            save_pdf=True)
+            save_svg=True)
     m.save(os.path.join(output_folder, "optimaltrees_portfolio_%d" % p),
            delete_existing=True)
     optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
