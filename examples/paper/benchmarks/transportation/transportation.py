@@ -17,7 +17,7 @@ np.random.seed(1)
 # Define data
 n_vec = np.array([], dtype=int)
 m_vec = np.array([], dtype=int)
-for i in np.arange(10, 100, 100):
+for i in np.arange(20, 100, 20):
     n_vec = np.append(n_vec, [i] * 3)
     m_vec = np.append(m_vec, [i, int(i/2), 2 * i])
 n_train = 10000
@@ -63,12 +63,13 @@ for i in range(len(n_vec)):
     '''
     n_dim = n_vec[i]
     m_dim = m_vec[i]
+    print("Solving for n = %d, m = %d" % (n_dim, m_dim))
 
     # Define transportation cost
     c = [5 * np.random.rand(m_dim)
          for _ in range(n_dim)]  # c_i for each warehouse
     # Supply for each warehouse (scalar)
-    s = 2 * np.ones(n_dim) + 10 * np.random.rand(n_dim)
+    s = 3 * np.ones(n_dim) + 10 * np.random.rand(n_dim)
 
     # Variables
     x = [cp.Variable(m_dim) for _ in range(n_dim)]  # x_i for each earehouse
@@ -93,8 +94,8 @@ for i in range(len(n_vec)):
     '''
     Sample points
     '''
-    theta_bar = 5 * np.ones(m_dim) + np.random.randn(m_dim)
-    radius = 0.25
+    theta_bar = 3 * np.ones(m_dim) + np.random.randn(m_dim)
+    radius = 0.5
 
     '''
     Train and solve
