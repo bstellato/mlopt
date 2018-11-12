@@ -111,7 +111,7 @@ for p in p_vec:
             learner=mlopt.OPTIMAL_TREE,
             hyperplanes=False,
             max_depth=15,
-            save_pdf=True)
+            save_svg=True)
     m.save(os.path.join(output_folder, "optimaltrees_portfolio_p%d_n%d" % (p, n_train)),
            delete_existing=True)
     optimaltrees_general, optimaltrees_detail = m.performance(theta_test,

@@ -13,7 +13,6 @@ importlib.reload(mlopt)
 '''
 Define Knapsack problem
 '''
-bin_vars = False
 
 # Generate data
 np.random.seed(1)
@@ -27,13 +26,13 @@ c = np.random.rand(n)
 
 # Weights
 a = cp.Parameter(n, nonneg=True, name='a')
+x_u = cp.Parameter(n, nonneg=True, name='x_u')
 b = 0.5 * n
-x_u = 3
 
 # Problem
 cost = - c * x
 constraints = [a * x <= b,
-               0 <= x, x <= 3]
+               0 <= x, x <= x_u]
 
 
 # Define optimizer
@@ -43,16 +42,21 @@ m = mlopt.Optimizer(cp.Minimize(cost), constraints)
 Sample points
 '''
 # Average request
-theta_bar = 2 * np.ones(n)
-radius = 0.5
+theta_bar = 2 * np.ones(2 * n)
+radius = 1.0
 
 
 def sample(theta_bar, radius, n=100):
 
     # Sample points from multivariate ball
-    X = uniform_sphere_sample(theta_bar, radius, n=n)
+    ndim = int(len(theta_bar)/2)
+    X_a = uniform_sphere_sample(theta_bar[:ndim], radius, n=n)
+    X_u = uniform_sphere_sample(theta_bar[ndim:], radius, n=n)
 
-    df = pd.DataFrame({'a': X.tolist()})
+    df = pd.DataFrame({
+        'a': X_a.tolist(),
+        'x_u': X_u.tolist()
+        })
 
     return df
 
@@ -71,21 +75,18 @@ theta_test = sample(theta_bar, radius, n=n_test)
 m.train(theta_train,
         parallel=False,
         learner=mlopt.OPTIMAL_TREE,
-        max_depth=2,
+        max_depth=3,
         #  cp=0.1,
         #  hyperplanes=True,
-        save_pdf=True)
+        save_svg=True)
 #  m.train(theta_train, learner=mlopt.PYTORCH)
 
 # Save solver
-output_folder = os.path.join("output", "knapsack")
-m.save(os.path.join(output_folder, "optimal_tree_knapsack"),
-       delete_existing=True)
+m.save("output/optimal_tree_knapsack", delete_existing=True)
 
 # Benchmark
-results_general, results_detail = m.performance(theta_test)
+results = m.performance(theta_test)
 
-results_general.to_csv(os.path.join(output_folder,
-                                    "knapsack_general.csv"))
-results_detail.to_csv(os.path.join(output_folder,
-                                   "knapsack_detail.csv"))
+output_folder = "output/"
+for i in range(len(results)):
+    results[i].to_csv(output_folder + "knapsack%d.csv" % i)

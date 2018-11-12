@@ -94,7 +94,10 @@ class Problem(object):
         Populate problem using parameter theta
         """
         for p in self.cvxpy_problem.parameters():
-            p.value = theta[p.name()]
+            theta_val = theta[p.name()]
+            if len(theta_val) == 1:
+                theta_val = theta_val[0]  # Make it a scaler in case
+            p.value = theta_val
 
     @property
     def objective(self):

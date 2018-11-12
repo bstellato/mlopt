@@ -135,7 +135,7 @@ for i in range(len(n_vec)):
             learner=mlopt.OPTIMAL_TREE,
             hyperplanes=False,
             max_depth=15,
-            save_pdf=True)
+            save_svg=True)
     m.save(os.path.join(output_folder,
                         "optimaltrees_" + name + "_n%d_m%d" % (n_dim, m_dim)),
            delete_existing=True)
