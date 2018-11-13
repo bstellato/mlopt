@@ -16,8 +16,8 @@ class Sampler(object):
     def __init__(self,
                  problem,
                  sampling_fn,
-                 n_samples_iter=100,
-                 max_iter=int(1e3)):
+                 n_samples_iter=1000,
+                 max_iter=int(1e2)):
         self.problem = problem  # Optimization problem
         self.sampling_fn = sampling_fn
         self.n_samples_iter = n_samples_iter
@@ -25,12 +25,12 @@ class Sampler(object):
 
     def frequencies(self, labels):
         """
-        Get frequency for each strategy
+        Get frequency for each unique strategy
         """
         return np.array([len(np.where(labels == i)[0])
                          for i in np.unique(labels)])
 
-    def sample(self, epsilon=1e-02, beta=1e-02):
+    def sample(self, epsilon=1e-03, beta=1e-05):
         """
         Iterative sampling.
         """
@@ -40,6 +40,11 @@ class Sampler(object):
         s_theta = []
 
         n_samples = 0
+
+        # Initialize probability to 1
+        good_turing_est = 1.
+        alpha = 0.9   # Inertia parameter
+
         # Start with 100 samples
         for i in range(self.max_iter):
             # Sample new points
@@ -59,20 +64,22 @@ class Sampler(object):
             if not any(np.where(freq == 1)[0]):
                 print("No labels appearing only once")
                 n1 = 0
+                #  n1 = np.inf
             else:
                 # Get frequency of frequencies
                 freq_freq = self.frequencies(freq)
                 n1 = freq_freq[0]
 
             # Get Good Turing estimator
-            good_turing_est = n1/n_samples
+            good_turing_est = alpha * n1/n_samples + \
+                (1 - alpha) * good_turing_est
 
-            print("Good-Turing Estimator ", good_turing_est)
+            print("i: %d, gt: %.2e, n: %d " % (i+1, good_turing_est, n_samples))
 
-            if good_turing_est < epsilon:
+            if (good_turing_est < epsilon):
                 break
 
-            #  # Get bound
+            #  # Get bound from theory
             #  c = 2 * np.sqrt(2) + np.sqrt(3)
             #  bound = good_turing_est
             #  bound += c * np.sqrt((1 / n_samples) * np.log(3 / beta))

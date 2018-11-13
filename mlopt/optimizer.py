@@ -61,8 +61,7 @@ class Optimizer(object):
         self._sampler = Sampler(self._problem, sampling_fn)
 
         # Sample parameters
-        # TODO: CONTINUE FROM HERE
-        # Move X_train and y_train computation here.
+        self.X_train, self.y_train, self.encoding = self._sampler.sample()
 
     def save_data(self, file_name, delete_existing=False):
         """
@@ -163,25 +162,28 @@ class Optimizer(object):
         if X is not None:
             self.X_train = X
         elif sampling_fn is not None:
-            self.X_train = self.sample(sampling_fn)
+            # Create X_train, y_train and encoding from
+            # sampling function
+            self.sample(sampling_fn)
+        else:
+            # Use samples already provided
+            if self.encoding is None:
+                # Encode training strategies by solving
+                # the problem for all the points
+                results = self._problem.solve_parametric(X,
+                                                         parallel=parallel,
+                                                         message="Compute " +
+                                                         "tight constraints " +
+                                                         "for training set")
+                train_strategies = [r['strategy'] for r in results]
 
-        if self.encoding is None:
-            # Encode training strategies by solving
-            # the problem for all the points
-            results = self._problem.solve_parametric(X,
-                                                     parallel=parallel,
-                                                     message="Compute " +
-                                                     "tight constraints " +
-                                                     "for training set")
-            train_strategies = [r['strategy'] for r in results]
+                # Check if the problems are solvable
+                for r in results:
+                    assert r['status'] in cps.SOLUTION_PRESENT, \
+                        "The training points must be feasible"
 
-            # Check if the problems are solvable
-            for r in results:
-                assert r['status'] in cps.SOLUTION_PRESENT, \
-                    "The training points must be feasible"
-
-            # Encode strategies
-            self.y_train, self.encoding = encode_strategies(train_strategies)
+                # Encode strategies
+                self.y_train, self.encoding = encode_strategies(train_strategies)
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),

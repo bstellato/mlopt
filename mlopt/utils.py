@@ -34,6 +34,7 @@ def pandas2array(X):
     Unroll dataframe elements to construct 2d array in case of
     cells containing tuples.
     """
+    import ipdb; ipdb.set_trace()
 
     if isinstance(X, np.ndarray):
         # Already numpy array. Return it.
