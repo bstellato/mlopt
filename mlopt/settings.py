@@ -18,3 +18,6 @@ DEFAULT_LEARNER = PYTORCH
 
 # Learners settings
 N_BEST = 3
+
+# Sampling
+SAMPLING_TOL = 1e-03

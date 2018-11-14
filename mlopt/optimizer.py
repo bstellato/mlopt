@@ -161,11 +161,7 @@ class Optimizer(object):
         # Check if data is passed, otherwise train
         if X is not None:
             self.X_train = X
-        elif sampling_fn is not None:
-            # Create X_train, y_train and encoding from
-            # sampling function
-            self.sample(sampling_fn)
-        else:
+
             # Use samples already provided
             if self.encoding is None:
                 # Encode training strategies by solving
@@ -183,7 +179,17 @@ class Optimizer(object):
                         "The training points must be feasible"
 
                 # Encode strategies
-                self.y_train, self.encoding = encode_strategies(train_strategies)
+                self.y_train, self.encoding = \
+                    encode_strategies(train_strategies)
+
+        elif sampling_fn is not None:
+            # Create X_train, y_train and encoding from
+            # sampling function
+            self.sample(sampling_fn)
+
+        else:
+            raise ValueError("You must provide either training samples X" +
+                             " or the sampling function")
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),

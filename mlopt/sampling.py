@@ -2,6 +2,7 @@ import numpy as np
 from scipy.special import gammainc
 import pandas as pd
 from mlopt.strategy import encode_strategies
+from mlopt.settings import SAMPLING_TOL as EPS
 
 
 class Sampler(object):
@@ -30,10 +31,12 @@ class Sampler(object):
         return np.array([len(np.where(labels == i)[0])
                          for i in np.unique(labels)])
 
-    def sample(self, epsilon=1e-03, beta=1e-05):
+    def sample(self, epsilon=EPS, beta=1e-05):
         """
         Iterative sampling.
         """
+
+        print("Iterative sampling")
 
         # Initialize dataframes
         theta = pd.DataFrame()
@@ -43,14 +46,15 @@ class Sampler(object):
 
         # Initialize probability to 1
         good_turing_est = 1.
-        alpha = 0.9   # Inertia parameter
+        alpha = 0.95   # Inertia parameter
 
         # Start with 100 samples
         for i in range(self.max_iter):
             # Sample new points
             theta_new = self.sampling_fn(self.n_samples_iter)
-            s_theta_new = self.problem.solve_parametric(theta_new)[2]
-            theta = theta.append(theta_new)
+            s_theta_new = [r['strategy']
+                           for r in self.problem.solve_parametric(theta_new)]
+            theta = theta.append(theta_new, ignore_index=True)
             s_theta += s_theta_new
             n_samples += self.n_samples_iter
 
@@ -77,6 +81,11 @@ class Sampler(object):
             print("i: %d, gt: %.2e, n: %d " % (i+1, good_turing_est, n_samples))
 
             if (good_turing_est < epsilon):
+                # Store values internally
+                self.good_turing = n1/n_samples
+                self.good_turing_smooth = good_turing_est
+                self.niter = i
+
                 break
 
             #  # Get bound from theory

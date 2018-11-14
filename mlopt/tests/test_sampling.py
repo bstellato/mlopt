@@ -63,29 +63,22 @@ class TestSampling(unittest.TestCase):
         # Test set
         self.df_test = sampling_function(n_test)
 
-
     def test_sample(self):
         """Test sampling scheme"""
 
         # Train optimizer
         self.optimizer.train(sampling_fn=sampling_function,
                              learner=PYTORCH)
+        #  self.optimizer.train(X=sampling_function(1000),
+                             #  learner=PYTORCH)
 
-        # Predict with optimizer
-        res = self.optimizer.solve(self.df_test)
+        # Check tolerance
+        self.assertTrue(self.optimizer._sampler.good_turing_smooth
+                        < s.SAMPLING_TOL)
 
-        # Make sure predictions match
-        #  for i in range(len(self.df_test)):
-        #      npt.assert_almost_equal(res[i]['x'],
-        #                              res_new[i]['x'],
-        #                              decimal=TOL)
-        #      npt.assert_almost_equal(res[i]['cost'],
-        #                              res_new[i]['cost'],
-        #                              decimal=TOL)
-        #      self.assertTrue(res[i]['strategy'] ==
-        #                      res_new[i]['strategy'])
-
-
+        # Check that smoothed is larger than unsmoothed
+        self.assertTrue(self.optimizer._sampler.good_turing
+                        < self.optimizer._sampler.good_turing_smooth)
 
 
 if __name__ == '__main__':
