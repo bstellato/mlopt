@@ -9,5 +9,9 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
+# Activate environment
+source activate python36
+
 # Include script
-python examples/paper/portfolio/portfolio_cont.py
+# python examples/paper/portfolio/portfolio_cont.py
+python examples/paper/benchmarks/transportation/transportation.py
