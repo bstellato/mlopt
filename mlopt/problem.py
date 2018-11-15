@@ -8,7 +8,7 @@ from warnings import warn
 import numpy as np
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
-    DEFAULT_SOLVER
+    DEFAULT_SOLVER, DIVISION_TOL
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos
@@ -122,11 +122,41 @@ class Problem(object):
         """
         Compute infeasibility for variables.
         """
+
+        # Compute relative constraint violation
+        violations = []
+        for c in self.constraints:
+            # Get constraint arguments
+            args = c.args[0].args
+
+            # Get relative value for all of the expression arguments
+            relative_viol = np.amax([np.linalg.norm(a.value) for a in args])
+            # Normalize relative tolerance if too small
+            relative_viol = relative_viol if relative_viol > DIVISION_TOL else 1.
+
+            # Append violation
+            violations.append(np.atleast_1d(c.violation() / relative_viol))
+
+        # Create numpy array
+        violations = np.concatenate(violations)
+
         # Compute violations
-        violations = np.concatenate([np.atleast_1d(c.violation())
-                                     for c in self.constraints])
+        #  violations = np.concatenate([np.atleast_1d(c.violation())
+        #                               for c in self.constraints])
 
         return np.linalg.norm(violations, np.inf)
+
+
+    # Constraint error
+    #  def get_constr_error(constr):
+    #      if isinstance(constr, cvx.constraints.EqConstraint):
+    #          error = cvx.abs(constr.args[0] - constr.args[1])
+    #      elif isinstance(constr, cvx.constraints.LeqConstraint):
+    #          error = cvx.pos(constr.args[0] - constr.args[1])
+    #      elif isinstance(constr, cvx.constraints.PSDConstraint):
+    #          mat = constr.args[0] - constr.args[1]
+    #          error = cvx.neg(cvx.lambda_min(mat + mat.T)/2)
+    #      return cvx.sum_entries(error)
 
     def _solve(self, problem):
         """

@@ -4,6 +4,7 @@ import cvxpy as cp
 INFEAS_TOL = 1e-04
 SUBOPT_TOL = 1e-04
 TIGHT_CONSTRAINTS_TOL = 1e-04
+DIVISION_TOL = 1e-6
 
 # Define default solver
 DEFAULT_SOLVER = cp.GUROBI
