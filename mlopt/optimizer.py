@@ -52,6 +52,12 @@ class Optimizer(object):
         """Number of parameters."""
         return self._problem.n_parameters
 
+    def samples_present(self):
+        """Check if samples have been generated."""
+        return self.X_train is not None and \
+            self.y_train is not None and \
+            self.encoding is not None
+
     def sample(self, sampling_fn):
         """
         Sample parameters.
@@ -158,38 +164,42 @@ class Optimizer(object):
             A dict of options for the learner.
         """
 
+        # Assert we have data to train or already trained
+        if X is None and sampling_fn is None and not self.samples_present():
+            raise ValueError("Not enough arguments to train the model")
+
+        if X is not None and sampling_fn is not None:
+            raise ValueError("You can pass only one value between " +
+                             "X and sampling_fn")
+
         # Check if data is passed, otherwise train
         if X is not None:
             self.X_train = X
+            self.y_train = None
+            self.encoding = None
 
-            # Use samples already provided
-            if self.encoding is None:
-                # Encode training strategies by solving
-                # the problem for all the points
-                results = self._problem.solve_parametric(X,
-                                                         parallel=parallel,
-                                                         message="Compute " +
-                                                         "tight constraints " +
-                                                         "for training set")
-                train_strategies = [r['strategy'] for r in results]
+            # Encode training strategies by solving
+            # the problem for all the points
+            results = self._problem.solve_parametric(X,
+                                                     parallel=parallel,
+                                                     message="Compute " +
+                                                     "tight constraints " +
+                                                     "for training set")
+            train_strategies = [r['strategy'] for r in results]
 
-                # Check if the problems are solvable
-                for r in results:
-                    assert r['status'] in cps.SOLUTION_PRESENT, \
-                        "The training points must be feasible"
+            # Check if the problems are solvable
+            for r in results:
+                assert r['status'] in cps.SOLUTION_PRESENT, \
+                    "The training points must be feasible"
 
-                # Encode strategies
-                self.y_train, self.encoding = \
-                    encode_strategies(train_strategies)
+            # Encode strategies
+            self.y_train, self.encoding = \
+                encode_strategies(train_strategies)
 
         elif sampling_fn is not None:
             # Create X_train, y_train and encoding from
             # sampling function
             self.sample(sampling_fn)
-
-        else:
-            raise ValueError("You must provide either training samples X" +
-                             " or the sampling function")
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
@@ -453,6 +463,9 @@ class Optimizer(object):
                 "n_test": [n_test],
                 "n_train": [n_train],
                 "n_theta": [n_theta],
+                "good_turing": [self._sampler.good_turing],
+                "good_turing_smooth": [self._sampler.good_turing_smooth],
+                "good_turing_iter": [self._sampler.niter],
                 "n_correct": [np.sum(idx_correct)],
                 "n_strategies": [n_strategies],
                 "accuracy": [100 * test_accuracy],

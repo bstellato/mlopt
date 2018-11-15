@@ -102,7 +102,6 @@ for i in range(len(n_vec)):
     '''
 
     # Training and testing data
-    theta_train = sample(theta_bar, radius, n=n_train)
     theta_test = sample(theta_bar, radius, n=n_test)
 
     # Train and test using pytorch
@@ -115,7 +114,7 @@ for i in range(len(n_vec)):
         m.load_data(data_file)
 
     # Train neural network
-    m.train(theta_train,
+    m.train(sampling_fn=lambda n: sample(theta_bar, radius, n),
             parallel=True,
             learner=mlopt.PYTORCH)
     m.save(os.path.join(output_folder,
@@ -130,8 +129,7 @@ for i in range(len(n_vec)):
     results_detail = results_detail.append(pytorch_detail)
 
     #  Train and test using optimal trees
-    m.train(theta_train,
-            parallel=True,
+    m.train(parallel=True,
             learner=mlopt.OPTIMAL_TREE,
             hyperplanes=False,
             max_depth=15,
