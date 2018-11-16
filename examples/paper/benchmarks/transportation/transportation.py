@@ -112,11 +112,12 @@ for i in range(len(n_vec)):
     if os.path.isfile(data_file):
         print("Loading data file %s" % data_file)
         m.load_data(data_file)
-
-    # Train neural network
-    m.train(sampling_fn=lambda n: sample(theta_bar, radius, n),
-            parallel=True,
-            learner=mlopt.PYTORCH)
+        m.train(parallel=True,
+                learner=mlopt.PYTORCH)
+    else:
+        m.train(sampling_fn=lambda n: sample(theta_bar, radius, n),
+                parallel=True,
+                learner=mlopt.PYTORCH)
     m.save(os.path.join(output_folder,
                         "pytorch_" + name + "_n%d_m%d" % (n_dim, m_dim)),
            delete_existing=True)

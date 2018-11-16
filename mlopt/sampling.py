@@ -78,7 +78,8 @@ class Sampler(object):
             good_turing_est = alpha * n1/n_samples + \
                 (1 - alpha) * good_turing_est
 
-            print("i: %d, gt: %.2e, n: %d " % (i+1, good_turing_est, n_samples))
+            print("i: %d, gt: %.2e, gt smooth: %.2e, n: %d " %
+                  (i+1, good_turing_est, n1/n_samples, n_samples))
 
             if (good_turing_est < epsilon):
                 # Store values internally
