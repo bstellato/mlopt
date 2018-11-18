@@ -54,9 +54,9 @@ class Optimizer(object):
 
     def samples_present(self):
         """Check if samples have been generated."""
-        return self.X_train is not None and \
-            self.y_train is not None and \
-            self.encoding is not None
+        return (self.X_train is not None) and \
+            (self.y_train is not None) and \
+            (self.encoding is not None)
 
     def sample(self, sampling_fn):
         """
@@ -137,6 +137,10 @@ class Optimizer(object):
         self._problem = data_dict['problem']
         self.encoding = data_dict['encoding']
 
+        # Compute Good turing estimates
+        self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
+        self._sampler.compute_good_turing(self.y_train)
+
     def train(self, X=None, sampling_fn=None,
               parallel=True,
               learner=DEFAULT_LEARNER,
@@ -166,6 +170,7 @@ class Optimizer(object):
 
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
+            import ipdb; ipdb.set_trace()
             raise ValueError("Not enough arguments to train the model")
 
         if X is not None and sampling_fn is not None:
@@ -465,7 +470,6 @@ class Optimizer(object):
                 "n_theta": [n_theta],
                 "good_turing": [self._sampler.good_turing],
                 "good_turing_smooth": [self._sampler.good_turing_smooth],
-                "good_turing_iter": [self._sampler.niter],
                 "n_correct": [np.sum(idx_correct)],
                 "n_strategies": [n_strategies],
                 "accuracy": [100 * test_accuracy],

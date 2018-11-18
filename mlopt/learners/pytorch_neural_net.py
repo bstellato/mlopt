@@ -60,7 +60,8 @@ class PyTorchNeuralNet(Learner):
         # Default params grid
         params_grid = {
             'lr': [0.001, 0.01, 0.1],
-            'max_epochs': [50, 100],
+            'max_epochs': [50, 100, 500],
+            'batch_size': [32, 64, 128],
             'module__n_hidden': [int((self.n_classes + self.n_input) / i)
                                  for i in (2, 3)],
         }
@@ -77,7 +78,9 @@ class PyTorchNeuralNet(Learner):
         )
 
         # Create neural network module
-        self.neural_net = NeuralNetClassifier(Net,
+        self.neural_net = NeuralNetClassifier(module=Net,
+                                              module__n_input=self.n_input,
+                                              module__n_classes=self.n_classes,
                                               device=self.device,
                                               criterion=nn.CrossEntropyLoss,
                                               optimizer=optim.Adam
@@ -88,7 +91,7 @@ class PyTorchNeuralNet(Learner):
         self.gs = GridSearchCV(self.neural_net,
                                self.options['params_grid'],
                                #  refit=False,  # Need to refit manually at the end
-                               cv=3,
+                               cv=2,
                                scoring='accuracy'
                                )
 
@@ -141,7 +144,7 @@ class PyTorchNeuralNet(Learner):
         self.n_train = len(X)
 
         X = pandas2array(X).astype(np.float32)
-        y = pandas2array(X).astype(np.int64)
+        y = y.astype(np.int64)
 
         # Fit neural network using cross validation
         self.gs.fit(X, y)

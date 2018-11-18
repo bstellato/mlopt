@@ -17,7 +17,7 @@ np.random.seed(1)
 # Define data
 n_vec = np.array([], dtype=int)
 m_vec = np.array([], dtype=int)
-for i in np.arange(20, 100, 20):
+for i in np.arange(20, 40, 20):
     n_vec = np.append(n_vec, [i] * 3)
     m_vec = np.append(m_vec, [i, int(i/2), 2 * i])
 n_train = 10000
@@ -121,7 +121,7 @@ for i in range(len(n_vec)):
     m.save(os.path.join(output_folder,
                         "pytorch_" + name + "_n%d_m%d" % (n_dim, m_dim)),
            delete_existing=True)
-    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=False)
+    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=True)
 
     # Fix dataframe by adding elements
     add_details(pytorch_general, n=n_dim, m=m_dim)

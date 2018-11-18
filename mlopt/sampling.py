@@ -16,13 +16,18 @@ class Sampler(object):
 
     def __init__(self,
                  problem,
-                 sampling_fn,
+                 sampling_fn=None,
                  n_samples_iter=1000,
-                 max_iter=int(1e2)):
+                 max_iter=int(1e2),
+                 alpha=0.97,
+                 n_samples=0):
         self.problem = problem  # Optimization problem
         self.sampling_fn = sampling_fn
         self.n_samples_iter = n_samples_iter
         self.max_iter = max_iter
+        self.alpha = alpha
+        self.n_samples = n_samples   # Initialize numer of samples
+        self.good_turing_smooth = 1.  # Initialize Good Turing estimator
 
     def frequencies(self, labels):
         """
@@ -30,6 +35,28 @@ class Sampler(object):
         """
         return np.array([len(np.where(labels == i)[0])
                          for i in np.unique(labels)])
+
+    def compute_good_turing(self, labels):
+        """Compute good turing estimator"""
+        # Get frequencies
+        freq = self.frequencies(labels)
+
+        # Check if there are labels appearing only once
+        if not any(np.where(freq == 1)[0]):
+            print("No labels appearing only once")
+            n1 = 0
+            #  n1 = np.inf
+        else:
+            # Get frequency of frequencies
+            freq_freq = self.frequencies(freq)
+            n1 = freq_freq[0]
+
+        # Get Good Turing estimator
+        self.good_turing = n1/self.n_samples
+
+        # Get Good Turing estimator
+        self.good_turing_smooth = self.alpha * n1/self.n_samples + \
+            (1 - self.alpha) * self.good_turing_smooth
 
     def sample(self, epsilon=EPS, beta=1e-05):
         """
@@ -42,51 +69,27 @@ class Sampler(object):
         theta = pd.DataFrame()
         s_theta = []
 
-        n_samples = 0
-
-        # Initialize probability to 1
-        good_turing_est = 1.
-        alpha = 0.95   # Inertia parameter
-
         # Start with 100 samples
-        for i in range(self.max_iter):
+        for self.niter in range(self.max_iter):
             # Sample new points
             theta_new = self.sampling_fn(self.n_samples_iter)
             s_theta_new = [r['strategy']
                            for r in self.problem.solve_parametric(theta_new)]
             theta = theta.append(theta_new, ignore_index=True)
             s_theta += s_theta_new
-            n_samples += self.n_samples_iter
+            self.n_samples += self.n_samples_iter
 
             # Get unique strategies
             labels, encoding = encode_strategies(s_theta)
 
-            # Get frequencies
-            freq = self.frequencies(labels)
-
-            # Check if there are labels appearing only once
-            if not any(np.where(freq == 1)[0]):
-                print("No labels appearing only once")
-                n1 = 0
-                #  n1 = np.inf
-            else:
-                # Get frequency of frequencies
-                freq_freq = self.frequencies(freq)
-                n1 = freq_freq[0]
-
-            # Get Good Turing estimator
-            good_turing_est = alpha * n1/n_samples + \
-                (1 - alpha) * good_turing_est
+            # Get Good Turing Estimator
+            self.compute_good_turing(labels)
 
             print("i: %d, gt: %.2e, gt smooth: %.2e, n: %d " %
-                  (i+1, good_turing_est, n1/n_samples, n_samples))
+                  (self.niter+1, self.good_turing, self.good_turing_smooth,
+                   self.n_samples))
 
-            if (good_turing_est < epsilon):
-                # Store values internally
-                self.good_turing = n1/n_samples
-                self.good_turing_smooth = good_turing_est
-                self.niter = i
-
+            if (self.good_turing_smooth < epsilon):
                 break
 
             #  # Get bound from theory
