@@ -22,8 +22,8 @@ def n_features(df):
     """
     n = 0
     for c in df.columns.values:
-        if isinstance(df[c][0], list):  # If list add length
-            n += len(df[c][0])
+        if isinstance(df[c].iloc[0], list):  # If list add length
+            n += len(df[c].iloc[0])
         else:  # If number add 1
             n += 1
     return n

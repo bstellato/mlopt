@@ -26,7 +26,7 @@ results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
 
-# DEBUG: prendi solo data 3
+# DEBUG
 #  n_vec = n_vec[2:]
 #  m_vec = m_vec[2:]
 
@@ -130,10 +130,7 @@ for i in range(len(n_vec)):
     results_detail = results_detail.append(pytorch_detail)
 
     #  Train and test using optimal trees
-    m.train(
-            #  sampling_fn=lambda n: sample(theta_bar, radius, n),
-            parallel=True,
-            parallel_trees=True,
+    m.train(parallel=True,
             learner=mlopt.OPTIMAL_TREE,
             hyperplanes=False,
             max_depth=15,

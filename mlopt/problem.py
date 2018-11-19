@@ -395,7 +395,7 @@ class Problem(object):
         #  with open('txt.txt', 'a') as f:
         #      f.write(str(os.environ))
         try:
-            n_cpus = int(os.environ["SLURM_CPUS_PER_NODE"])
+            n_cpus = int(os.environ["SLURM_CPUS_PER_TASK"])
         except KeyError:
             n_cpus = cpu_count()
 

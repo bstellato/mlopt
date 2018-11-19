@@ -170,7 +170,6 @@ class Optimizer(object):
 
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
-            import ipdb; ipdb.set_trace()
             raise ValueError("Not enough arguments to train the model")
 
         if X is not None and sampling_fn is not None:
@@ -179,6 +178,7 @@ class Optimizer(object):
 
         # Check if data is passed, otherwise train
         if X is not None:
+            print("Use new data X")
             self.X_train = X
             self.y_train = None
             self.encoding = None
@@ -202,6 +202,7 @@ class Optimizer(object):
                 encode_strategies(train_strategies)
 
         elif sampling_fn is not None:
+            print("Use iterative sampling")
             # Create X_train, y_train and encoding from
             # sampling function
             self.sample(sampling_fn)

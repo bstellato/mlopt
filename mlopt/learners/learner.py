@@ -36,7 +36,7 @@ class Learner(ABC):
     def load(self, file_name):
         """Load learner from file"""
 
-    def pick_best_probabilities(self, y):
+    def pick_best_probabilities(self, y, n_best=None):
         """
         Sort predictions and pick best points.
 
@@ -44,7 +44,7 @@ class Learner(ABC):
         are most likely.
         """
         n_points = y.shape[0]
-        n_best = self.options['n_best']
+        n_best = n_best if (n_best is not None) else self.options['n_best']
 
         # Sort probabilities
         idx_probs = np.empty((n_points, n_best), dtype='int')

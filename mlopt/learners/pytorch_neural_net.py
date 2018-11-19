@@ -10,9 +10,16 @@ import torch.optim as optim                             # Optimizer tools
 from torch.utils.data import TensorDataset, DataLoader  # Data manipulaton
 
 # Scikit learn pytorch wrapper for cv
-from skorch import NeuralNetClassifier
-from sklearn.model_selection import GridSearchCV
+#  from skorch import NeuralNetClassifier
+#  from sklearn.model_selection import GridSearchCV
 import numpy as np
+
+
+def weights_init(m):
+    if isinstance(m, nn.Linear):
+        nn.init.xavier_uniform_(m.weight.data)
+        x = 0.5
+        nn.init.uniform_(m.bias, -x, x)
 
 
 class Net(nn.Module):
@@ -20,7 +27,7 @@ class Net(nn.Module):
     PyTorch internal neural network class.
     """
 
-    def __init__(self, n_input, n_classes, n_hidden):
+    def __init__(self, n_input, n_classes):
         super(Net, self).__init__()
         n_hidden = int((n_classes + n_input) / 2)
         self.f1 = nn.Linear(n_input, n_hidden)
@@ -34,7 +41,7 @@ class Net(nn.Module):
         x = F.relu(self.f2(x))  # Second layer
         x = F.relu(self.f3(x))  # Third layer
         x = F.relu(self.f4(x))  # Fourth layer
-        x = F.softmax(self.f5(x), dim=1)  # Last layer
+        x = self.f5(x)  # Last layer (no relu)
         return x
 
 
@@ -58,16 +65,15 @@ class PyTorchNeuralNet(Learner):
         self.n_classes = options.pop('n_classes')
 
         # Default params grid
-        params_grid = {
-            'lr': [0.001, 0.01, 0.1],
-            'max_epochs': [50, 100, 500],
-            'batch_size': [32, 64, 128],
-            'module__n_hidden': [int((self.n_classes + self.n_input) / i)
-                                 for i in (2, 3)],
+        default_params = {
+            'learning_rate': [0.0001, 0.001, 0.01],
+            'n_epochs': [500, 1000],
+            'batch_size': [32, 128],
         }
         # Unpack settings
         self.options = {}
-        self.options['params_grid'] = options.pop('params_grid', params_grid)
+        self.options['params'] = options.pop('params', default_params)
+
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', N_BEST),
                                      self.n_classes)
@@ -77,57 +83,73 @@ class PyTorchNeuralNet(Learner):
             "cuda:0" if torch.cuda.is_available() else "cpu"
         )
 
-        # Create neural network module
-        self.neural_net = NeuralNetClassifier(module=Net,
-                                              module__n_input=self.n_input,
-                                              module__n_classes=self.n_classes,
-                                              device=self.device,
-                                              criterion=nn.CrossEntropyLoss,
-                                              optimizer=optim.Adam
-                                              )
-        self.net = None  # Best network not usde yet
-
-        # Create CV structure
-        self.gs = GridSearchCV(self.neural_net,
-                               self.options['params_grid'],
-                               #  refit=False,  # Need to refit manually at the end
-                               cv=2,
-                               scoring='accuracy'
-                               )
-
-        #  self.options['learning_rate'] = options.pop('learning_rate', 0.001)
-        #  self.options['n_epochs'] = options.pop('n_epochs', 1000)
-        #  self.options['batch_size'] = options.pop('batch_size', 32)
-        #  self.n_input = options.pop('n_input')
-        #  self.n_classes = options.pop('n_classes')
         # Pick minimum between n_best and n_classes
-        #  self.options['n_best'] = min(options.pop('n_best', N_BEST),
-        #                               self.n_classes)
+        self.options['n_best'] = min(options.pop('n_best', N_BEST),
+                                     self.n_classes)
 
         # Reset torch seed
         torch.manual_seed(1)
 
-        #  # Define device
-        #  self.device = torch.device(
-        #      "cuda:0" if torch.cuda.is_available() else "cpu"
-        #  )
+        # Create PyTorch Neural Network and port to to device
+        self.net = Net(self.n_input,
+                       self.n_classes).to(self.device)
 
-        #  # Create PyTorch Neural Network and port to to device
-        #  self.net = Net(self.n_input,
-        #                 self.n_classes).to(self.device)
-        #
-        #  # Define criterion
-        #  self.criterion = nn.CrossEntropyLoss()
-        #
-        #  # Define optimizer
-        #  self.optimizer = optim.Adam(self.net.parameters(),
-        #                              lr=self.options['learning_rate'])
-        #
+        # Define criterion
+        self.criterion = nn.CrossEntropyLoss()
 
-        # Older
-        #  self.optimizer = torch.optim.SGD(self.net.parameters(),
-        #  lr=self.options['learning_rate'],
-        #  momentum = 0.9)
+    def train_instance(self, X, y, params):
+        """
+        Train single instance of the network for parameters in params
+
+        params is a dictionary containing
+        - batch size
+        - n_epochs
+        - learning_rate
+        """
+
+        print("Learning Neural Network with parameters: ")
+        print(params)
+
+        # Define optimizer
+        self.optimizer = optim.SGD(self.net.parameters(),
+                                   lr=params['learning_rate'],
+                                   momentum=0.9)
+
+        # Convert data to tensor dataset
+        X = torch.tensor(pandas2array(X), dtype=torch.float)
+        y = torch.tensor(y, dtype=torch.long)
+        dataset = TensorDataset(X, y)
+
+        # Define loader for batches
+        data_loader = DataLoader(dataset,
+                                 batch_size=params['batch_size'],
+                                 #  shuffle=True
+                                 )
+
+        n_batches_per_epoch = \
+            int(self.n_train / params['batch_size'])
+
+        # Reset parameters
+        self.net.apply(weights_init)
+
+        with trange(params['n_epochs'], desc="Training neural net") as t:
+            for epoch in t:  # loop over dataset multiple times
+
+                avg_cost = 0.0
+                for i, (inputs, labels) in enumerate(data_loader):
+                    inputs, labels = \
+                        inputs.to(self.device), labels.to(self.device)
+
+                    self.optimizer.zero_grad()                   # zero grad
+                    outputs = self.net(inputs)                   # forward
+                    self.loss = self.criterion(outputs, labels)  # loss
+                    self.loss.backward()                         # backward
+                    self.optimizer.step()                        # optimizer
+
+                    avg_cost += self.loss.item() / n_batches_per_epoch
+
+                t.set_description("Training neural net (epoch %4i, cost %.2e)"
+                                  % (epoch + 1, avg_cost))
 
     def train(self, X, y):
         """
@@ -143,53 +165,57 @@ class PyTorchNeuralNet(Learner):
 
         self.n_train = len(X)
 
-        X = pandas2array(X).astype(np.float32)
-        y = y.astype(np.int64)
+        # Split dataset in training and validation
+        frac_train = 0.9
+        n_frac_train = int(frac_train * self.n_train)
+        n_frac_valid = self.n_train - n_frac_train
+        X_train = X[:n_frac_train]
+        y_train = y[:n_frac_train]
+        X_valid = X[n_frac_train:]
+        y_valid = y[n_frac_train:]
+        print("Split dataset in %d training and %d validation" %
+              (n_frac_train, n_frac_valid))
 
-        # Fit neural network using cross validation
-        self.gs.fit(X, y)
-        print("Best score: ", self.gs.best_score_)
-        print("Best params: ", self.gs.best_params_)
+        # Create parameter vector
+        params = [{
+            'learning_rate': learning_rate,
+            'batch_size': batch_size,
+            'n_epochs': n_epochs
+        }
+            for learning_rate in self.options['params']['learning_rate']
+            for batch_size in self.options['params']['batch_size']
+            for n_epochs in self.options['params']['n_epochs']]
+        n_models = len(params)
 
-        # Assign net to variable
-        self.net = self.gs.best_estimator_.module_
+        # Create vector of results
+        accuracy_vec = np.zeros(n_models)
 
-        #  # Convert data to tensor dataset
-        #  X = torch.tensor(pandas2array(X), dtype=torch.float)
-        #  y = torch.tensor(y, dtype=torch.long)
-        #  dataset = TensorDataset(X, y)
-        #
-        #  # Define loader for batches
-        #  data_loader = DataLoader(dataset,
-        #                           batch_size=self.options['batch_size'],
-        #                           #  shuffle=True
-        #                           )
-        #
-        #  n_batches_per_epoch = \
-        #      int(self.n_train / self.options['batch_size'])
-        #
-        #  with trange(self.options['n_epochs'], desc="Training neural net") as t:
-        #      for epoch in t:  # loop over dataset multiple times
-        #
-        #          avg_cost = 0.0
-        #          for i, (inputs, labels) in enumerate(data_loader):
-        #              inputs, labels = \
-        #                  inputs.to(self.device), labels.to(self.device)
-        #
-        #              self.optimizer.zero_grad()                   # zero grad
-        #              outputs = self.net(inputs)                   # forward
-        #              self.loss = self.criterion(outputs, labels)  # loss
-        #              self.loss.backward()                         # backward
-        #              self.optimizer.step()                        # optimizer
-        #
-        #              avg_cost += self.loss.item() / n_batches_per_epoch
-        #
-        #          t.set_description("Training neural net (epoch %4i, cost %.2e)"
-        #                            % (epoch + 1, avg_cost))
-        #
-        #  print('Finished training')
+        for i in range(n_models):
 
-    def predict(self, X):
+            # Rain with parameters
+            self.train_instance(X_train, y_train, params[i])
+
+            # Predict validation
+            y_pred = self.predict(X_valid, n_best=1)
+
+            # Get accuracy
+            accuracy_vec[i] = np.sum(
+                np.equal(y_pred.flatten(), y_valid)) / len(y_valid)
+            print("Accuracy: %.2f%%" % (accuracy_vec[i] * 100))
+
+        # Pick best parameters
+        self.best_params = params[np.argmax(accuracy_vec)]
+        print("Best parameters")
+        print(self.best_params)
+
+        print("Train neural network with best parameters")
+
+        # Retrain network with best parameters over whole dataset
+        self.train_instance(X, y, self.best_params)
+
+    def predict(self, X, n_best=None):
+
+        n_best = n_best if (n_best is not None) else self.options['n_best']
 
         # Convert pandas df to array (unroll tuples)
         X = torch.tensor(pandas2array(X), dtype=torch.float)
@@ -197,11 +223,10 @@ class PyTorchNeuralNet(Learner):
 
         # Evaluate probabilities
         # TODO: Required? Maybe we do not need softmax
-        #  y = F.softmax(self.net(X),
-        #                dim=1).detach().cpu().numpy()
-        y = self.net(X).detach().cpu().numpy()
+        y = F.softmax(self.net(X),
+                      dim=1).detach().cpu().numpy()
 
-        return self.pick_best_probabilities(y)
+        return self.pick_best_probabilities(y, n_best=n_best)
 
     def save(self, file_name):
         # Save state dictionary to file
