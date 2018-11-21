@@ -130,23 +130,23 @@ for i in range(len(n_vec)):
     results_detail = results_detail.append(pytorch_detail)
 
     #  Train and test using optimal trees
-    m.train(
-            #  sampling_fn=lambda n: sample(theta_bar, radius, n),
-            parallel=True,
-            parallel_trees=True,
-            learner=mlopt.OPTIMAL_TREE,
-            hyperplanes=False,
-            max_depth=15,
-            save_svg=True)
-    m.save(os.path.join(output_folder,
-                        "optimaltrees_" + name + "_n%d_m%d" % (n_dim, m_dim)),
-           delete_existing=True)
-    optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
-                                                              parallel=True)
-    add_details(optimaltrees_general, n=n_dim, m=m_dim)
-    add_details(optimaltrees_detail, n=n_dim, m=m_dim)
-    results_general = results_general.append(optimaltrees_general)
-    results_detail = results_detail.append(optimaltrees_detail)
+    #  m.train(
+    #          #  sampling_fn=lambda n: sample(theta_bar, radius, n),
+    #          parallel=True,
+    #          parallel_trees=True,
+    #          learner=mlopt.OPTIMAL_TREE,
+    #          hyperplanes=False,
+    #          max_depth=15,
+    #          save_svg=True)
+    #  m.save(os.path.join(output_folder,
+    #                      "optimaltrees_" + name + "_n%d_m%d" % (n_dim, m_dim)),
+    #         delete_existing=True)
+    #  optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
+    #                                                            parallel=True)
+    #  add_details(optimaltrees_general, n=n_dim, m=m_dim)
+    #  add_details(optimaltrees_detail, n=n_dim, m=m_dim)
+    #  results_general = results_general.append(optimaltrees_general)
+    #  results_detail = results_detail.append(optimaltrees_detail)
 
     # Save data to file
     if not os.path.isfile(data_file):

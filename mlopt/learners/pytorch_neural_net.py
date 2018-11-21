@@ -87,9 +87,6 @@ class PyTorchNeuralNet(Learner):
         self.options['n_best'] = min(options.pop('n_best', N_BEST),
                                      self.n_classes)
 
-        # Reset torch seed
-        torch.manual_seed(1)
-
         # Create PyTorch Neural Network and port to to device
         self.net = Net(self.n_input,
                        self.n_classes).to(self.device)
@@ -130,6 +127,7 @@ class PyTorchNeuralNet(Learner):
             int(self.n_train / params['batch_size'])
 
         # Reset parameters
+        torch.manual_seed(1)  # Reset seed
         self.net.apply(weights_init)
 
         with trange(params['n_epochs'], desc="Training neural net") as t:
