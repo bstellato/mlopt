@@ -46,7 +46,7 @@ def add_details(df, p=None, n=None):
 
 for p in p_vec:
     '''
-    Define Sparse Regression problem
+    Define portfolio problem
     '''
     # This needs to work for different
     n = p * 10
@@ -76,14 +76,14 @@ for p in p_vec:
     '''
 
     # Training and testing data
-    n_train = 10000
+    #  n_train = 10000
     n_test = 100
-    theta_train = sample(theta_bar, radius, n=n_train)
+    #  theta_train = sample(theta_bar, radius, n=n_train)
     theta_test = sample(theta_bar, radius, n=n_test)
 
     # Train and test using pytorch
     data_file = os.path.join(output_folder,
-                             "%s_p%d_n%d_data.pkl" % (name, p, n_train))
+                             "%s_p%d_data.pkl" % (name, p))
 
     # Loading data points
     if os.path.isfile(data_file):
@@ -97,7 +97,7 @@ for p in p_vec:
                 parallel=True,
                 learner=mlopt.PYTORCH)
     m.save(os.path.join(output_folder,
-                        "pytorch_%s_p%d_n%d" % (name, p, n_train)),
+                        "pytorch_%s_p%d_n%d" % (name, p)),
            delete_existing=True)
     pytorch_general, pytorch_detail = m.performance(theta_test, parallel=True)
 

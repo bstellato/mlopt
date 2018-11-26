@@ -59,28 +59,28 @@ for i in range(len(n_vec)):
     m_dim = m_vec[i]
     print("Solving for n = %d, m = %d" % (n_dim, m_dim))
 
+    # Variables
+    x = cp.Variable(n_dim, m_dim)
+    y = cp.Variable(n_dim, integer=True)
+
     # Define transportation cost
-    c = np.random.rand(n_dim, m_dim)
-    c = [5 * np.random.rand(m_dim)
-         for _ in range(n_dim)]  # c_i for each warehouse
+    c = np.random.rand(n_dim, m_dim)  # Facilities x stores
+    f = np.random.rand(n_dim)
+
     # Supply for each warehouse (scalar)
     s = 3 * np.ones(n_dim) + 10 * np.random.rand(n_dim)
-
-    # Variables
-    x = [cp.Variable(m_dim) for _ in range(n_dim)]  # x_i for each earehouse
 
     # Parameters
     d = cp.Parameter(m_dim, name='d')
 
     # Constraints
-    constraints = [cp.sum(x[i]) <= s[i] for i in range(n_dim)]
-    constraints += [cp.sum(x) >= d]
-    constraints += [x[i] >= 0 for i in range(n_dim)]
+    constraints = [cp.sum(x, 1) >= d]
+    constraints += [cp.sum(x[i, :]) <= s[i] * y[i] for i in range(n_dim)]
+    constraints += [x >= 0]
+    constraints += [y >= 0, y <= 1]
 
     # Objective
-    cost = 0
-    for i in range(n_dim):
-        cost += c[i] * x[i]
+    cost = cp.multiply(c, x) + f * y
 
     # Define optimizer
     m = mlopt.Optimizer(cp.Minimize(cost), constraints,

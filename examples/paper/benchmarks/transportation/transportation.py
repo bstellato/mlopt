@@ -17,18 +17,17 @@ np.random.seed(1)
 # Define data
 n_vec = np.array([], dtype=int)
 m_vec = np.array([], dtype=int)
-for i in np.arange(20, 40, 20):
-    n_vec = np.append(n_vec, [i] * 3)
-    m_vec = np.append(m_vec, [i, int(i/2), 2 * i])
-n_train = 10000
+for i in np.arange(20, 120, 20):
+    n_vec = np.append(n_vec, [i] * 2)
+    m_vec = np.append(m_vec, [i, int(i/2)])
 n_test = 100
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
 
 # DEBUG: only data 3
-n_vec = n_vec[2:]
-m_vec = m_vec[2:]
+#  n_vec = n_vec[2:]
+#  m_vec = m_vec[2:]
 
 name = "transportation"
 
@@ -130,24 +129,24 @@ for i in range(len(n_vec)):
     results_detail = results_detail.append(pytorch_detail)
 
     #  Train and test using optimal trees
-    #  m.train(
-    #          #  sampling_fn=lambda n: sample(theta_bar, radius, n),
-    #          parallel=True,
-    #          parallel_trees=True,
-    #          learner=mlopt.OPTIMAL_TREE,
-    #          hyperplanes=False,
-    #          max_depth=15,
-    #          save_svg=True)
-    #  m.save(os.path.join(output_folder,
-    #                      "optimaltrees_" + name + "_n%d_m%d" % (n_dim, m_dim)),
-    #         delete_existing=True)
-    #  optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
-    #                                                            parallel=True)
-    #  add_details(optimaltrees_general, n=n_dim, m=m_dim)
-    #  add_details(optimaltrees_detail, n=n_dim, m=m_dim)
-    #  results_general = results_general.append(optimaltrees_general)
-    #  results_detail = results_detail.append(optimaltrees_detail)
-
+    m.train(
+            #  sampling_fn=lambda n: sample(theta_bar, radius, n),
+            parallel=True,
+            parallel_trees=True,
+            learner=mlopt.OPTIMAL_TREE,
+            hyperplanes=False,
+            max_depth=15,
+            save_svg=True)
+    m.save(os.path.join(output_folder,
+                        "optimaltrees_" + name + "_n%d_m%d" % (n_dim, m_dim)),
+           delete_existing=True)
+    optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
+                                                              parallel=True)
+    add_details(optimaltrees_general, n=n_dim, m=m_dim)
+    add_details(optimaltrees_detail, n=n_dim, m=m_dim)
+    results_general = results_general.append(optimaltrees_general)
+    results_detail = results_detail.append(optimaltrees_detail)
+#
     # Save data to file
     if not os.path.isfile(data_file):
         print("Saving data file %s" % data_file)
