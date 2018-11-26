@@ -1,20 +1,29 @@
+# Needed for slurm
+import os
+import sys
+sys.path.append(os.getcwd())
+
+from mlopt.sampling import uniform_sphere_sample
+import mlopt
 import numpy as np
 import scipy.sparse as spa
 import cvxpy as cp
 import pandas as pd
-import os
-import mlopt
-from mlopt.sampling import uniform_sphere_sample
+
+
 np.random.seed(1)
 
-
 # Define loop to train
-p_vec = np.array([10, 20, 30])
+p_vec = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+#  p_vec = np.array([10, 20])
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
 # Output folder
-output_folder = "output/portfolio"
+name = "portfolio"
+output_folder = "output/%s" % name
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
 
 
 # Function to sample points
@@ -54,7 +63,7 @@ for p in p_vec:
 
     # Define optimizer
     m = mlopt.Optimizer(cp.Minimize(cost), constraints,
-                        name="portfolio")
+                        name=name)
 
     '''
     Sample points
@@ -67,18 +76,30 @@ for p in p_vec:
     '''
 
     # Training and testing data
-    n_train = 500
-    n_test = 10
-    theta_train = sample_portfolio(theta_bar, radius, n=n_train)
-    theta_test = sample_portfolio(theta_bar, radius, n=n_test)
+    n_train = 10000
+    n_test = 100
+    theta_train = sample(theta_bar, radius, n=n_train)
+    theta_test = sample(theta_bar, radius, n=n_test)
 
     # Train and test using pytorch
-    m.train(theta_train,
-            parallel=False,
-            learner=mlopt.PYTORCH)
-    m.save(os.path.join(output_folder, "pytorch_portfolio_%d" % p),
+    data_file = os.path.join(output_folder,
+                             "%s_p%d_n%d_data.pkl" % (name, p, n_train))
+
+    # Loading data points
+    if os.path.isfile(data_file):
+        print("Loading data file %s" % data_file)
+        m.load_data(data_file)
+        m.train(parallel=True,
+                learner=mlopt.PYTORCH)
+    else:
+        # Train neural network
+        m.train(sampling_fn=lambda n: sample(theta_bar, radius, n),
+                parallel=True,
+                learner=mlopt.PYTORCH)
+    m.save(os.path.join(output_folder,
+                        "pytorch_%s_p%d_n%d" % (name, p, n_train)),
            delete_existing=True)
-    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=False)
+    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=True)
 
     # Fix dataframe by adding elements
     add_details(pytorch_general, n=n, p=p)
@@ -86,36 +107,30 @@ for p in p_vec:
     results_general = results_general.append(pytorch_general)
     results_detail = results_detail.append(pytorch_detail)
 
-    # DEBUG. DEFINE OPTIMIZER AGAIn
-    #  mu = cp.Parameter(n, name='mu')
-    #  x = cp.Variable(n)
-    #  cost = - mu * x + gamma * cp.quad_form(x, Sigma)
-    #  constraints = [cp.sum(x) == 1, x >= 0]
-    #  m = mlopt.Optimizer(cp.Minimize(cost), constraints,
-    #                      name="portfolio")
-    #  m.train(theta_train, learner=mlopt.PYTORCH)
-    #  results_pytorch = m.performance(theta_test)
-
     #  Train and test using optimal trees
-    m.train(theta_train,
-            parallel=False,
+    m.train(
+            #  theta_train,
+            parallel=True,
             learner=mlopt.OPTIMAL_TREE,
-            max_depth=10,
-            #  cp=0.1,
-            #  hyperplanes=True,
+            hyperplanes=False,
+            max_depth=15,
             save_svg=True)
-    m.save(os.path.join(output_folder, "optimaltrees_portfolio_%d" % p),
+    m.save(os.path.join(output_folder, "optimaltrees_%s_p%d_n%d" % (name, p, n_train)),
            delete_existing=True)
     optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
-                                                              parallel=False)
+                                                              parallel=True)
     add_details(optimaltrees_general, n=n, p=p)
     add_details(optimaltrees_detail, n=n, p=p)
     results_general = results_general.append(optimaltrees_general)
     results_detail = results_detail.append(optimaltrees_detail)
 
+    # Save data to file
+    if not os.path.isfile(data_file):
+        print("Saving data file %s" % data_file)
+        m.save_data(data_file, delete_existing=True)
 
-# Create cumulative results
-results_general.to_csv(os.path.join(output_folder,
-                                    "portfolio_cont_general.csv"))
-results_detail.to_csv(os.path.join(output_folder,
-                                   "portfolio_cont_detail.csv"))
+    # Store cumulative results at each iteration
+    results_general.to_csv(os.path.join(output_folder,
+                                        "%s_general.csv" % name))
+    results_detail.to_csv(os.path.join(output_folder,
+                                       "%s_detail.csv" % name))

@@ -26,9 +26,9 @@ results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
 
-# DEBUG: prendi solo data 3
-#  n_vec = n_vec[2:]
-#  m_vec = m_vec[2:]
+# DEBUG: only data 3
+n_vec = n_vec[2:]
+m_vec = m_vec[2:]
 
 name = "transportation"
 
