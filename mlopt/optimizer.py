@@ -201,6 +201,10 @@ class Optimizer(object):
             self.y_train, self.encoding = \
                 encode_strategies(train_strategies)
 
+            # Compute Good turing estimates
+            self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
+            self._sampler.compute_good_turing(self.y_train)
+
         elif sampling_fn is not None:
             print("Use iterative sampling")
             # Create X_train, y_train and encoding from
