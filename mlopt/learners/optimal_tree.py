@@ -110,6 +110,9 @@ class OptimalTree(Learner):
         # Start time
         start_time = time.time()
 
+        # Reset random seed
+        self.jl.eval("using Random; Random.seed!(1)")
+
         # Create classifier
         self._lnr = self._create_classifier(**self.optimaltrees_options)
 

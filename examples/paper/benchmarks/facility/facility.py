@@ -15,22 +15,16 @@ import pandas as pd
 np.random.seed(1)
 
 # Define data
-n_vec = np.array([], dtype=int)
-m_vec = np.array([], dtype=int)
-for i in np.arange(20, 40, 20):
-    n_vec = np.append(n_vec, [i] * 3)
-    m_vec = np.append(m_vec, [i, int(i/2), 2 * i])
-n_train = 10000
-n_test = 100
+n_vec = np.array([], dtype=int)  # Facilities
+m_vec = np.array([], dtype=int)  # Stores
+for i in np.arange(20, 100, 20):
+    n_vec = np.append(n_vec, [i] * 2)
+    m_vec = np.append(m_vec, [i, int(i/2)])
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
 
-# DEBUG
-#  n_vec = n_vec[2:]
-#  m_vec = m_vec[2:]
-
-name = "transportation"
+name = "facility"
 
 # Output folder
 output_folder = "output/" + name
@@ -59,13 +53,14 @@ def add_details(df, n=None, m=None):
 # Main script
 for i in range(len(n_vec)):
     '''
-    Define Transportation problem
+    Define Facility Location problem
     '''
     n_dim = n_vec[i]
     m_dim = m_vec[i]
     print("Solving for n = %d, m = %d" % (n_dim, m_dim))
 
     # Define transportation cost
+    c = np.random.rand(n_dim, m_dim)
     c = [5 * np.random.rand(m_dim)
          for _ in range(n_dim)]  # c_i for each warehouse
     # Supply for each warehouse (scalar)

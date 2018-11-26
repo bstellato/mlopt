@@ -17,7 +17,7 @@ class Sampler(object):
     def __init__(self,
                  problem,
                  sampling_fn=None,
-                 n_samples_iter=1000,
+                 n_samples_iter=5000,
                  max_iter=int(1e2),
                  alpha=0.97,
                  n_samples=0):
