@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=15
+#SBATCH --cpus-per-task=20
 #SBATCH --mem-per-cpu=8G
 #SBATCH --gres=gpu:1
 #SBATCH --partition=sched_mit_sloan_gpu
@@ -14,5 +14,5 @@
 source activate python36
 
 # Include script
-python examples/paper/benchmarks/portfolio/portfolio.py
-# python examples/paper/benchmarks/transportation/transportation.py
+# python examples/paper/benchmarks/portfolio/portfolio.py
+python examples/paper/benchmarks/transportation/transportation.py

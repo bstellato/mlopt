@@ -104,7 +104,7 @@ class PyTorchNeuralNet(Learner):
         - learning_rate
         """
 
-        print("Learning Neural Network with parameters: ")
+        print("Learning Neural Network with parameters: ", end='')
         print(params)
 
         # Define optimizer
@@ -184,6 +184,8 @@ class PyTorchNeuralNet(Learner):
             for batch_size in self.options['params']['batch_size']
             for n_epochs in self.options['params']['n_epochs']]
         n_models = len(params)
+
+        print("Train Neural Network with %d sets of parameters" % n_models)
 
         # Create vector of results
         accuracy_vec = np.zeros(n_models)
