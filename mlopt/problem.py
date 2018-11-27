@@ -135,7 +135,7 @@ class Problem(object):
             relative_viol = relative_viol if relative_viol > DIVISION_TOL else 1.
 
             # Append violation
-            violations.append(np.atleast_1d(c.violation() / relative_viol))
+            violations.append(np.atleast_1d(c.violation().flatten() / relative_viol))
 
         # Create numpy array
         violations = np.concatenate(violations)
@@ -168,12 +168,12 @@ class Problem(object):
 
         results = {}
         results['time'] = problem.solver_stats.solve_time
-        results['x'] = np.concatenate([np.atleast_1d(v.value)
-                                       for v in problem.variables()])
         results['cost'] = np.inf
         results['status'] = problem.status
 
         if results['status'] in cp.settings.SOLUTION_PRESENT:
+            results['x'] = np.concatenate([np.atleast_1d(v.value.flatten())
+                                           for v in problem.variables()])
             results['cost'] = self.cost()
             results['infeasibility'] = self.infeasibility()
             tight_constraints = dict()
@@ -182,6 +182,11 @@ class Problem(object):
                 tight_constraints[c.id] = np.abs(val) <= TIGHT_CONSTRAINTS_TOL
             results['tight_constraints'] = tight_constraints
         else:
+            # DEBUG
+            problem.solve(solver=self.solver,
+                          verbose=True,
+                          **self.solver_options)
+            results['x'] = np.nan * np.ones(self.n_var)
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
             results['tight_constraints'] = dict()

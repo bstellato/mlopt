@@ -58,7 +58,7 @@ class Sampler(object):
         self.good_turing_smooth = self.alpha * n1/self.n_samples + \
             (1 - self.alpha) * self.good_turing_smooth
 
-    def sample(self, epsilon=EPS, beta=1e-05):
+    def sample(self, parallel=True, epsilon=EPS, beta=1e-05):
         """
         Iterative sampling.
         """
@@ -74,7 +74,7 @@ class Sampler(object):
             # Sample new points
             theta_new = self.sampling_fn(self.n_samples_iter)
             s_theta_new = [r['strategy']
-                           for r in self.problem.solve_parametric(theta_new)]
+                           for r in self.problem.solve_parametric(theta_new, parallel=parallel)]
             theta = theta.append(theta_new, ignore_index=True)
             s_theta += s_theta_new
             self.n_samples += self.n_samples_iter

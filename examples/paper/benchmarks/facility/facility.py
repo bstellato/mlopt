@@ -20,6 +20,7 @@ m_vec = np.array([], dtype=int)  # Stores
 for i in np.arange(20, 100, 20):
     n_vec = np.append(n_vec, [i] * 2)
     m_vec = np.append(m_vec, [i, int(i/2)])
+n_test = 100
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
@@ -60,15 +61,15 @@ for i in range(len(n_vec)):
     print("Solving for n = %d, m = %d" % (n_dim, m_dim))
 
     # Variables
-    x = cp.Variable(n_dim, m_dim)
+    x = cp.Variable((n_dim, m_dim))
     y = cp.Variable(n_dim, integer=True)
 
     # Define transportation cost
     c = np.random.rand(n_dim, m_dim)  # Facilities x stores
-    f = np.random.rand(n_dim)
+    f = 10 * np.random.rand(n_dim)
 
     # Supply for each warehouse (scalar)
-    s = 3 * np.ones(n_dim) + 10 * np.random.rand(n_dim)
+    s = 8 * np.ones(n_dim) + 10 * np.random.rand(n_dim)
 
     # Parameters
     d = cp.Parameter(m_dim, name='d')
@@ -80,7 +81,7 @@ for i in range(len(n_vec)):
     constraints += [y >= 0, y <= 1]
 
     # Objective
-    cost = cp.multiply(c, x) + f * y
+    cost = cp.sum(cp.multiply(c, x)) + f * y
 
     # Define optimizer
     m = mlopt.Optimizer(cp.Minimize(cost), constraints,
@@ -90,7 +91,7 @@ for i in range(len(n_vec)):
     Sample points
     '''
     theta_bar = 3 * np.ones(m_dim) + np.random.randn(m_dim)
-    radius = 0.5
+    radius = 5
 
     '''
     Train and solve
