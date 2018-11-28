@@ -3,14 +3,21 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=24
 #SBATCH --mem-per-cpu=4G
-#SBATCH --partition=sched_mit_sloan_interactive
+#SBATCH --partition=sched_mit_sloan_batch
 #SBATCH --time=0-24:00
-#SBATCH -o /home/stellato/projects/mlopt/output/output_%j.txt
+#SBATCH -o /home/stellato/projects/mlopt/output/output_transportation_%j.txt
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
 # Activate environment
 source activate python36
+
+SLURM_PARTITION=`squeue -h -o "%P" -j$SLURM_JOB_ID`;
+if [[ $SLURM_PARTITION == *"interactive"* ]]; then
+    export IAI_LICENSE_FILE="/home/stellato/iai_interactive.lic"
+elif [[ $SLURM_PARTITION == *"gpu"* ]]; then
+    export IAI_LICENSE_FILE="/home/stellato/iai_gpu.lic"
+fi
 
 # Include script
 # python examples/paper/portfolio/portfolio.py

@@ -1,8 +1,92 @@
 import numpy as np
 from mlopt.settings import INFEAS_TOL, SUBOPT_TOL
+import os
+import pandas as pd
+import mlopt
 #  import scipy.io as spio
 #  import cvxpy as cp
 #  import scipy.sparse as spa
+
+
+def benchmark(m,  # Optimizer
+              data_file,
+              theta_bar,
+              sample_fn,
+              details_fn,
+              dims):
+    """
+    Perform benchmark
+
+    Parameters
+    ----------
+    m : Optimizer
+        Problem optimizer.
+    data_file : string
+        Name of the data file.
+    theta_bar : array or dict
+        Average value of optimizer.
+    sample_fn : Function
+        Sampling function.
+    details_fn : Function
+        Function to add details to DataFrame.
+    dims : dict
+        Problem dimensions.
+    """
+
+    # Reset random seed
+    np.random.seed(1)
+
+    # Get test elements
+    theta_test = sample_fn(100)
+
+    data_file_general = data_file + "_general.csv"
+    data_file_detail = data_file + "_detail.csv"
+
+    # Loading data points
+    already_run = os.path.isfile(data_file_general) and \
+        os.path.isfile(data_file_detail)
+    if already_run:
+        print("Loading data %s" % data_file)
+        general = pd.read_csv(data_file_general)
+        detail = pd.read_csv(data_file_detail)
+    else:
+        print("Perform training for %s" % data_file)
+
+        # Train neural network
+        m.train(sampling_fn=sample_fn,
+                parallel=True,
+                learner=mlopt.PYTORCH)
+
+        pytorch_general, pytorch_detail = m.performance(theta_test,
+                                                        parallel=True)
+
+        # Fix dataframe by adding elements
+        details_fn(pytorch_general, **dims)
+        details_fn(pytorch_detail, **dims)
+
+        #  Train and test using optimal trees
+        m.train(
+                parallel=True,
+                learner=mlopt.OPTIMAL_TREE,
+                save_svg=True)
+        optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
+                                                                  parallel=True)
+        details_fn(optimaltrees_general, **dims)
+        details_fn(optimaltrees_detail, **dims)
+
+        #  Combine and store partial results
+        general = pytorch_general.append(optimaltrees_general)
+        detail = pytorch_detail.append(optimaltrees_detail)
+
+        # DEBUG WITHOUT TREES
+        #  general = pytorch_general
+        #  detail = pytorch_detail
+
+        # Store to csv
+        general.to_csv(data_file_general, index=False)
+        detail.to_csv(data_file_detail, index=False)
+
+    return general, detail
 
 
 def n_features(df):

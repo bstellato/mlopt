@@ -13,6 +13,16 @@
 # Activate environment
 source activate python36
 
+SLURM_PARTITION=`squeue -h -o "%P" -j$SLURM_JOB_ID`;
+if [[ $SLURM_PARTITION == *"interactive"* ]]; then
+    export IAI_LICENSE_FILE="/home/stellato/iai_interactive.lic"
+elif [[ $SLURM_PARTITION == *"gpu"* ]]; then
+    export IAI_LICENSE_FILE="/home/stellato/iai_gpu.lic"
+fi
+
+echo $IAI_LICENSE_FILE
+
 # Include script
 # python examples/paper/benchmarks/portfolio/portfolio.py
-python examples/paper/benchmarks/transportation/transportation.py
+# python examples/paper/benchmarks/transportation/transportation.py
+python examples/paper/benchmarks/facility/facility.py
