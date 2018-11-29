@@ -34,9 +34,9 @@ if not os.path.exists(output_folder):
 
 
 # Function to sample points
-def sample(theta_bar, radius, n=100):
+def sample(theta_bar, n=100):
 
-    radius = 5
+    radius = 0.5
 
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, radius, n=n)
@@ -66,11 +66,12 @@ for i in range(len(n_vec)):
     print("Solving for n = %d, m = %d" % (n_dim, m_dim))
 
     # Variables
-    x = cp.Variable((n_dim, m_dim))
+    x = [cp.Variable(m_dim) for _ in range(n_dim)]
+    #  x = cp.Variable((n_dim, m_dim))
     y = cp.Variable(n_dim, integer=True)
 
     # Define transportation cost
-    c = np.random.rand(n_dim, m_dim)  # Facilities x stores
+    c = [np.random.rand(m_dim) for _ in range(n_dim)]  # Facilities x stores
     f = 10 * np.random.rand(n_dim)
 
     # Supply for each warehouse (scalar)
@@ -80,13 +81,15 @@ for i in range(len(n_vec)):
     d = cp.Parameter(m_dim, name='d')
 
     # Constraints
-    constraints = [cp.sum(x, 1) >= d]
-    constraints += [cp.sum(x[i, :]) <= s[i] * y[i] for i in range(n_dim)]
-    constraints += [x >= 0]
+    constraints = [cp.sum(x) >= d]
+    constraints += [cp.sum(x[i]) <= s[i] * y[i] for i in range(n_dim)]
+    constraints += [x[i] >= 0 for i in range(n_dim)]
     constraints += [y >= 0, y <= 1]
 
     # Objective
-    cost = cp.sum(cp.multiply(c, x)) + f * y
+    cost = f * y
+    for i in range(n_dim):
+        cost += c[i] * x[i]
 
     # Define optimizer
     m = mlopt.Optimizer(cp.Minimize(cost), constraints,

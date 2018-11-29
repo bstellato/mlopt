@@ -183,9 +183,9 @@ class Problem(object):
             results['tight_constraints'] = tight_constraints
         else:
             # DEBUG
-            problem.solve(solver=self.solver,
-                          verbose=True,
-                          **self.solver_options)
+            #  problem.solve(solver=self.solver,
+            #                verbose=True,
+            #                **self.solver_options)
             results['x'] = np.nan * np.ones(self.n_var)
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
