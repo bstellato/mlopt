@@ -25,4 +25,5 @@ echo $IAI_LICENSE_FILE
 # Include script
 # python examples/paper/benchmarks/portfolio/portfolio.py
 # python examples/paper/benchmarks/transportation/transportation.py
-python examples/paper/benchmarks/facility/facility.py
+# python examples/paper/benchmarks/facility/facility.py
+python examples/paper/benchmarks/control/control.py

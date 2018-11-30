@@ -41,7 +41,6 @@ def generate_P_des(T):
 
 
 np.random.seed(1)
-
 name = "control"
 
 # Output folder
@@ -55,12 +54,11 @@ if not os.path.exists(output_folder):
 # horizon length
 T_vec = np.array([5, 10, 20, 30, 40], dtype=int)
 
-
 # Function to sample points
 def sample(theta_bar, n=100):
 
     # Get bar values for certain parameters
-    E_0_bar = theta_bar[0]
+    E_0_bar = [theta_bar[0]]
     P_des_bar = theta_bar[1:]
 
     # Sample points from multivariate ball
@@ -84,13 +82,12 @@ results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 
 
-for T in range(len(T_vec)):
+for T in T_vec:
     '''
     Define control problem
     '''
 
     # Generate example
-    T = 5      # Horizon
     tau = 4.    # length of the discretization time interval
 
     # Parameters
@@ -98,7 +95,7 @@ for T in range(len(T_vec)):
     E_0_bar = 40.    # Initial charge
 
     # Constraints on electric charge
-    E_max = 40.  # Maximum charge
+    E_max = 50.  # Maximum charge
     E_0 = cp.Parameter(nonneg=True, name='E_0')
 
     # Constraints on power
@@ -119,7 +116,7 @@ for T in range(len(T_vec)):
     E = cp.Variable(T+1)
     P_batt = cp.Variable(T)
     P_eng = cp.Variable(T)
-    z = cp.Variable(T, boolean=True)
+    z = cp.Variable(T, integer=True)
 
     # Constraints
     constraints = []
@@ -140,6 +137,8 @@ for T in range(len(T_vec)):
     # P_des <= P_batt + P_eng
     constraints += [P_des[t] <= P_batt[t] + P_eng[t] for t in range(T)]
 
+    # Constrain z
+    constraints += [0 <= z, z <= 1]
 
     # Cost
     cost = eta * (E[T] - E_max) ** 2
@@ -157,7 +156,7 @@ for T in range(len(T_vec)):
     '''
     Define parameters average values
     '''
-    theta_bar = np.concatenate([E_0_bar], P_des_bar)
+    theta_bar = np.concatenate(([E_0_bar], P_des_bar))
 
     '''
     Train and solve
@@ -172,7 +171,13 @@ for T in range(len(T_vec)):
                                           theta_bar,
                                           lambda n: sample(theta_bar, n),
                                           add_details,
-                                          {'T': T})
+                                          {'T': T}
+                                          )
     results_general = results_general.append(temp_general)
     results_detail = results_detail.append(temp_detail)
 
+# Store cumulative results
+results_general.to_csv(os.path.join(output_folder,
+                                    "%s_general.csv" % name))
+results_detail.to_csv(os.path.join(output_folder,
+                                   "%s_detail.csv" % name))

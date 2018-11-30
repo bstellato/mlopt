@@ -32,7 +32,8 @@ class OptimalTree(Learner):
         self.options['hyperplanes'] = options.pop('hyperplanes', False)
         self.options['parallel'] = options.pop('parallel_trees', True)
         self.options['cp'] = options.pop('cp', None)
-        self.options['max_depth'] = options.pop('max_depth', 15)
+        self.options['max_depth'] = options.pop('max_depth', [5, 10, 10])
+        self.options['minbucket'] = options.pop('minbucket', [1, 5, 10])
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', N_BEST),
                                      self.n_classes)
@@ -69,6 +70,8 @@ class OptimalTree(Learner):
         self._convert = self.jl.eval("convert")
         self._create_classifier = \
             self.jl.eval("OptimalTrees.OptimalTreeClassifier")
+        self._create_grid = \
+            self.jl.eval("OptimalTrees.GridSearch")
         self._fit = self.jl.eval("OptimalTrees.fit!")
         self._predict = self.jl.eval("OptimalTrees.predict_proba")
         self._write = self.jl.eval("OptimalTrees.writejson")
@@ -79,8 +82,9 @@ class OptimalTree(Learner):
         self._close = self.jl.eval("close")
 
         # Assign optimaltrees options
-        self.optimaltrees_options = {}
+        self.optimaltrees_options = {'ls_random_seed': 1}
         self.optimaltrees_options['max_depth'] = self.options['max_depth']
+        self.optimaltrees_options['minbucket'] = self.options['minbucket']
         if self.options['hyperplanes']:
             self.optimaltrees_options['hyperplane_config'] = \
                 self.jl.eval('(sparsity=:all,)')
@@ -114,14 +118,19 @@ class OptimalTree(Learner):
         self.jl.eval("using Random; Random.seed!(1)")
 
         # Create classifier
-        self._lnr = self._create_classifier(**self.optimaltrees_options)
+        # Set seed to 1 to make the validation reproducible
+        self._lnr = self._create_classifier(ls_random_seed=self.optimaltrees_options['ls_random_seed'])
+
+        # Create grid search
+        self._grid = self._create_grid(self._lnr,
+                                       **self.optimaltrees_options)
 
         # Train classifier
-        self._fit(self._lnr, X, y)
+        self._fit(self._grid, X, y, train_proportion=0.9)
 
         # End time
         end_time = time.time()
-        print("Elapsed time %.2f" % (end_time - start_time))
+        print("Tree training time %.2f" % (end_time - start_time))
 
     def predict(self, X):
 

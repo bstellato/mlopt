@@ -13,7 +13,9 @@ def benchmark(m,  # Optimizer
               theta_bar,
               sample_fn,
               details_fn,
-              dims):
+              dims,
+              trees=True
+              ):
     """
     Perform benchmark
 
@@ -31,6 +33,8 @@ def benchmark(m,  # Optimizer
         Function to add details to DataFrame.
     dims : dict
         Problem dimensions.
+    trees : bool, optional
+        Whether or not to train the trees. Defaults to true.
     """
 
     # Reset random seed
@@ -65,22 +69,22 @@ def benchmark(m,  # Optimizer
         details_fn(pytorch_detail, **dims)
 
         #  Train and test using optimal trees
-        m.train(
-                parallel=True,
-                learner=mlopt.OPTIMAL_TREE,
-                save_svg=True)
-        optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
-                                                                  parallel=True)
-        details_fn(optimaltrees_general, **dims)
-        details_fn(optimaltrees_detail, **dims)
+        if trees:
+            m.train(
+                    parallel=True,
+                    learner=mlopt.OPTIMAL_TREE,
+                    save_svg=True)
+            optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
+                                                                      parallel=True)
+            details_fn(optimaltrees_general, **dims)
+            details_fn(optimaltrees_detail, **dims)
 
-        #  Combine and store partial results
-        general = pytorch_general.append(optimaltrees_general)
-        detail = pytorch_detail.append(optimaltrees_detail)
-
-        # DEBUG WITHOUT TREES
-        #  general = pytorch_general
-        #  detail = pytorch_detail
+            #  Combine and store partial results
+            general = pytorch_general.append(optimaltrees_general)
+            detail = pytorch_detail.append(optimaltrees_detail)
+        else:
+            general = pytorch_general
+            detail = pytorch_detail
 
         # Store to csv
         general.to_csv(data_file_general, index=False)
