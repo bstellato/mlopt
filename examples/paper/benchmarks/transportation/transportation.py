@@ -27,7 +27,7 @@ for i in np.arange(20, 120, 20):
 #  n_vec = n_vec[2:]
 #  m_vec = m_vec[2:]
 
-name = "transportation_csv"
+name = "transportation"
 
 # Output folder
 output_folder = "output/" + name
@@ -37,7 +37,7 @@ if not os.path.exists(output_folder):
 
 # Function to sample points
 def sample(theta_bar, n=100):
-    radius = 0.5
+    radius = 0.75
 
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, radius, n=n)
@@ -45,13 +45,6 @@ def sample(theta_bar, n=100):
     df = pd.DataFrame({'d': X.tolist()})
 
     return df
-
-
-def add_details(df, n=None, m=None):
-    len_df = len(df)
-
-    df['n'] = [n] * len_df
-    df['m'] = [m] * len_df
 
 
 # Main script
@@ -109,7 +102,6 @@ for i in range(len(n_vec)):
     temp_general, temp_detail = benchmark(m, data_file,
                                           theta_bar,
                                           lambda n: sample(theta_bar, n),
-                                          add_details,
                                           {'n': n_dim, 'm': m_dim})
     results_general = results_general.append(temp_general)
     results_detail = results_detail.append(temp_detail)

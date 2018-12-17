@@ -15,7 +15,7 @@ import pandas as pd
 np.random.seed(1)
 
 # Define loop to train
-p_vec = np.array([10, 20, 30, 40, 50, 60, 70, 80])
+p_vec = np.array([10, 20, 30, 40, 50])
 #  p_vec = np.array([3, 4])
 
 # Output folder
@@ -28,7 +28,7 @@ if not os.path.exists(output_folder):
 # Function to sample points
 def sample(theta_bar, n=100):
 
-    radius = 0.3
+    radius = 0.1
 
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, radius, n=n)
@@ -36,13 +36,6 @@ def sample(theta_bar, n=100):
     df = pd.DataFrame({'mu': X.tolist()})
 
     return df
-
-
-def add_details(df, p=None, n=None):
-    len_df = len(df)
-
-    df['n'] = [n] * len_df
-    df['p'] = [p] * len_df
 
 
 results_general = pd.DataFrame()
@@ -84,7 +77,6 @@ for p in p_vec:
     temp_general, temp_detail = benchmark(m, data_file,
                                           theta_bar,
                                           lambda n: sample(theta_bar, n),
-                                          add_details,
                                           {'p': p})
     results_general = results_general.append(temp_general)
     results_detail = results_detail.append(temp_detail)

@@ -8,11 +8,20 @@ import mlopt
 #  import scipy.sparse as spa
 
 
+def add_details(df, **kwargs):
+    """
+    Add details to dataframe
+    """
+    len_df = len(df)  # Dataframe length
+
+    for key, val in kwargs.items():
+        df[key] = [val] * len_df
+
+
 def benchmark(m,  # Optimizer
               data_file,
               theta_bar,
               sample_fn,
-              details_fn,
               dims,
               trees=True
               ):
@@ -29,8 +38,6 @@ def benchmark(m,  # Optimizer
         Average value of optimizer.
     sample_fn : Function
         Sampling function.
-    details_fn : Function
-        Function to add details to DataFrame.
     dims : dict
         Problem dimensions.
     trees : bool, optional
@@ -56,35 +63,57 @@ def benchmark(m,  # Optimizer
     else:
         print("Perform training for %s" % data_file)
 
+
+        print("Training NN")
+        print("-----------\n")
+
         # Train neural network
         m.train(sampling_fn=sample_fn,
                 parallel=True,
                 learner=mlopt.PYTORCH)
 
-        pytorch_general, pytorch_detail = m.performance(theta_test,
-                                                        parallel=True)
+        general, detail = m.performance(theta_test, parallel=True)
 
         # Fix dataframe by adding elements
-        details_fn(pytorch_general, **dims)
-        details_fn(pytorch_detail, **dims)
+        add_details(general, predictor="NN", **dims)
+        add_details(detail, predictor="NN", **dims)
 
         #  Train and test using optimal trees
         if trees:
+
+            print("Training OCT")
+            print("-----------\n")
+
+            # OCT
             m.train(
                     parallel=True,
                     learner=mlopt.OPTIMAL_TREE,
+                    hyperplanes=False,
                     save_svg=True)
-            optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
-                                                                      parallel=True)
-            details_fn(optimaltrees_general, **dims)
-            details_fn(optimaltrees_detail, **dims)
+            oct_general, oct_detail = m.performance(theta_test, parallel=True)
+            add_details(oct_general, predictor="OCT", **dims)
+            add_details(oct_detail, predictor="OCT", **dims)
 
             #  Combine and store partial results
-            general = pytorch_general.append(optimaltrees_general)
-            detail = pytorch_detail.append(optimaltrees_detail)
-        else:
-            general = pytorch_general
-            detail = pytorch_detail
+            general = general.append(oct_general)
+            detail = detail.append(oct_detail)
+
+            print("Training OCT-H")
+            print("-----------\n")
+
+            # OCT-H
+            m.train(
+                    parallel=True,
+                    learner=mlopt.OPTIMAL_TREE,
+                    hyperplanes=True,
+                    save_svg=True)
+            octh_general, octh_detail = m.performance(theta_test, parallel=True)
+            add_details(octh_general, predictor="OCT-H", **dims)
+            add_details(octh_detail, predictor="OCT-H", **dims)
+
+            #  Combine and store partial results
+            general = general.append(octh_general)
+            detail = detail.append(octh_detail)
 
         # Store to csv
         general.to_csv(data_file_general, index=False)

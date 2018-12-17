@@ -30,9 +30,11 @@ class OptimalTree(Learner):
         self.n_classes = options.pop('n_classes')
         self.options = {}
         self.options['hyperplanes'] = options.pop('hyperplanes', False)
+        #  self.options['fast_num_support_restarts'] = \
+        #      options.pop('fast_num_support_restarts', [20])
         self.options['parallel'] = options.pop('parallel_trees', True)
         self.options['cp'] = options.pop('cp', None)
-        self.options['max_depth'] = options.pop('max_depth', [5, 10, 10])
+        self.options['max_depth'] = options.pop('max_depth', [5, 10, 15])
         self.options['minbucket'] = options.pop('minbucket', [1, 5, 10])
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', N_BEST),
@@ -87,7 +89,12 @@ class OptimalTree(Learner):
         self.optimaltrees_options['minbucket'] = self.options['minbucket']
         if self.options['hyperplanes']:
             self.optimaltrees_options['hyperplane_config'] = \
-                self.jl.eval('(sparsity=:all,)')
+                self.jl.eval('[[(sparsity=:all,)]]')
+            # Sparse hyperplanes
+            #  self.optimaltrees_options['hyperplane_config'] = \
+            #      self.jl.eval('[[(sparsity=2,)]]')
+            #  self.optimaltrees_options['fast_num_support_restarts'] = \
+            #      self.options['fast_num_support_restarts']
         if self.options['cp']:
             self.optimaltrees_options['cp'] = self.options['cp']
 

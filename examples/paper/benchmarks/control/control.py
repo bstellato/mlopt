@@ -54,6 +54,7 @@ if not os.path.exists(output_folder):
 # horizon length
 T_vec = np.array([5, 10, 20, 30, 40], dtype=int)
 
+
 # Function to sample points
 def sample(theta_bar, n=100):
 
@@ -69,12 +70,6 @@ def sample(theta_bar, n=100):
                        'P_des': X_P_des.tolist()})
 
     return df
-
-
-def add_details(df, T=None):
-    len_df = len(df)
-
-    df['T'] = [T] * len_df
 
 
 # Main script
@@ -170,7 +165,6 @@ for T in T_vec:
     temp_general, temp_detail = benchmark(m, data_file,
                                           theta_bar,
                                           lambda n: sample(theta_bar, n),
-                                          add_details,
                                           {'T': T}
                                           )
     results_general = results_general.append(temp_general)
