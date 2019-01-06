@@ -11,6 +11,16 @@ import pandas as pd
 import cvxpy as cp
 
 
+def sample(theta_bar, radius, n=100):
+
+    # Sample points from multivariate ball
+    X = uniform_sphere_sample(theta_bar, radius, n=n)
+
+    df = pd.DataFrame({'d': X.tolist()})
+
+    return df
+
+
 class TestSave(unittest.TestCase):
 
     def setUp(self):
@@ -22,7 +32,7 @@ class TestSave(unittest.TestCase):
         c = 1.
         p = 1.
         x_init = 2.
-        radius = 3.
+        self.radius = 3.
         n = 100   # Number of points
         n_test = 10
 
@@ -32,9 +42,9 @@ class TestSave(unittest.TestCase):
 
         # Define parameter and sampling points
         d = cp.Parameter(T, nonneg=True, name="d")
-        d_bar = 3. * np.ones(T)
-        X_d = uniform_sphere_sample(d_bar, radius, n=n)
-        X_d_test = uniform_sphere_sample(d_bar, radius, n=n_test)
+        self.d_bar = 3. * np.ones(T)
+        X_d = uniform_sphere_sample(self.d_bar, self.radius, n=n)
+        X_d_test = uniform_sphere_sample(self.d_bar, self.radius, n=n_test)
         self.df = pd.DataFrame({'d': X_d.tolist()})
         self.df_test = pd.DataFrame({'d': X_d_test.tolist()})
 
@@ -52,49 +62,101 @@ class TestSave(unittest.TestCase):
         self.optimizer = Optimizer(cp.Minimize(self.cost),
                                    self.constraints)
 
-    def test_save_load(self):
-        """Test save load"""
-
-        learners = [
-            s.PYTORCH,
-            s.OPTIMAL_TREE
+        # Define learners
+        self.learners = [
+            s.OPTIMAL_TREE,
+            s.PYTORCH
         ]
 
-        for learner in learners:
+    def test_save_load_data(self):
+        """Test save load data"""
+        m = self.optimizer
 
-            # Train optimizer
-            self.optimizer.train(self.df, learner=learner)
+        nn_params = {'learning_rate': [0.01],
+                     'batch_size': [32],
+                     'n_epochs': [100]}
 
-            # Create temporary directory where
-            # to do stuff
+        for learner in self.learners:
             with tempfile.TemporaryDirectory() as tmpdir:
+                data_file = os.path.join(tmpdir, "data.pkl")
 
-                # Archive name
-                file_name = os.path.join(tmpdir, learner + ".tar.gz")
+                # Sample and store
+                m.train(sampling_fn=lambda n: sample(self.d_bar,
+                                                     self.radius,
+                                                     n),
+                        parallel=True,
+                        learner=learner,
+                        params=nn_params)
+                store_general, store_detail = m.performance(self.df_test,
+                                                            parallel=True)
 
-                # Save optimizer
-                self.optimizer.save(file_name)
+                # Save datafile
+                m.save_data(data_file, delete_existing=True)
 
-                # Create new optimizer and load
-                new_optimizer = Optimizer.from_file(file_name)
+                # Create new optimizer, load data, train and
+                # evaluate performance
+                self.optimizer = Optimizer(cp.Minimize(self.cost),
+                                           self.constraints)
+                m = self.optimizer
+                m.load_data(data_file)
+                m.train(parallel=True,
+                        learner=learner,
+                        params=nn_params)
+                load_general, load_detail = m.performance(self.df_test,
+                                                          parallel=True)
 
-                # Predict with optimizer
-                res = self.optimizer.solve(self.df_test)
-
-                # Predict with new_optimizer
-                res_new = new_optimizer.solve(self.df_test)
-
-                # Make sure predictions match
-                for i in range(len(self.df_test)):
-                    npt.assert_almost_equal(res[i]['x'],
-                                            res_new[i]['x'],
-                                            decimal=TOL)
-                    npt.assert_almost_equal(res[i]['cost'],
-                                            res_new[i]['cost'],
-                                            decimal=TOL)
-                    self.assertTrue(res[i]['strategy'] ==
-                                    res_new[i]['strategy'])
-
-
+                # test same things
+                npt.assert_almost_equal(store_general['max_infeas'][0],
+                                        load_general['max_infeas'][0],
+                                        decimal=1e-8)
+                npt.assert_almost_equal(store_general['avg_infeas'][0],
+                                        load_general['avg_infeas'][0],
+                                        decimal=1e-8)
+                npt.assert_almost_equal(store_general['max_subopt'][0],
+                                        load_general['max_subopt'][0],
+                                        decimal=1e-8)
+                npt.assert_almost_equal(store_general['avg_subopt'][0],
+                                        load_general['avg_subopt'][0],
+                                        decimal=1e-8)
+#
+    #  def test_save_load(self):
+    #      """Test save load"""
+    #
+    #      for learner in self.learners:
+    #
+    #          # Train optimizer
+    #          self.optimizer.train(self.df, learner=learner)
+    #
+    #          # Create temporary directory where
+    #          # to do stuff
+    #          with tempfile.TemporaryDirectory() as tmpdir:
+    #
+    #              # Archive name
+    #              file_name = os.path.join(tmpdir, learner + ".tar.gz")
+    #
+    #              # Save optimizer
+    #              self.optimizer.save(file_name)
+    #
+    #              # Create new optimizer and load
+    #              new_optimizer = Optimizer.from_file(file_name)
+    #
+    #              # Predict with optimizer
+    #              res = self.optimizer.solve(self.df_test)
+    #
+    #              # Predict with new_optimizer
+    #              res_new = new_optimizer.solve(self.df_test)
+    #
+    #              # Make sure predictions match
+    #              for i in range(len(self.df_test)):
+    #                  npt.assert_almost_equal(res[i]['x'],
+    #                                          res_new[i]['x'],
+    #                                          decimal=TOL)
+    #                  npt.assert_almost_equal(res[i]['cost'],
+    #                                          res_new[i]['cost'],
+    #                                          decimal=TOL)
+    #                  self.assertTrue(res[i]['strategy'] ==
+    #                                  res_new[i]['strategy'])
+    #
+    #
 if __name__ == '__main__':
     unittest.main()

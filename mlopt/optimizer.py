@@ -58,7 +58,7 @@ class Optimizer(object):
             (self.y_train is not None) and \
             (self.encoding is not None)
 
-    def sample(self, sampling_fn):
+    def sample(self, sampling_fn, parallel=True):
         """
         Sample parameters.
         """
@@ -67,7 +67,7 @@ class Optimizer(object):
         self._sampler = Sampler(self._problem, sampling_fn)
 
         # Sample parameters
-        self.X_train, self.y_train, self.encoding = self._sampler.sample()
+        self.X_train, self.y_train, self.encoding = self._sampler.sample(parallel=parallel)
 
     def save_data(self, file_name, delete_existing=False):
         """
@@ -209,7 +209,7 @@ class Optimizer(object):
             print("Use iterative sampling")
             # Create X_train, y_train and encoding from
             # sampling function
-            self.sample(sampling_fn)
+            self.sample(sampling_fn, parallel=parallel)
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
