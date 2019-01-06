@@ -25,7 +25,7 @@ u = cp.Variable(n)
 
 # Data
 c = np.random.rand(n)  # Supplier cost
-m = 1. + np.random.rand(n)
+m_max = 1. + np.random.rand(n)
 gamma = 0.1
 
 # Parameters
@@ -38,7 +38,7 @@ cost = c * u + gamma * cp.max(cp.multiply(tau, x)) + 1e-06 * cp.sum(x)
 # Constraints
 constraints = [cp.sum(u) >= d]
 constraints += [0 <= u,
-                u <= cp.multiply(x, m)]
+                u <= cp.multiply(x, m_max)]
 constraints += [0 <= x,
                 x <= 1]
 
@@ -79,10 +79,10 @@ theta_test = sample(theta_bar, n=n_test)
 
 # Train solver
 m.train(theta_train,
-        parallel=False,
+        parallel=True,
         learner=mlopt.OPTIMAL_TREE,
         max_depth=3,
-        #  hyperplanes=True,
+        hyperplanes=True,
         save_svg=True)
 #  m.train(theta_train, learner=mlopt.PYTORCH)
 
