@@ -69,8 +69,6 @@ class TestSampling(unittest.TestCase):
         # Train optimizer
         self.optimizer.train(sampling_fn=sampling_function,
                              learner=PYTORCH)
-        #  self.optimizer.train(X=sampling_function(1000),
-        #                       learner=PYTORCH)
 
         # Check tolerance
         self.assertTrue(self.optimizer._sampler.good_turing_smooth

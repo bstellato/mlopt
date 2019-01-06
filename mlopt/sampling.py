@@ -18,12 +18,14 @@ class Sampler(object):
                  problem,
                  sampling_fn=None,
                  n_samples_iter=5000,
+                 n_samples_strategy=200,
                  max_iter=int(1e2),
-                 alpha=0.97,
+                 alpha=0.99,
                  n_samples=0):
         self.problem = problem  # Optimization problem
         self.sampling_fn = sampling_fn
         self.n_samples_iter = n_samples_iter
+        self.n_samples_strategy = n_samples_strategy
         self.max_iter = max_iter
         self.alpha = alpha
         self.n_samples = n_samples   # Initialize numer of samples
@@ -74,7 +76,8 @@ class Sampler(object):
             # Sample new points
             theta_new = self.sampling_fn(self.n_samples_iter)
             s_theta_new = [r['strategy']
-                           for r in self.problem.solve_parametric(theta_new, parallel=parallel)]
+                           for r in self.problem.solve_parametric(theta_new,
+                                                                  parallel=parallel)]
             theta = theta.append(theta_new, ignore_index=True)
             s_theta += s_theta_new
             self.n_samples += self.n_samples_iter
@@ -90,6 +93,29 @@ class Sampler(object):
                    self.n_samples))
 
             if (self.good_turing_smooth < epsilon):
+
+                # Compute number of strategies
+                n_strategies = len(encoding)
+
+                # Compute ideal number of strategies
+                n_samples_ideal = self.n_samples_strategy * n_strategies
+                n_samples_todo = np.maximum(n_samples_ideal - self.n_samples, 0)
+
+                if n_samples_todo > 0:
+                    # Sample new points
+                    theta_new = self.sampling_fn(n_samples_todo)
+                    s_theta_new = [r['strategy']
+                                   for r in self.problem.solve_parametric(theta_new, parallel=parallel)]
+                    theta = theta.append(theta_new, ignore_index=True)
+                    s_theta += s_theta_new
+                    self.n_samples += n_samples_todo
+
+                    # Get unique strategies
+                    labels, encoding = encode_strategies(s_theta)
+
+                    # Get Good Turing Estimator
+                    self.compute_good_turing(labels)
+
                 break
 
             #  # Get bound from theory

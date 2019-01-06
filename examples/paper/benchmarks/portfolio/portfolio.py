@@ -4,6 +4,7 @@ import sys
 sys.path.append(os.getcwd())
 
 from mlopt.sampling import uniform_sphere_sample
+from mlopt.utils import benchmark
 import mlopt
 import numpy as np
 import scipy.sparse as spa
@@ -14,10 +15,8 @@ import pandas as pd
 np.random.seed(1)
 
 # Define loop to train
-p_vec = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
-#  p_vec = np.array([10, 20])
-results_general = pd.DataFrame()
-results_detail = pd.DataFrame()
+p_vec = np.array([10, 20, 30, 40, 50])
+#  p_vec = np.array([3, 4])
 
 # Output folder
 name = "portfolio"
@@ -27,7 +26,9 @@ if not os.path.exists(output_folder):
 
 
 # Function to sample points
-def sample(theta_bar, radius, n=100):
+def sample(theta_bar, n=100):
+
+    radius = 0.15
 
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, radius, n=n)
@@ -37,12 +38,8 @@ def sample(theta_bar, radius, n=100):
     return df
 
 
-def add_details(df, p=None, n=None):
-    len_df = len(df)
-
-    df['n'] = [n] * len_df
-    df['p'] = [p] * len_df
-
+results_general = pd.DataFrame()
+results_detail = pd.DataFrame()
 
 for p in p_vec:
     '''
@@ -66,71 +63,27 @@ for p in p_vec:
                         name=name)
 
     '''
-    Sample points
+    Define parameters average values
     '''
     theta_bar = np.random.randn(n)
-    radius = 0.3
 
     '''
     Train and solve
     '''
 
-    # Training and testing data
-    #  n_train = 10000
-    n_test = 100
-    #  theta_train = sample(theta_bar, radius, n=n_train)
-    theta_test = sample(theta_bar, radius, n=n_test)
+    data_file = os.path.join(output_folder, "%s_p%d" % (name, p))
 
-    # Train and test using pytorch
-    data_file = os.path.join(output_folder,
-                             "%s_p%d_data.pkl" % (name, p))
+    # Benchmark and append results
+    temp_general, temp_detail = benchmark(m, data_file,
+                                          theta_bar,
+                                          lambda n: sample(theta_bar, n),
+                                          {'p': p})
+    results_general = results_general.append(temp_general)
+    results_detail = results_detail.append(temp_detail)
 
-    # Loading data points
-    if os.path.isfile(data_file):
-        print("Loading data file %s" % data_file)
-        m.load_data(data_file)
-        m.train(parallel=True,
-                learner=mlopt.PYTORCH)
-    else:
-        # Train neural network
-        m.train(sampling_fn=lambda n: sample(theta_bar, radius, n),
-                parallel=True,
-                learner=mlopt.PYTORCH)
-    m.save(os.path.join(output_folder,
-                        "pytorch_%s_p%d_n%d" % (name, p)),
-           delete_existing=True)
-    pytorch_general, pytorch_detail = m.performance(theta_test, parallel=True)
 
-    # Fix dataframe by adding elements
-    add_details(pytorch_general, n=n, p=p)
-    add_details(pytorch_detail, n=n, p=p)
-    results_general = results_general.append(pytorch_general)
-    results_detail = results_detail.append(pytorch_detail)
-
-    #  Train and test using optimal trees
-    m.train(
-            #  theta_train,
-            parallel=True,
-            learner=mlopt.OPTIMAL_TREE,
-            hyperplanes=False,
-            max_depth=15,
-            save_svg=True)
-    m.save(os.path.join(output_folder, "optimaltrees_%s_p%d_n%d" % (name, p, n_train)),
-           delete_existing=True)
-    optimaltrees_general, optimaltrees_detail = m.performance(theta_test,
-                                                              parallel=True)
-    add_details(optimaltrees_general, n=n, p=p)
-    add_details(optimaltrees_detail, n=n, p=p)
-    results_general = results_general.append(optimaltrees_general)
-    results_detail = results_detail.append(optimaltrees_detail)
-
-    # Save data to file
-    if not os.path.isfile(data_file):
-        print("Saving data file %s" % data_file)
-        m.save_data(data_file, delete_existing=True)
-
-    # Store cumulative results at each iteration
-    results_general.to_csv(os.path.join(output_folder,
-                                        "%s_general.csv" % name))
-    results_detail.to_csv(os.path.join(output_folder,
-                                       "%s_detail.csv" % name))
+# Store cumulative results
+results_general.to_csv(os.path.join(output_folder,
+                                    "%s_general.csv" % name))
+results_detail.to_csv(os.path.join(output_folder,
+                                   "%s_detail.csv" % name))
