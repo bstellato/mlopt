@@ -18,7 +18,7 @@ np.random.seed(1)
 # Define data
 n_vec = np.array([], dtype=int)
 m_vec = np.array([], dtype=int)
-for i in np.arange(20, 120, 20):
+for i in np.arange(20, 100, 20):
     n_vec = np.append(n_vec, [i] * 2)
     m_vec = np.append(m_vec, [i, int(i/2)])
 

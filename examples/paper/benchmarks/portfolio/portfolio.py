@@ -28,7 +28,7 @@ if not os.path.exists(output_folder):
 # Function to sample points
 def sample(theta_bar, n=100):
 
-    radius = 0.1
+    radius = 0.15
 
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, radius, n=n)
