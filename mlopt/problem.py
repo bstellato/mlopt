@@ -6,6 +6,8 @@ from multiprocessing import Pool, cpu_count
 #  from itertools import repeat
 from warnings import warn
 import numpy as np
+import scipy as sp
+import scipy.sparse as spa
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
     DEFAULT_SOLVER, DIVISION_TOL
@@ -288,7 +290,9 @@ class Problem(object):
             if not self._is_var_mip(v):
                 raise int_var_error
 
-    def solve_with_strategy(self, strategy):
+    def solve_with_strategy(self,
+                            strategy,
+                            method="ls"):
         """
         Solve problem using strategy
 
@@ -296,10 +300,10 @@ class Problem(object):
         ----------
         strategy : Strategy
             Strategy to be used.
-        solver : string, optional
-            Solver to be used. Default Mosek.
-        settings : dict, optional
-            Solver settings. Default empty.
+        method : String
+            Linear system solution "ls" or subproblem solution "sb".
+            By default the we solve the linear system if the problem
+            is an (MI)LP/(MI)QP.
 
         Returns
         -------
@@ -316,53 +320,91 @@ class Problem(object):
         orig_objective = self.objective
         orig_variables = self.cvxpy_problem.variables()
         orig_constraints = self.constraints
-        orig_int_vars = [v for v in orig_variables if v.attributes['integer']]
-        orig_bool_vars = [v for v in orig_variables if v.attributes['boolean']]
+        orig_int_vars = [v for v in orig_variables
+                         if v.attributes['integer']]
+        orig_bool_vars = [v for v in orig_variables
+                          if v.attributes['boolean']]
 
-        # Get same objective
-        objective = orig_objective
+        if self.cvxpy_problem.is_qp():
+            # The problem is QP representable
 
-        # Get only constraints in strategy
-        constraints = []
-        for con in orig_constraints:
-            try:
-                idx_tight = np.where(tight_constraints[con.id])[0]
-            except KeyError:
-                import ipdb; ipdb.set_trace()
-            if len(idx_tight) > 0:
-                # Tight constraints in expression
-                con_expr = con.args[0]
-                if con_expr.shape == ():
-                    # Scalar case no slicing
-                    tight_expr = con_expr
-                else:
-                    # Get tight constraints
-                    tight_expr = con.args[0][idx_tight]
+            # Extract problem data
+            qp = self.cvxpy_problem.get_problem_data()[0]
 
-                # Set linear inequalities as equalities
-                new_type = type(con)
-                if type(con) == NonPos:
-                    new_type = Zero
+            # Construct constraints matrix
+            A_con = sp.vstack([qp['A'], qp['F']]).tocsc()
+            b_con = np.concatenate((qp['b'], qp['g']))
 
-                # Add constraints
-                constraints += [new_type(tight_expr)]
+            # Extract tight constraints
+            tight_con_vec = np.array([])
+            for con in orig_constraints:
+                tight_con_vec = np.concatenate((tight_con_vec,
+                                                tight_constraints[con.id]))
+            idx_tight = np.where(tight_con_vec)[0]
+            n_tight = len(idx_tight)
+            A_con = A_con[idx_tight, :]
+            b_con = b_con[idx_tight]
+            I_con = spa.csc_matrix((n_tight, n_tight))
 
-        # Fix discrete variables and
-        # set them to continuous.
-        discrete_fix = []
-        for var in orig_int_vars + orig_bool_vars:
-            self._set_cont_var(var)
-            discrete_fix += [var == int_vars[var.id]]
+            # Create linear system
+            KKT = spa.vstack([spa.hstack([qp['P'], A_con.T]),
+                              spa.hstack([A_con, I_con])])
 
-        # Solve problem
-        prob_red = cp.Problem(objective, constraints + discrete_fix)
-        results = self._solve(prob_red)
+            # CONTINUE FROM HERE
 
-        # Make variables discrete again
-        for var in orig_int_vars:  # Integer
-            self._set_int_var(var)
-        for var in orig_bool_vars:  # Boolean
-            self._set_bool_var(var)
+
+            # RHS
+
+            # Integer variables
+
+            # Solve it
+
+        else:
+
+            # Get same objective
+            objective = orig_objective
+
+            # Get only constraints in strategy
+            constraints = []
+            for con in orig_constraints:
+                try:
+                    idx_tight = np.where(tight_constraints[con.id])[0]
+                except KeyError:
+                    import ipdb; ipdb.set_trace()
+                if len(idx_tight) > 0:
+                    # Tight constraints in expression
+                    con_expr = con.args[0]
+                    if con_expr.shape == ():
+                        # Scalar case no slicing
+                        tight_expr = con_expr
+                    else:
+                        # Get tight constraints
+                        tight_expr = con.args[0][idx_tight]
+
+                    # Set linear inequalities as equalities
+                    new_type = type(con)
+                    if type(con) == NonPos:
+                        new_type = Zero
+
+                    # Add constraints
+                    constraints += [new_type(tight_expr)]
+
+            # Fix discrete variables and
+            # set them to continuous.
+            discrete_fix = []
+            for var in orig_int_vars + orig_bool_vars:
+                self._set_cont_var(var)
+                discrete_fix += [var == int_vars[var.id]]
+
+            # Solve problem
+            prob_red = cp.Problem(objective, constraints + discrete_fix)
+            results = self._solve(prob_red)
+
+            # Make variables discrete again
+            for var in orig_int_vars:  # Integer
+                self._set_int_var(var)
+            for var in orig_bool_vars:  # Boolean
+                self._set_bool_var(var)
 
         return results
 
