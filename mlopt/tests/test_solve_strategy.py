@@ -14,6 +14,7 @@ class TestSolveStrategy(unittest.TestCase):
         # Define problem
         c = np.array([-1, -2])
         x = cp.Variable(2, boolean=True)
+        #  x = cp.Variable(2)
         cost = c * x
         constraints = [x[1] <= 0.5 * x[0] + 1.5,
                        x[1] <= -0.5 * x[0] + 3.5,
@@ -128,6 +129,8 @@ class TestSolveStrategy(unittest.TestCase):
         # Solve just with strategy
         results_new = problem.solve_with_strategy(results['strategy'])
 
+        import ipdb; ipdb.set_trace()
+
         # Verify both solutions are equal
         npt.assert_almost_equal(results['x'],
                                 results_new['x'],
@@ -163,7 +166,7 @@ class TestSolveStrategy(unittest.TestCase):
 
         # Objective
         # TODO: If you remove that part it reports a crappy solution
-        cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
+        cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + 1e-06 * cp.sum_squares(x)
 
         # Define problem
         problem = Problem(cp.Minimize(cost), constraints)
@@ -226,7 +229,7 @@ class TestSolveStrategy(unittest.TestCase):
                        y >= 2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints, verbose=True)
+        problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve and compute strategy
         results = problem.solve()

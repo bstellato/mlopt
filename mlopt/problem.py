@@ -8,6 +8,7 @@ from warnings import warn
 import numpy as np
 import scipy as sp
 import scipy.sparse as spa
+import scipy.sparse.linalg as sla
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
     DEFAULT_SOLVER, DIVISION_TOL
@@ -18,6 +19,7 @@ from cvxpy.constraints.zero import Zero
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
 from tqdm import tqdm
+import time
 
 #  def populate_and_solve(args):
 #      """Single function to populate the problem with
@@ -80,6 +82,14 @@ class Problem(object):
     def n_var(self):
         """Number of variables"""
         return sum([x.size for x in self.cvxpy_problem.variables()])
+
+    @property
+    def n_disc_var(self):
+        """Number of discrete variables"""
+        return sum([x.size for x in self.cvxpy_problem.variables()
+                    if (x.attributes['boolean'] or
+                        x.attributes['integer'])
+                    ])
 
     @property
     def n_constraints(self):
@@ -324,40 +334,80 @@ class Problem(object):
                          if v.attributes['integer']]
         orig_bool_vars = [v for v in orig_variables
                           if v.attributes['boolean']]
+        orig_disc_vars = [v for v in orig_variables
+                          if (v.attributes['boolean'] or
+                              v.attributes['integer'])]
 
         if self.cvxpy_problem.is_qp():
             # The problem is QP representable
+            print("The problem is QP representable")
 
             # Extract problem data
-            qp = self.cvxpy_problem.get_problem_data()[0]
+            qp = self.cvxpy_problem.get_problem_data(solver=DEFAULT_SOLVER)[0]
 
             # Construct constraints matrix
-            A_con = sp.vstack([qp['A'], qp['F']]).tocsc()
-            b_con = np.concatenate((qp['b'], qp['g']))
+            A_con = spa.vstack([qp['A'], qp['F']]).tocsc()
+            b_con = np.concatenate((qp['b'], qp['G']))
 
             # Extract tight constraints
             tight_con_vec = np.array([])
             for con in orig_constraints:
-                tight_con_vec = np.concatenate((tight_con_vec,
-                                                tight_constraints[con.id]))
+                tight_con_vec = \
+                        np.concatenate((tight_con_vec,
+                                        np.atleast_1d(tight_constraints[con.id])))
             idx_tight = np.where(tight_con_vec)[0]
             n_tight = len(idx_tight)
-            A_con = A_con[idx_tight, :]
-            b_con = b_con[idx_tight]
-            I_con = spa.csc_matrix((n_tight, n_tight))
+            A_con_tight = A_con[idx_tight, :]
+            b_con_tight = b_con[idx_tight]
+            O_con_tight = spa.csc_matrix((n_tight, n_tight))
+            I_con_disc = spa.eye(self.n_var).tocsc()
+            O_con_disc = spa.csc_matrix((self.n_disc_var, n_tight))
+
+
+            # Discrete variables vector (values)
+            disc_vars_vec = np.array([])
+            for var in orig_disc_vars:
+                disc_vars_vec = np.concatenate((disc_vars_vec,
+                                                np.atleast_1d(int_vars[var.id])))
+
+            # Discrete variables index
+            disc_var_idx = np.array([])
+            for v in orig_variables:
+                if v.attributes['boolean'] or v.attributes['integer']:
+                    disc_var_idx = np.concatenate((disc_var_idx,
+                                                   [True] * v.size))
+                else:
+                    disc_var_idx = np.concatenate((disc_var_idx,
+                                                   [False] * v.size))
+            disc_var_idx = np.where(disc_var_idx)[0]
+            I_con_disc = I_con_disc[disc_var_idx, :]
+
 
             # Create linear system
-            KKT = spa.vstack([spa.hstack([qp['P'], A_con.T]),
-                              spa.hstack([A_con, I_con])])
+            KKT = spa.vstack([spa.hstack([qp['P'], A_con_tight.T]),
+                              spa.hstack([A_con_tight, O_con_tight]),
+                              spa.hstack([I_con_disc, O_con_disc])])
 
-            # CONTINUE FROM HERE
+            # Concatenate rhs
+            #  rhs = np.concatenate((-qp['q'], b_con_tight))
+            rhs = np.concatenate((-qp['q'], b_con_tight, disc_vars_vec))
 
+            # Solve linear system
+            t_start = time.time()
+            sol = spa.linalg.lsqr(KKT, rhs)[0]
+            t_end = time.time()
+            x_sol = sol[:self.n_var]
 
-            # RHS
-
-            # Integer variables
-
-            # Solve it
+            # Get results
+            results = {}
+            results['x'] = x_sol
+            results['time'] = t_end - t_start
+            results['cost'] = x_sol.T.dot(qp['P'].dot(x_sol)) + \
+                qp['q'].T.dot(x_sol)
+            violation = np.maximum(A_con.dot(x_sol) - b_con, 0.)
+            relative_violation = np.amax(sla.norm(A_con, axis=1))
+            results['infeasibility'] = np.linalg.norm(violation / relative_violation,
+                    np.inf)
 
         else:
 
