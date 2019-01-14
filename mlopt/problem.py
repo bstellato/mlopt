@@ -398,12 +398,14 @@ class Problem(object):
             t_end = time.time()
             x_sol = sol[:self.n_var]
 
+            import ipdb; ipdb.set_trace()
+
             # Get results
             results = {}
             results['x'] = x_sol
             results['time'] = t_end - t_start
-            results['cost'] = x_sol.T.dot(qp['P'].dot(x_sol)) + \
-                qp['q'].T.dot(x_sol)
+            results['cost'] = .5 * x_sol.T.dot(qp['P'].dot(x_sol)) + \
+                qp['q'].dot(x_sol)
             violation = np.maximum(A_con.dot(x_sol) - b_con, 0.)
             relative_violation = np.amax(sla.norm(A_con, axis=1))
             results['infeasibility'] = np.linalg.norm(violation / relative_violation,

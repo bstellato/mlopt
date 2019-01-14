@@ -152,6 +152,7 @@ class TestSolveStrategy(unittest.TestCase):
         # Define problem
         x = cp.Variable(T+1)
         u = cp.Variable(T)
+        t = cp.Variable(T+1)
 
         # Explicitly define parameter
         d = np.array([3.94218985, 2.98861724,
@@ -164,9 +165,13 @@ class TestSolveStrategy(unittest.TestCase):
             constraints += [x[t+1] == x[t] + u[t] - d[t]]
         constraints += [u >= 0, u <= M]
 
+        # Maximum
+        constraints += [t >= h * x, t >= -p * x]
+
         # Objective
-        # TODO: If you remove that part it reports a crappy solution
-        cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + 1e-06 * cp.sum_squares(x)
+        # TODO: Check if regularization is needed
+        #  cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + 1e-06 * cp.sum_squares(x)
+        cost = cp.sum(t) + c * cp.sum(u)
 
         # Define problem
         problem = Problem(cp.Minimize(cost), constraints)
@@ -189,11 +194,21 @@ class TestSolveStrategy(unittest.TestCase):
 
         # TODO: Solve issue!
         # Correct strategy but variable is infeasible for original problem.
-        # Need to rethink how we choose the strategy!
-        self.assertTrue(problem.infeasibility() >= 0)
-        self.assertTrue(problem.infeasibility() <= TOL)
-        self.assertTrue(abs(results['cost'] - results_strategy['cost']) <= TOL)
 
+        import ipdb; ipdb.set_trace()
+
+        # Verify both solutions are equal
+        npt.assert_almost_equal(results['x'],
+                                results_strategy['x'],
+                                decimal=TOL)
+        npt.assert_almost_equal(results['cost'],
+                                results_strategy['cost'],
+                                decimal=TOL)
+
+        #  # Need to rethink how we choose the strategy!
+        #  self.assertTrue(problem.infeasibility() >= 0) self.assertTrue(problem.infeasibility() <= TOL)
+        #  self.assertTrue(abs(results['cost'] - results_strategy['cost']) <= TOL)
+        #
     def test_random_integer(self):
         """Mixed-integer random LP test"""
 
