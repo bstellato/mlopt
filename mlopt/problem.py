@@ -300,6 +300,92 @@ class Problem(object):
             if not self._is_var_mip(v):
                 raise int_var_error
 
+    def solve_eq_qp(self, problem, strategy):
+        # Get problem constraints and objective
+        #  orig_objective = self.objective
+        orig_variables = self.cvxpy_problem.variables()
+        orig_constraints = self.constraints
+        #  orig_int_vars = [v for v in orig_variables
+        #                   if v.attributes['integer']]
+        #  orig_bool_vars = [v for v in orig_variables
+        #                    if v.attributes['boolean']]
+        orig_disc_vars = [v for v in orig_variables
+                          if (v.attributes['boolean'] or
+                              v.attributes['integer'])]
+
+        # Unpack strategy
+        tight_constraints = strategy.tight_constraints
+        int_vars = strategy.int_vars
+
+        # Extract problem data
+        qp = self.cvxpy_problem.get_problem_data(solver=DEFAULT_SOLVER)[0]
+
+        # Construct constraints matrix
+        A_con = spa.vstack([qp['A'], qp['F']]).tocsc()
+        b_con = np.concatenate((qp['b'], qp['G']))
+
+        # Extract tight constraints
+        tight_con_vec = np.array([])
+        for con in orig_constraints:
+            tight_con_vec = \
+                    np.concatenate((tight_con_vec,
+                                    np.atleast_1d(tight_constraints[con.id])))
+        idx_tight = np.where(tight_con_vec)[0]
+        n_tight = len(idx_tight)
+        A_con_tight = A_con[idx_tight, :]
+        b_con_tight = b_con[idx_tight]
+        O_con_tight = spa.csc_matrix((n_tight, n_tight))
+        I_con_disc = spa.eye(self.n_var).tocsc()
+        O_con_disc = spa.csc_matrix((self.n_disc_var, n_tight))
+
+
+        # Discrete variables vector (values)
+        disc_vars_vec = np.array([])
+        for var in orig_disc_vars:
+            disc_vars_vec = np.concatenate((disc_vars_vec,
+                                            np.atleast_1d(int_vars[var.id])))
+
+        # Discrete variables index
+        disc_var_idx = np.array([])
+        for v in orig_variables:
+            if v.attributes['boolean'] or v.attributes['integer']:
+                disc_var_idx = np.concatenate((disc_var_idx,
+                                               [True] * v.size))
+            else:
+                disc_var_idx = np.concatenate((disc_var_idx,
+                                               [False] * v.size))
+        disc_var_idx = np.where(disc_var_idx)[0]
+        I_con_disc = I_con_disc[disc_var_idx, :]
+
+
+        # Create linear system
+        KKT = spa.vstack([spa.hstack([qp['P'], A_con_tight.T]),
+                          spa.hstack([A_con_tight, O_con_tight]),
+                          spa.hstack([I_con_disc, O_con_disc])])
+
+        # Concatenate rhs
+        #  rhs = np.concatenate((-qp['q'], b_con_tight))
+        rhs = np.concatenate((-qp['q'], b_con_tight, disc_vars_vec))
+
+        # Solve linear system
+        t_start = time.time()
+        sol = spa.linalg.lsqr(KKT, rhs)[0]
+        t_end = time.time()
+        x_sol = sol[:self.n_var]
+
+        # Get results
+        results = {}
+        results['x'] = x_sol
+        results['time'] = t_end - t_start
+        results['cost'] = .5 * x_sol.T.dot(qp['P'].dot(x_sol)) + \
+            qp['q'].dot(x_sol)
+        violation = np.maximum(A_con.dot(x_sol) - b_con, 0.)
+        relative_violation = np.amax(sla.norm(A_con, axis=1))
+        results['infeasibility'] = np.linalg.norm(violation / relative_violation,
+                np.inf)
+
+        return results
+
     def solve_with_strategy(self,
                             strategy,
                             method="ls"):
@@ -342,74 +428,9 @@ class Problem(object):
             # The problem is QP representable
             print("The problem is QP representable")
 
-            # Extract problem data
-            qp = self.cvxpy_problem.get_problem_data(solver=DEFAULT_SOLVER)[0]
-
-            # Construct constraints matrix
-            A_con = spa.vstack([qp['A'], qp['F']]).tocsc()
-            b_con = np.concatenate((qp['b'], qp['G']))
-
-            # Extract tight constraints
-            tight_con_vec = np.array([])
-            for con in orig_constraints:
-                tight_con_vec = \
-                        np.concatenate((tight_con_vec,
-                                        np.atleast_1d(tight_constraints[con.id])))
-            idx_tight = np.where(tight_con_vec)[0]
-            n_tight = len(idx_tight)
-            A_con_tight = A_con[idx_tight, :]
-            b_con_tight = b_con[idx_tight]
-            O_con_tight = spa.csc_matrix((n_tight, n_tight))
-            I_con_disc = spa.eye(self.n_var).tocsc()
-            O_con_disc = spa.csc_matrix((self.n_disc_var, n_tight))
-
-
-            # Discrete variables vector (values)
-            disc_vars_vec = np.array([])
-            for var in orig_disc_vars:
-                disc_vars_vec = np.concatenate((disc_vars_vec,
-                                                np.atleast_1d(int_vars[var.id])))
-
-            # Discrete variables index
-            disc_var_idx = np.array([])
-            for v in orig_variables:
-                if v.attributes['boolean'] or v.attributes['integer']:
-                    disc_var_idx = np.concatenate((disc_var_idx,
-                                                   [True] * v.size))
-                else:
-                    disc_var_idx = np.concatenate((disc_var_idx,
-                                                   [False] * v.size))
-            disc_var_idx = np.where(disc_var_idx)[0]
-            I_con_disc = I_con_disc[disc_var_idx, :]
-
-
-            # Create linear system
-            KKT = spa.vstack([spa.hstack([qp['P'], A_con_tight.T]),
-                              spa.hstack([A_con_tight, O_con_tight]),
-                              spa.hstack([I_con_disc, O_con_disc])])
-
-            # Concatenate rhs
-            #  rhs = np.concatenate((-qp['q'], b_con_tight))
-            rhs = np.concatenate((-qp['q'], b_con_tight, disc_vars_vec))
-
-            # Solve linear system
-            t_start = time.time()
-            sol = spa.linalg.lsqr(KKT, rhs)[0]
-            t_end = time.time()
-            x_sol = sol[:self.n_var]
-
-            import ipdb; ipdb.set_trace()
-
-            # Get results
-            results = {}
-            results['x'] = x_sol
-            results['time'] = t_end - t_start
-            results['cost'] = .5 * x_sol.T.dot(qp['P'].dot(x_sol)) + \
-                qp['q'].dot(x_sol)
-            violation = np.maximum(A_con.dot(x_sol) - b_con, 0.)
-            relative_violation = np.amax(sla.norm(A_con, axis=1))
-            results['infeasibility'] = np.linalg.norm(violation / relative_violation,
-                    np.inf)
+            # Solve parametric program
+            results = self.solve_eq_qp(self.cvxpy_problem,
+                                       strategy)
 
         else:
 

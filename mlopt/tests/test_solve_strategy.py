@@ -129,7 +129,6 @@ class TestSolveStrategy(unittest.TestCase):
         # Solve just with strategy
         results_new = problem.solve_with_strategy(results['strategy'])
 
-        import ipdb; ipdb.set_trace()
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results['x'],
