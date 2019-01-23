@@ -168,9 +168,9 @@ class TestSolveStrategy(unittest.TestCase):
         constraints += [t >= h * x, t >= -p * x]
 
         # Objective
-        # TODO: Check if regularization is needed
-        #  cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u) + 1e-06 * cp.sum_squares(x)
         cost = cp.sum(t) + c * cp.sum(u)
+        # TODO: Check if regularization is needed
+        #  cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
         problem = Problem(cp.Minimize(cost), constraints)
@@ -193,8 +193,6 @@ class TestSolveStrategy(unittest.TestCase):
 
         # TODO: Solve issue!
         # Correct strategy but variable is infeasible for original problem.
-
-        import ipdb; ipdb.set_trace()
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results['x'],

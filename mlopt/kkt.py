@@ -1,0 +1,244 @@
+# Define and solve equality constrained QP
+# Add this function as a solve method in CVXPY
+from cvxpy.reductions import (EvalParams, FlipObjective,
+                              Qp2SymbolicQp, QpMatrixStuffing,
+                              CvxAttr2Constr)
+from cvxpy.problems.objective import Maximize
+from cvxpy.reductions.solvers.solving_chain import SolvingChain
+from cvxpy.reductions.solvers.qp_solvers.qp_solver import QpSolver
+from cvxpy.reductions.solvers import utilities
+import cvxpy.interface as intf
+import cvxpy.settings as s
+import scipy.sparse as spa
+from cvxpy.reductions import Solution
+import cvxpy as cp
+import numpy as np
+import time
+
+KKT = "KKT"
+
+
+class KKTSolver(QpSolver):
+    """KKT solver for equality constrained QPs"""
+
+    def name(self):
+        return KKT
+
+    def import_solver(self):
+        pass
+
+    def invert(self, solution, inverse_data):
+        attr = {s.SOLVE_TIME: solution['time']}
+
+        # Map OSQP statuses back to CVXPY statuses
+        status = solution['status']
+
+        if status in s.SOLUTION_PRESENT:
+            opt_val = solution['cost']
+            primal_vars = {
+                list(inverse_data.id_map.keys())[0]:
+                intf.DEFAULT_INTF.const_to_matrix(np.array(solution['x']))
+            }
+            dual_vars = utilities.get_dual_values(
+                intf.DEFAULT_INTF.const_to_matrix(solution['y']),
+                utilities.extract_dual_value,
+                inverse_data.sorted_constraints)
+        else:
+            primal_vars = None
+            dual_vars = None
+            opt_val = np.inf
+            if status == s.UNBOUNDED:
+                opt_val = -np.inf
+        return Solution(status, opt_val, primal_vars, dual_vars, attr)
+
+    def solve_via_data(self, data, warm_start, verbose,
+                       solver_opts,
+                       solver_cache=None):
+
+        # Construct constraints matrix
+        # Only equality constraints
+        if data['F'].shape[0] > 0:
+            A_con = spa.vstack([data['A'], data['F']])  # .tocsc()
+            b_con = np.concatenate((data['b'], data['G']))
+        else:
+            A_con = data['A']
+            b_con = data['b']
+        n_var = data['P'].shape[0]
+        n_con = len(b_con)
+        O_con = spa.csc_matrix((n_con, n_con))
+
+        # Create linear system
+        KKT = spa.vstack([spa.hstack([data['P'], A_con.T]),
+                          spa.hstack([A_con, O_con])], format='csc')
+        rhs = np.concatenate((-data['q'], b_con))
+
+        if verbose:
+            print("Solving %d x %d linear system A x = b " %
+                  (n_var + n_con, n_var + n_con) + "using scipy")
+
+        # Solve linear system
+        t_start = time.time()
+        x = spa.linalg.lsqr(KKT, rhs)[0]
+        #  x = spa.linalg.spsolve(KKT, rhs)
+        t_end = time.time()
+
+        # Get results
+        results = {}
+        results['x'] = x[:n_var]
+        results['y'] = x[n_var:]
+
+        # If nan report infeasible linear system
+        if np.any(np.isnan(results['x'])):
+            results['status'] = s.INFEASIBLE
+        else:
+            results['status'] = s.OPTIMAL
+            results['cost'] = \
+                .5 * results['x'].T.dot(data['P'].dot(results['x'])) \
+                + data['q'].dot(results['x'])
+        results['time'] = t_end - t_start
+
+        return results
+
+
+def construct_ls_solving_chain(problem):
+    """
+    Construct solving chaing using the same QP steps as
+    cvxpy.reductions.solvers/solving_chain.py
+
+    However, in the end we add LsSolver() to solve the
+    equality constrained QP using least squares.
+    """
+    reductions = []
+    if problem.parameters():
+        reductions += [EvalParams()]
+    # Dcp2Cone and Qp2SymbolicQp require problems to minimize their objectives.
+    if type(problem.objective) == Maximize:
+        reductions.append(FlipObjective())
+
+    # Conclude the chain with one of the following:
+    reductions += [CvxAttr2Constr(),
+                   Qp2SymbolicQp(),
+                   QpMatrixStuffing(),
+                   KKTSolver()]
+    return SolvingChain(reductions=reductions)
+
+
+def solve_kkt(self,
+              verbose=False,
+              warm_start=True,  # Unused
+              *args, **kwargs):
+
+    #  chain_key = (KKT)
+    #  if chain_key != self._cached_chain_key:
+    try:
+        self._solving_chain = construct_ls_solving_chain(self)
+    except Exception as e:
+        raise e
+    #  self._cached_chain_key = chain_key
+
+    # Get data from chain
+    data, inverse_data = self._solving_chain.apply(self)
+
+    # Solve problem
+    solver_output = self._solving_chain.solve_via_data(
+            self, data, warm_start, verbose, kwargs)
+
+    # Unpack results
+    self.unpack_results(solver_output,
+                        self._solving_chain,
+                        inverse_data)
+
+    return self.value
+
+
+# Register solve method
+cp.Problem.register_solve(KKT, solve_kkt)
+
+
+
+    # Old function to solve equality constrained QP
+    #  # Get problem constraints and objective
+    #  #  orig_objective = self.objective
+    #  orig_variables = self.cvxpy_problem.variables()
+    #  orig_constraints = self.constraints
+    #  #  orig_int_vars = [v for v in orig_variables
+    #  #                   if v.attributes['integer']]
+    #  #  orig_bool_vars = [v for v in orig_variables
+    #  #                    if v.attributes['boolean']]
+    #  orig_disc_vars = [v for v in orig_variables
+    #                    if (v.attributes['boolean'] or
+    #                        v.attributes['integer'])]
+    #
+    #  # Unpack strategy
+    #  tight_constraints = strategy.tight_constraints
+    #  int_vars = strategy.int_vars
+    #
+    #  # Extract problem data
+    #  qp = self.cvxpy_problem.get_problem_data(solver=DEFAULT_SOLVER)[0]
+    #
+    #  # Construct constraints matrix
+    #  A_con = spa.vstack([qp['A'], qp['F']]).tocsc()
+    #  b_con = np.concatenate((qp['b'], qp['G']))
+    #
+    #  # Extract tight constraints
+    #  tight_con_vec = np.array([])
+    #  for con in orig_constraints:
+    #      tight_con_vec = \
+    #              np.concatenate((tight_con_vec,
+    #                              np.atleast_1d(tight_constraints[con.id])))
+    #  idx_tight = np.where(tight_con_vec)[0]
+    #  n_tight = len(idx_tight)
+    #  A_con_tight = A_con[idx_tight, :]
+    #  b_con_tight = b_con[idx_tight]
+    #  O_con_tight = spa.csc_matrix((n_tight, n_tight))
+    #  I_con_disc = spa.eye(self.n_var).tocsc()
+    #  O_con_disc = spa.csc_matrix((self.n_disc_var, n_tight))
+    #
+    #
+    #  # Discrete variables vector (values)
+    #  disc_vars_vec = np.array([])
+    #  for var in orig_disc_vars:
+    #      disc_vars_vec = np.concatenate((disc_vars_vec,
+    #                                      np.atleast_1d(int_vars[var.id])))
+    #
+    #  # Discrete variables index
+    #  disc_var_idx = np.array([])
+    #  for v in orig_variables:
+    #      if v.attributes['boolean'] or v.attributes['integer']:
+    #          disc_var_idx = np.concatenate((disc_var_idx,
+    #                                         [True] * v.size))
+    #      else:
+    #          disc_var_idx = np.concatenate((disc_var_idx,
+    #                                         [False] * v.size))
+    #  disc_var_idx = np.where(disc_var_idx)[0]
+    #  I_con_disc = I_con_disc[disc_var_idx, :]
+    #
+    #
+    #  # Create linear system
+    #  KKT = spa.vstack([spa.hstack([qp['P'], A_con_tight.T]),
+    #                    spa.hstack([A_con_tight, O_con_tight]),
+    #                    spa.hstack([I_con_disc, O_con_disc])])
+    #
+    #  # Concatenate rhs
+    #  #  rhs = np.concatenate((-qp['q'], b_con_tight))
+    #  rhs = np.concatenate((-qp['q'], b_con_tight, disc_vars_vec))
+    #
+    #  # Solve linear system
+    #  t_start = time.time()
+    #  sol = spa.linalg.lsqr(KKT, rhs)[0]
+    #  t_end = time.time()
+    #  x_sol = sol[:self.n_var]
+    #
+    #  # Get results
+    #  results = {}
+    #  results['x'] = x_sol
+    #  results['time'] = t_end - t_start
+    #  results['cost'] = .5 * x_sol.T.dot(qp['P'].dot(x_sol)) + \
+    #      qp['q'].dot(x_sol)
+    #  violation = np.maximum(A_con.dot(x_sol) - b_con, 0.)
+    #  relative_violation = np.amax(sla.norm(A_con, axis=1))
+    #  results['infeasibility'] = np.linalg.norm(violation / relative_violation,
+    #          np.inf)
+    #
+    #  return results
+    #
