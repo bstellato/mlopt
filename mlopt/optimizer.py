@@ -480,12 +480,20 @@ class Optimizer(object):
                 "accuracy": [100 * test_accuracy],
                 "n_infeas": [np.sum(infeas >= INFEAS_TOL)],
                 "avg_infeas": [np.mean(infeas)],
+                "std_infeas": [np.std(infeas)],
                 "avg_subopt": [np.mean(subopt[np.where(infeas <=
                                                        INFEAS_TOL)[0]])],
+                "std_subopt": [np.std(subopt[np.where(infeas <=
+                                                      INFEAS_TOL)[0]])],
                 "max_infeas": [np.max(infeas)],
                 "max_subopt": [np.max(subopt)],
                 "avg_time_improv": [100 * np.mean(time_comp)],
                 "max_time_improv": [100 * np.max(time_comp)],
+                "std_time_improv": [100 * np.std(time_comp)],
+                "mean_time_pred": [100 * np.mean(time_pred)],
+                "avg_time_pred": [100 * np.std(time_pred)],
+                "mean_time_full": [100 * np.mean(time_test)],
+                "avg_time_full": [100 * np.std(time_test)],
             }
         )
         # Add radius info if problem has it.
@@ -502,6 +510,8 @@ class Optimizer(object):
                 "correct": idx_correct,
                 "infeas": infeas,
                 "subopt": subopt,
+                "time_pred": time_pred,
+                "time_full": time_test,
                 "time_improvement": time_comp,
             }
         )

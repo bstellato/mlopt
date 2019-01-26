@@ -13,6 +13,7 @@ import scipy.sparse as spa
 from cvxpy.reductions import Solution
 import cvxpy as cp
 import numpy as np
+import pypardiso as pardiso
 import time
 
 KKT = "KKT"
@@ -76,10 +77,19 @@ class KKTSolver(QpSolver):
             print("Solving %d x %d linear system A x = b " %
                   (n_var + n_con, n_var + n_con) + "using scipy")
 
+        # Prepare Least Squares linear system
+        #  KKTtKKT = KKT.T.dot(KKT)
+        #  KKTtrhs = KKT.T.dot(rhs)
+
         # Solve linear system
         t_start = time.time()
-        x = spa.linalg.lsqr(KKT, rhs)[0]
+        #  x = spa.linalg.lsqr(KKT, rhs)[0]
         #  x = spa.linalg.spsolve(KKT, rhs)
+        try:
+            #  x = pardiso.spsolve(KKTtKKT, KKTtrhs)
+            x = pardiso.spsolve(KKT, rhs)
+        except ValueError:
+            x = np.full(n_var + n_con, np.nan)
         t_end = time.time()
 
         # Get results
@@ -100,7 +110,7 @@ class KKTSolver(QpSolver):
         return results
 
 
-def construct_ls_solving_chain(problem):
+def construct_kkt_solving_chain(problem):
     """
     Construct solving chaing using the same QP steps as
     cvxpy.reductions.solvers/solving_chain.py
@@ -111,8 +121,7 @@ def construct_ls_solving_chain(problem):
     reductions = []
     if problem.parameters():
         reductions += [EvalParams()]
-    # Dcp2Cone and Qp2SymbolicQp require problems to minimize their objectives.
-    if type(problem.objective) == Maximize:
+    if type(problem.objective) == Maximize:  # Force minimization
         reductions.append(FlipObjective())
 
     # Conclude the chain with one of the following:
@@ -131,7 +140,7 @@ def solve_kkt(self,
     #  chain_key = (KKT)
     #  if chain_key != self._cached_chain_key:
     try:
-        self._solving_chain = construct_ls_solving_chain(self)
+        self._solving_chain = construct_kkt_solving_chain(self)
     except Exception as e:
         raise e
     #  self._cached_chain_key = chain_key

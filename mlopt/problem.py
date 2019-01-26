@@ -64,6 +64,12 @@ class Problem(object):
         # Define problem
         self.cvxpy_problem = cp.Problem(cp.Minimize(cost),
                                         constraints)
+
+        # Reformulate and extract constraints
+        # if problem is QP compatible
+        #  if self.cvxpy_problem.is_qp():  #
+        # TODO!
+
         # Set options
         self.solver_options = solver_options
 

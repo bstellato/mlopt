@@ -1,9 +1,10 @@
+output_bak/
+
 output.txt
 output/
 .DS_Store
 .ropeproject
 tags
-
 
 
 

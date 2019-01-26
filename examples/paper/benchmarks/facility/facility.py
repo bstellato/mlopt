@@ -20,7 +20,7 @@ n_vec = np.array([], dtype=int)  # Facilities
 m_vec = np.array([], dtype=int)  # Stores
 for i in np.arange(20, 100, 20):
     n_vec = np.append(n_vec, [i] * 2)
-    m_vec = np.append(m_vec, [i, int(i/2)])
+    m_vec = np.append(m_vec, [int(i/2), i])
 results_general = pd.DataFrame()
 results_detail = pd.DataFrame()
 

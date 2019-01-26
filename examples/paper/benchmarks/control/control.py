@@ -112,6 +112,7 @@ for T in T_vec:
     P_batt = cp.Variable(T)
     P_eng = cp.Variable(T)
     z = cp.Variable(T, integer=True)
+    h = cp.Variable(T)  # For maximum
 
     # Constraints
     constraints = []
@@ -139,10 +140,17 @@ for T in T_vec:
     cost = eta * (E[T] - E_max) ** 2
     for t in range(T):
         cost += alpha * (P_eng[t]) ** 2 + beta * P_eng[t] + gamma * z[t]
+        # Add (z - z_prev) constraints
+        cost += delta * h[t]
+        constraints += [h[t] >= 0]
         if t == 0:
-            cost += delta * cp.pos(z[t] - z_prev)
+            constraints += [h[t] >= (z[t] - z_prev)]
         else:
-            cost += delta * cp.pos(z[t] - z[t-1])
+            constraints += [h[t] >= (z[t] - z[t-1])]
+        #  if t == 0:
+        #      cost += delta * cp.pos(z[t] - z_prev)
+        #  else:
+        #      cost += delta * cp.pos(z[t] - z[t-1])
 
     # Define optimizer
     m = mlopt.Optimizer(cp.Minimize(cost), constraints,
