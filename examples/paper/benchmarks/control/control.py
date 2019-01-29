@@ -52,7 +52,8 @@ if not os.path.exists(output_folder):
 # Define data
 # The only dimension changing in these examples is the
 # horizon length
-T_vec = np.array([5, 10, 20, 30, 40], dtype=int)
+#  T_vec = np.array([5, 10, 20, 30, 40], dtype=int)
+T_vec = np.array([10, 15, 20, 25, 30, 35, 40], dtype=int)
 
 
 # Function to sample points

@@ -490,10 +490,10 @@ class Optimizer(object):
                 "avg_time_improv": [100 * np.mean(time_comp)],
                 "max_time_improv": [100 * np.max(time_comp)],
                 "std_time_improv": [100 * np.std(time_comp)],
-                "mean_time_pred": [100 * np.mean(time_pred)],
-                "avg_time_pred": [100 * np.std(time_pred)],
-                "mean_time_full": [100 * np.mean(time_test)],
-                "avg_time_full": [100 * np.std(time_test)],
+                "mean_time_pred": [np.mean(time_pred)],
+                "std_time_pred": [np.std(time_pred)],
+                "mean_time_full": [np.mean(time_test)],
+                "std_time_full": [np.std(time_test)],
             }
         )
         # Add radius info if problem has it.
