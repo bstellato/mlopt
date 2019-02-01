@@ -231,6 +231,7 @@ class Optimizer(object):
         infeas = []
         cost = []
 
+        # TODO: Parallelize this loop
         for j in range(n_best):
             res = self._problem.solve_with_strategy(strategies[j])
             x.append(res['x'])
