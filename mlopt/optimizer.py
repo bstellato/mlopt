@@ -248,7 +248,7 @@ class Optimizer(object):
             # Solve in parallel
             n_proc = get_n_processes(max_n=n_best)
             pool = Pool(processes=n_proc)
-            results = pool.imap(self._problem.solve_with_strategy, strategies)
+            results = pool.map(self._problem.solve_with_strategy, strategies)
             x = [r["x"] for r in results]
             time = [r["time"] for r in results]
             infeas = [r["infeasibility"] for r in results]
@@ -316,10 +316,10 @@ class Optimizer(object):
         classes = self._learner.predict(X)
 
         if parallel:
-            message = message + "in parallel ()"
+            n_proc = get_n_processes(max_n=n_best)
+            message = message + "in parallel (%d processors)" % n_proc
         else:
             message = message + " in serial"
-
 
         for i in tqdm(range(n_points), desc=message):
 

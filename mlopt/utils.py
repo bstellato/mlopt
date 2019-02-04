@@ -9,8 +9,11 @@ import mlopt
 def args_norms(expr):
     """Calculate norm of the arguments in a cvxpy expression"""
     if expr.args:
+        norms = []
         # Expression contains arguments
-        return [args_norms(e) for e in expr.args]
+        for arg in expr.args:
+            norms += args_norms(arg)
+        return norms
     else:
         return [np.linalg.norm(expr.value)]
 
