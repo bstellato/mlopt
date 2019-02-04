@@ -1,5 +1,5 @@
 import os
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 #  import multiprocessing, logging
 #  logger = multiprocessing.log_to_stderr()
 #  logger.setLevel(multiprocessing.SUBDEBUG)
@@ -19,7 +19,7 @@ from cvxpy.constraints.zero import Zero
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
 from tqdm import tqdm
-#  import time
+from mlopt.utils import get_n_processes, args_norms
 
 #  def populate_and_solve(args):
 #      """Single function to populate the problem with
@@ -145,16 +145,19 @@ class Problem(object):
         # Compute relative constraint violation
         violations = []
         for c in self.constraints:
-            # Get constraint arguments
-            args = c.args[0].args
+            # Get constraint arguments norms
+            arg_norms = args_norms(c)
 
             # Get relative value for all of the expression arguments
-            relative_viol = np.amax([np.linalg.norm(a.value) for a in args])
+            relative_viol = np.amax(arg_norms)
+
             # Normalize relative tolerance if too small
-            relative_viol = relative_viol if relative_viol > DIVISION_TOL else 1.
+            relative_viol = relative_viol \
+                if relative_viol > DIVISION_TOL else 1.
 
             # Append violation
-            violations.append(np.atleast_1d(c.violation().flatten() / relative_viol))
+            violations.append(np.atleast_1d(c.violation().flatten() /
+                                            relative_viol))
 
         # Create numpy array
         violations = np.concatenate(violations)
@@ -183,6 +186,7 @@ class Problem(object):
         """
         if use_KKT:
             # Solve problem with KKT system
+            import ipdb; ipdb.set_trace()
             problem.solve(method=KKT)
         else:
             problem.solve(solver=self.solver,
@@ -386,7 +390,6 @@ class Problem(object):
         else:
             results = self._solve(prob_red)
 
-
         # Make variables discrete again
         for var in orig_int_vars:  # Integer
             self._set_int_var(var)
@@ -426,17 +429,7 @@ class Problem(object):
             Results dictionary.
         """
         n = len(theta)  # Number of points
-        #  with open('txt.txt', 'a') as f:
-        #      f.write(str(os.environ))
-        try:
-            n_cpus = int(os.environ["SLURM_CPUS_PER_TASK"])
-        except KeyError:
-            n_cpus = cpu_count()
-
-        # DEBUG: TODO: Remove!
-        #  n_cpus = 28
-        #  parallel = False
-        n_proc = min(n, n_cpus)
+        n_proc = get_n_processes(n)
 
         if parallel:
             print("Solving for all theta (parallel %i processors)..." %

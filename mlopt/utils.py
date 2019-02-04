@@ -1,11 +1,41 @@
 import numpy as np
+from multiprocessing import cpu_count
 from mlopt.settings import INFEAS_TOL, SUBOPT_TOL
 import os
 import pandas as pd
 import mlopt
-#  import scipy.io as spio
-#  import cvxpy as cp
-#  import scipy.sparse as spa
+
+
+def args_norms(expr):
+    """Calculate norm of the arguments in a cvxpy expression"""
+    if expr.args:
+        # Expression contains arguments
+        return [args_norms(e) for e in expr.args]
+    else:
+        return [np.linalg.norm(expr.value)]
+
+
+def get_n_processes(max_n=np.inf):
+    """Get number of processes from current cps number
+
+    Parameters
+    ----------
+    max_n: int
+        Maximum number of processes.
+
+    Returns
+    -------
+    float
+        Number of processes to use.
+    """
+    try:
+        # Check number of cpus if we are on a SLURM server
+        n_cpus = int(os.environ["SLURM_CPUS_PER_TASK"])
+    except KeyError:
+        n_cpus = cpu_count()
+    n_proc = min(max_n, n_cpus)
+
+    return n_proc
 
 
 def add_details(df, **kwargs):
@@ -63,7 +93,6 @@ def benchmark(m,  # Optimizer
     else:
         print("Perform training for %s" % data_file)
 
-
         print("Training NN")
         print("-----------\n")
 
@@ -107,7 +136,8 @@ def benchmark(m,  # Optimizer
                     learner=mlopt.OPTIMAL_TREE,
                     hyperplanes=True,
                     save_svg=True)
-            octh_general, octh_detail = m.performance(theta_test, parallel=True)
+            octh_general, octh_detail = m.performance(theta_test,
+                                                      parallel=True)
             add_details(octh_general, predictor="OCT-H", **dims)
             add_details(octh_detail, predictor="OCT-H", **dims)
 
@@ -225,29 +255,3 @@ def accuracy(results_pred, results_test):
                     idx_correct[i] = 1
 
     return np.sum(idx_correct) / n_points, idx_correct
-
-
-# TODO: Fix creation from matlab file
-#  def read_mat(filepath):
-#      # Load file
-#      m = spio.loadmat(filepath)
-#
-#      # Convert matrices
-#      c = m['c'].T.flatten().astype(float)
-#      Aeq = m['Aeq'].astype(float).tocsc()
-#      beq = m['beq'].T.flatten().astype(float)
-#      Aineq = m['Aineq'].astype(float).tocsc()
-#      bineq = m['bineq'].T.flatten().astype(float)
-#      if len(m['int_idx']) > 0:
-#          int_idx = m['int_idx'].T.flatten().astype(int)
-#      else:
-#          int_idx = np.array([], dtype=int)
-#
-#      # Create cvxpy problem
-#      x = cp.Variable(len(c))
-#      cost = c * x
-#      constraints = []
-#
-#
-#
-#      return problem_data(c, l, A, u, int_idx)

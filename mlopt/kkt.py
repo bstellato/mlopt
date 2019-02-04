@@ -75,7 +75,7 @@ class KKTSolver(QpSolver):
 
         if verbose:
             print("Solving %d x %d linear system A x = b " %
-                  (n_var + n_con, n_var + n_con) + "using scipy")
+                  (n_var + n_con, n_var + n_con) + "using pardiso")
 
         # Prepare Least Squares linear system
         #  KKTtKKT = KKT.T.dot(KKT)
@@ -119,16 +119,29 @@ def construct_kkt_solving_chain(problem):
     equality constrained QP using least squares.
     """
     reductions = []
-    if problem.parameters():
-        reductions += [EvalParams()]
+    #  if problem.parameters():
+    #      reductions += [EvalParams()]
     if type(problem.objective) == Maximize:  # Force minimization
         reductions.append(FlipObjective())
 
     # Conclude the chain with one of the following:
+    #  reductions += [CvxAttr2Constr(),
+    #                 Qp2SymbolicQp(),
+    #                 QpMatrixStuffing(),
+    #                 KKTSolver()]
+
+    # Canonicalization
     reductions += [CvxAttr2Constr(),
-                   Qp2SymbolicQp(),
-                   QpMatrixStuffing(),
+                   Qp2SymbolicQp()]
+
+    # Parameters evaluation
+    if problem.parameters():
+        reductions += [EvalParams()]
+
+    # Lower level matrix stuffing and solution
+    reductions += [QpMatrixStuffing(),
                    KKTSolver()]
+
     return SolvingChain(reductions=reductions)
 
 

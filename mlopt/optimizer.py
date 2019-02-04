@@ -4,6 +4,8 @@ from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy, suboptimality
+from multiprocessing import Pool
+from mlopt.utils import get_n_processes
 import cvxpy.settings as cps
 import pandas as pd
 import numpy as np
@@ -219,9 +221,20 @@ class Optimizer(object):
         # Train learner
         self._learner.train(self.X_train, self.y_train)
 
-    def choose_best(self, strategies):
+    def choose_best(self, strategies, parallel):
         """
-        Choose best strategy between provided ones.
+        Choose best strategy between provided ones
+
+        Parameters
+        ----------
+        parallel : bool, optional
+            Perform `n_best` strategies evaluation in parallel.
+            True by default.
+
+        Returns
+        -------
+        dict
+            Results as a dictionary.
         """
         n_best = self._learner.options['n_best']
 
@@ -231,13 +244,23 @@ class Optimizer(object):
         infeas = []
         cost = []
 
-        # TODO: Parallelize this loop
-        for j in range(n_best):
-            res = self._problem.solve_with_strategy(strategies[j])
-            x.append(res['x'])
-            time.append(res['time'])
-            infeas.append(res['infeasibility'])
-            cost.append(res['cost'])
+        if parallel:
+            # Solve in parallel
+            n_proc = get_n_processes(max_n=n_best)
+            pool = Pool(processes=n_proc)
+            results = pool.imap(self._problem.solve_with_strategy, strategies)
+            x = [r["x"] for r in results]
+            time = [r["time"] for r in results]
+            infeas = [r["infeasibility"] for r in results]
+            cost = [r["cost"] for r in results]
+        else:
+            # Solve in serial
+            for j in range(n_best):
+                res = self._problem.solve_with_strategy(strategies[j])
+                x.append(res['x'])
+                time.append(res['time'])
+                infeas.append(res['infeasibility'])
+                cost.append(res['cost'])
 
         # Pick best class between k ones
         infeas = np.array(infeas)
@@ -264,7 +287,9 @@ class Optimizer(object):
         return result
 
     def solve(self, X,
-              message="Predict optimal solution"):
+              message="Predict optimal solution",
+              parallel=True
+              ):
         """
         Predict optimal solution given the parameters X.
 
@@ -272,6 +297,9 @@ class Optimizer(object):
         ----------
         X : pandas dataframe
             Data points.
+        parallel : bool, optional
+            Perform `n_best` strategies evaluation in parallel.
+            Defaults to True.
 
         Returns
         -------
@@ -287,6 +315,12 @@ class Optimizer(object):
         # Predict best n_best classes for all the points
         classes = self._learner.predict(X)
 
+        if parallel:
+            message = message + "in parallel ()"
+        else:
+            message = message + " in serial"
+
+
         for i in tqdm(range(n_points), desc=message):
 
             # Populate problem
@@ -296,7 +330,8 @@ class Optimizer(object):
             strategies = [self.encoding[classes[i, j]]
                           for j in range(n_best)]
 
-            results.append(self.choose_best(strategies))
+            results.append(self.choose_best(strategies,
+                                            parallel=parallel))
 
         return results
 

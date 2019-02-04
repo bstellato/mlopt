@@ -1,5 +1,5 @@
 from mlopt.learners.learner import Learner
-from mlopt.settings import N_BEST, PYTORCH
+from mlopt.settings import N_BEST, FRAC_TRAIN, PYTORCH
 from mlopt.utils import pandas2array
 from tqdm import trange
 import os
@@ -8,10 +8,6 @@ import torch.nn as nn                                   # Neural network tools
 import torch.nn.functional as F                         # nonlinearitis
 import torch.optim as optim                             # Optimizer tools
 from torch.utils.data import TensorDataset, DataLoader  # Data manipulaton
-
-# Scikit learn pytorch wrapper for cv
-#  from skorch import NeuralNetClassifier
-#  from sklearn.model_selection import GridSearchCV
 import numpy as np
 
 
@@ -77,6 +73,8 @@ class PyTorchNeuralNet(Learner):
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', N_BEST),
                                      self.n_classes)
+        # Get fraction between training and validation
+        self.options['frac_train'] = options.pop('frac_train', FRAC_TRAIN)
 
         # Define device
         self.device = torch.device(
@@ -164,7 +162,7 @@ class PyTorchNeuralNet(Learner):
         self.n_train = len(X)
 
         # Split dataset in training and validation
-        frac_train = 0.9
+        frac_train = self.options['frac_train']
         n_frac_train = int(frac_train * self.n_train)
         n_frac_valid = self.n_train - n_frac_train
         X_train = X[:n_frac_train]

@@ -12,8 +12,8 @@ import cvxpy as cp
 
 class TestParallel(unittest.TestCase):
 
-    def test_parallel_vs_serial(self):
-        """Test parallel VS serial solution"""
+    def test_parallel_vs_serial_learning(self):
+        """Test parallel VS serial learning"""
 
         # Generate data
         np.random.seed(1)
@@ -92,8 +92,7 @@ class TestParallel(unittest.TestCase):
 
         # Define optimizer
         # Force mosek to be single threaded
-        m = Optimizer(cp.Minimize(cost), constraints,
-                name="portfolio", mosek_params={'MSK_IPAR_INTPNT_MULTI_THREAD': 0})
+        m = Optimizer(cp.Minimize(cost), constraints, name="portfolio")
 
         '''
         Sample points
@@ -125,6 +124,62 @@ class TestParallel(unittest.TestCase):
         m.performance(df_test, parallel=True)
 
         return
+
+    def test_parallel_strategy_selection(self):
+        """Choose best strategy in parallel"""
+        np.random.seed(1)
+        # This needs to work for different
+        p = 10
+        n = p * 10
+        F = np.random.randn(n, p)
+        D = np.diag(np.random.rand(n)*np.sqrt(p))
+        Sigma = F.dot(F.T) + D
+        gamma = 1.0
+        mu = cp.Parameter(n, name='mu')
+        x = cp.Variable(n)
+        cost = - mu * x + gamma * cp.quad_form(x, Sigma)
+        constraints = [cp.sum(x) == 1, x >= 0]
+
+        # Define optimizer
+        # Force mosek to be single threaded
+        m = Optimizer(cp.Minimize(cost), constraints)
+
+        '''
+        Sample points
+        '''
+        theta_bar = np.random.randn(n)
+        radius = 0.3
+
+        '''
+        Train and solve
+        '''
+
+        # Training and testing data
+        n_train = 1000
+        n_test = 1  # Choose only one point to check parallel strategy evaluation
+
+        # Sample points from multivariate ball
+        X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
+        df = pd.DataFrame({'mu': X_d.tolist()})
+        X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
+        df_test = pd.DataFrame({'mu': X_d_test.tolist()})
+
+        # Train and test using pytorch
+        m.train(df, parallel=True, learner=PYTORCH)
+
+        # Test
+        serial = m.solve(df_test, parallel=False)
+        parallel = m.solve(df_test)
+
+        # Compare x
+        npt.assert_array_almost_equal(serial['x'],
+                                      parallel['x'],
+                                      decimal=TOL)
+
+        # Compare cost
+        npt.assert_array_almost_equal(serial['cost'],
+                                      parallel['cost'],
+                                      decimal=TOL)
 
 
 if __name__ == '__main__':

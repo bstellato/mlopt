@@ -1,7 +1,6 @@
 from mlopt.learners.learner import Learner
-from mlopt.settings import N_BEST, OPTIMAL_TREE
-from mlopt.utils import pandas2array
-import multiprocessing
+from mlopt.settings import N_BEST, FRAC_TRAIN, OPTIMAL_TREE
+from mlopt.utils import pandas2array, get_n_processes
 import shutil
 from subprocess import call
 from warnings import warn
@@ -41,14 +40,13 @@ class OptimalTree(Learner):
                                      self.n_classes)
         self.options['save_svg'] = options.pop('save_svg', False)
 
+        # Get fraction between training and validation
+        self.options['frac_train'] = options.pop('frac_train', FRAC_TRAIN)
+
         # Load Julia
         import julia
         self.jl = julia.Julia()
-        # Check if we are running on a multi-core machine
-        try:
-            n_cpus = int(os.environ["SLURM_CPUS_PER_TASK"])
-        except KeyError:
-            n_cpus = multiprocessing.cpu_count()
+        n_cpus = get_n_processes()
 
         n_cur_procs = self.jl.eval("using Distributed; nprocs()")
         if n_cur_procs < n_cpus and self.options['parallel']:
@@ -126,14 +124,16 @@ class OptimalTree(Learner):
 
         # Create classifier
         # Set seed to 1 to make the validation reproducible
-        self._lnr = self._create_classifier(ls_random_seed=self.optimaltrees_options['ls_random_seed'])
+        self._lnr = \
+            self._create_classifier(ls_random_seed=self.optimaltrees_options['ls_random_seed'])
 
         # Create grid search
         self._grid = self._create_grid(self._lnr,
                                        **self.optimaltrees_options)
 
         # Train classifier
-        self._fit(self._grid, X, y, train_proportion=0.9)
+        self._fit(self._grid, X, y,
+                  train_proportion=self.options['frac_train'])
 
         # End time
         end_time = time.time()
