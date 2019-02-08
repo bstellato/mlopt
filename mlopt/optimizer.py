@@ -221,12 +221,14 @@ class Optimizer(object):
         # Train learner
         self._learner.train(self.X_train, self.y_train)
 
-    def choose_best(self, strategies, parallel):
+    def choose_best(self, strategies, parallel=True):
         """
         Choose best strategy between provided ones
 
         Parameters
         ----------
+        strategies : list
+            Strategies to compare.
         parallel : bool, optional
             Perform `n_best` strategies evaluation in parallel.
             True by default.
@@ -288,7 +290,8 @@ class Optimizer(object):
 
     def solve(self, X,
               message="Predict optimal solution",
-              parallel=True
+              parallel=True,
+              verbose=False,
               ):
         """
         Predict optimal solution given the parameters X.
@@ -308,6 +311,11 @@ class Optimizer(object):
         """
         n_points = len(X)
         n_best = self._learner.options['n_best']
+
+
+        # Change verbose setting
+        if verbose:
+            self._problem.solver_options['verbose'] = True
 
         # Define array of results to return
         results = []

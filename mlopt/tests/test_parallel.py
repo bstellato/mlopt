@@ -148,7 +148,7 @@ class TestParallel(unittest.TestCase):
         Sample points
         '''
         theta_bar = np.random.randn(n)
-        radius = 0.3
+        radius = 0.6
 
         '''
         Train and solve
@@ -168,7 +168,7 @@ class TestParallel(unittest.TestCase):
         params = {
             'learning_rate': [0.01],
             'batch_size': [100],
-            'n_epochs': [1000]
+            'n_epochs': [200]
         }
 
         m.train(df, parallel=True, learner=PYTORCH, params=params)

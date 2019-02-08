@@ -15,7 +15,7 @@ from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
 from mlopt.kkt import KKT
 # Import cvxpy and constraint types
 import cvxpy as cp
-from cvxpy.constraints.nonpos import NonPos
+from cvxpy.constraints.nonpos import NonPos, Inequality
 from cvxpy.constraints.zero import Zero
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
@@ -189,14 +189,11 @@ class Problem(object):
         Solve problem with CVXPY and return results dictionary
         """
         # DEBUG: Remove KKT
-        #  if use_KKT:
-        if False:
+        if use_KKT:
             # Solve problem with KKT system
-            import ipdb; ipdb.set_trace()
-            problem.solve(solver=KKT, **solver_options)
+            problem.solve(solver=KKT, **self.solver_options)
         else:
             problem.solve(solver=self.solver,
-                          #  verbose=True,
                           **self.solver_options)
 
         results = {}
@@ -333,6 +330,7 @@ class Problem(object):
         ----------
         strategy : Strategy
             Strategy to be used.
+
         Returns
         -------
         dict
@@ -364,21 +362,21 @@ class Problem(object):
         for con in orig_constraints:
             idx_tight = np.where(tight_constraints[con.id])[0]
             if len(idx_tight) > 0:
-                # Tight constraints in expression
-                con_expr = con.args[0]
-                if con_expr.shape == ():
+
+                # Get tight constraints in expression
+                if con.expr.shape == ():
                     # Scalar case no slicing
-                    tight_expr = con_expr
+                    tight_expr = con.expr
                 else:
                     # Get tight constraints
-                    tight_expr = con_expr[idx_tight]
+                    tight_expr = con.expr[idx_tight]
 
                 # Set affine inequalities as equalities
                 new_type = type(con)
-                if type(con) == NonPos and tight_expr.is_affine():
+                if (type(con) == NonPos or type(con) == Inequality) \
+                        and tight_expr.is_affine():
                     new_type = Zero
 
-                # Add constraints
                 constraints += [new_type(tight_expr)]
 
         # Fix discrete variables and
@@ -392,8 +390,8 @@ class Problem(object):
         prob_red = cp.Problem(objective, constraints + discrete_fix)
         if prob_red.is_qp():
             # If QP, if must be an equality constrained QP because
-            # of the loop above fixing NonPos constraints to Zero constraints.
-            # Solve using KKT solver
+            # of the loop above fixing linear inequality constraints
+            # to be equalities
             results = self._solve(prob_red, use_KKT=True)
         else:
             results = self._solve(prob_red)

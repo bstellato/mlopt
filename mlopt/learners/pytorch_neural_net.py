@@ -188,26 +188,32 @@ class PyTorchNeuralNet(Learner):
         # Create vector of results
         accuracy_vec = np.zeros(n_models)
 
-        for i in range(n_models):
+        if n_models > 1:
+            for i in range(n_models):
 
-            # Rain with parameters
-            self.train_instance(X_train, y_train, params[i])
+                # Rain with parameters
+                self.train_instance(X_train, y_train, params[i])
 
-            # Predict validation
-            y_pred = self.predict(X_valid, n_best=1)
+                # Predict validation
+                y_pred = self.predict(X_valid, n_best=1)
 
-            # Get accuracy
-            accuracy_vec[i] = np.sum(
-                np.equal(y_pred.flatten(), y_valid)) / len(y_valid)
-            print("Accuracy: %.2f%%" % (accuracy_vec[i] * 100))
+                # Get accuracy
+                accuracy_vec[i] = np.sum(
+                    np.equal(y_pred.flatten(), y_valid)) / len(y_valid)
+                print("Accuracy: %.2f%%" % (accuracy_vec[i] * 100))
 
-        # Pick best parameters
-        self.best_params = params[np.argmax(accuracy_vec)]
-        print("Best parameters")
+            # Pick best parameters
+            self.best_params = params[np.argmax(accuracy_vec)]
+            print("Best parameters")
+
+            print("Train neural network with best parameters")
+
+        else:
+
+            print("Train neural network with just one set of parameters")
+            self.best_params = params[0]
+
         print(self.best_params)
-
-        print("Train neural network with best parameters")
-
         # Retrain network with best parameters over whole dataset
         self.train_instance(X, y, self.best_params)
 
