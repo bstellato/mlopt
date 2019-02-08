@@ -149,6 +149,10 @@ class Problem(object):
             # Get constraint arguments norms
             arg_norms = args_norms(c)
 
+            try:
+                relative_viol = np.amax(arg_norms)
+            except:
+                import ipdb; ipdb.set_trace()
             # Get relative value for all of the expression arguments
             relative_viol = np.amax(arg_norms)
 
@@ -184,7 +188,9 @@ class Problem(object):
         """
         Solve problem with CVXPY and return results dictionary
         """
-        if use_KKT:
+        # DEBUG: Remove KKT
+        #  if use_KKT:
+        if False:
             # Solve problem with KKT system
             import ipdb; ipdb.set_trace()
             problem.solve(solver=KKT, **solver_options)
