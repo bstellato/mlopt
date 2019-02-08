@@ -365,11 +365,11 @@ class Problem(object):
                     tight_expr = con_expr
                 else:
                     # Get tight constraints
-                    tight_expr = con.args[0][idx_tight]
+                    tight_expr = con_expr[idx_tight]
 
-                # Set linear inequalities as equalities
+                # Set affine inequalities as equalities
                 new_type = type(con)
-                if type(con) == NonPos:
+                if type(con) == NonPos and tight_expr.is_affine():
                     new_type = Zero
 
                 # Add constraints
@@ -384,8 +384,10 @@ class Problem(object):
 
         # Solve problem
         prob_red = cp.Problem(objective, constraints + discrete_fix)
-        if self.cvxpy_problem.is_qp():
-            # Problem QP representable. Solve just a KKT system
+        if prob_red.is_qp():
+            # If QP, if must be an equality constrained QP because
+            # of the loop above fixing NonPos constraints to Zero constraints.
+            # Solve using KKT solver
             results = self._solve(prob_red, use_KKT=True)
         else:
             results = self._solve(prob_red)
