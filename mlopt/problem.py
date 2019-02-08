@@ -12,6 +12,7 @@ import scipy.sparse.linalg as sla
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
     DEFAULT_SOLVER, DIVISION_TOL
+from mlopt.kkt import KKT
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos
@@ -179,7 +180,6 @@ class Problem(object):
     #          error = cvx.neg(cvx.lambda_min(mat + mat.T)/2)
     #      return cvx.sum_entries(error)
 
-
     def _solve(self, problem, use_KKT=False):
         """
         Solve problem with CVXPY and return results dictionary
@@ -187,7 +187,7 @@ class Problem(object):
         if use_KKT:
             # Solve problem with KKT system
             import ipdb; ipdb.set_trace()
-            problem.solve(method=KKT)
+            problem.solve(solver=KKT, **solver_options)
         else:
             problem.solve(solver=self.solver,
                           #  verbose=True,

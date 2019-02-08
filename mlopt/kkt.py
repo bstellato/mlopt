@@ -1,17 +1,23 @@
 # Define and solve equality constrained QP
 # Add this function as a solve method in CVXPY
-from cvxpy.reductions import (EvalParams, FlipObjective,
-                              Qp2SymbolicQp, QpMatrixStuffing,
-                              CvxAttr2Constr)
-from cvxpy.problems.objective import Maximize
-from cvxpy.reductions.solvers.solving_chain import SolvingChain
+#  from cvxpy.reductions import (EvalParams, FlipObjective,
+#                                Qp2SymbolicQp, QpMatrixStuffing,
+#                                CvxAttr2Constr)
+#  from cvxpy.problems.objective import Maximize
+#  from cvxpy.reductions.solvers.solving_chain import SolvingChain
 from cvxpy.reductions.solvers.qp_solvers.qp_solver import QpSolver
+from cvxpy.constraints import Zero
+from cvxpy.reductions.utilities import are_args_affine
+from cvxpy.error import SolverError
 from cvxpy.reductions.solvers import utilities
+from cvxpy.problems.objective import Minimize
+from cvxpy.reductions.solvers.qp_solvers.qp_solver \
+    import is_stuffed_qp_objective
+from cvxpy.reductions.solvers.defines import SOLVER_MAP_QP, QP_SOLVERS, INSTALLED_SOLVERS
 import cvxpy.interface as intf
 import cvxpy.settings as s
 import scipy.sparse as spa
 from cvxpy.reductions import Solution
-import cvxpy as cp
 import numpy as np
 import pypardiso as pardiso
 import time
@@ -31,7 +37,6 @@ class KKTSolver(QpSolver):
     def invert(self, solution, inverse_data):
         attr = {s.SOLVE_TIME: solution['time']}
 
-        # Map OSQP statuses back to CVXPY statuses
         status = solution['status']
 
         if status in s.SOLUTION_PRESENT:
@@ -56,19 +61,15 @@ class KKTSolver(QpSolver):
                        solver_opts,
                        solver_cache=None):
 
-        # Construct constraints matrix
-        # Only equality constraints
         if data['F'].shape[0] > 0:
-            A_con = spa.vstack([data['A'], data['F']])  # .tocsc()
-            b_con = np.concatenate((data['b'], data['G']))
-        else:
-            A_con = data['A']
-            b_con = data['b']
+            raise SolverError('KKT supports only equality constrained QPs.')
+        A_con = data['A']
+        b_con = data['b']
         n_var = data['P'].shape[0]
         n_con = len(b_con)
         O_con = spa.csc_matrix((n_con, n_con))
 
-        # Create linear system
+        # Create KKT linear system
         KKT = spa.vstack([spa.hstack([data['P'], A_con.T]),
                           spa.hstack([A_con, O_con])], format='csc')
         rhs = np.concatenate((-data['q'], b_con))
@@ -77,17 +78,11 @@ class KKTSolver(QpSolver):
             print("Solving %d x %d linear system A x = b " %
                   (n_var + n_con, n_var + n_con) + "using pardiso")
 
-        # Prepare Least Squares linear system
-        #  KKTtKKT = KKT.T.dot(KKT)
-        #  KKTtrhs = KKT.T.dot(rhs)
-
         # Solve linear system
         t_start = time.time()
-        #  x = spa.linalg.lsqr(KKT, rhs)[0]
-        #  x = spa.linalg.spsolve(KKT, rhs)
         try:
-            #  x = pardiso.spsolve(KKTtKKT, KKTtrhs)
             x = pardiso.spsolve(KKT, rhs)
+            #  x = spa.linalg.spsolve(KKT, rhs)   # Scipy version (much slower)
         except ValueError:
             x = np.full(n_var + n_con, np.nan)
         t_end = time.time()
@@ -97,7 +92,6 @@ class KKTSolver(QpSolver):
         results['x'] = x[:n_var]
         results['y'] = x[n_var:]
 
-        # If nan report infeasible linear system
         if np.any(np.isnan(results['x'])):
             results['status'] = s.INFEASIBLE
         else:
@@ -110,75 +104,82 @@ class KKTSolver(QpSolver):
         return results
 
 
-def construct_kkt_solving_chain(problem):
-    """
-    Construct solving chaing using the same QP steps as
-    cvxpy.reductions.solvers/solving_chain.py
-
-    However, in the end we add LsSolver() to solve the
-    equality constrained QP using least squares.
-    """
-    reductions = []
-    #  if problem.parameters():
-    #      reductions += [EvalParams()]
-    if type(problem.objective) == Maximize:  # Force minimization
-        reductions.append(FlipObjective())
-
-    # Conclude the chain with one of the following:
-    #  reductions += [CvxAttr2Constr(),
-    #                 Qp2SymbolicQp(),
-    #                 QpMatrixStuffing(),
-    #                 KKTSolver()]
-
-    # Canonicalization
-    reductions += [CvxAttr2Constr(),
-                   Qp2SymbolicQp()]
-
-    # Parameters evaluation
-    if problem.parameters():
-        reductions += [EvalParams()]
-
-    # Lower level matrix stuffing and solution
-    reductions += [QpMatrixStuffing(),
-                   KKTSolver()]
-
-    return SolvingChain(reductions=reductions)
+# Add solver to CVXPY solvers
+QP_SOLVERS.insert(0, KKT)
+SOLVER_MAP_QP[KKT] = KKTSolver()
+INSTALLED_SOLVERS.append(KKT)
 
 
-def solve_kkt(self,
-              verbose=False,
-              warm_start=True,  # Unused
-              *args, **kwargs):
+# OLD: REGISTER A NEW SOLVE METHOD
+#  def construct_kkt_solving_chain(problem):
+#      """
+#      Construct solving chaing using the same QP steps as
+#      cvxpy.reductions.solvers/solving_chain.py
+#
+#      However, in the end we add LsSolver() to solve the
+#      equality constrained QP using least squares.
+#      """
+#      reductions = []
+#      #  if problem.parameters():
+#      #      reductions += [EvalParams()]
+#      if type(problem.objective) == Maximize:  # Force minimization
+#          reductions.append(FlipObjective())
+#
+#      # Conclude the chain with one of the following:
+#      #  reductions += [CvxAttr2Constr(),
+#      #                 Qp2SymbolicQp(),
+#      #                 QpMatrixStuffing(),
+#      #                 KKTSolver()]
+#
+#      # Canonicalization
+#      reductions += [CvxAttr2Constr(),
+#                     Qp2SymbolicQp()]
+#
+#      # Parameters evaluation
+#      if problem.parameters():
+#          reductions += [EvalParams()]
+#
+#      # Lower level matrix stuffing and solution
+#      reductions += [QpMatrixStuffing(),
+#                     KKTSolver()]
+#
+#      return SolvingChain(reductions=reductions)
 
-    #  chain_key = (KKT)
-    #  if chain_key != self._cached_chain_key:
-    try:
-        self._solving_chain = construct_kkt_solving_chain(self)
-    except Exception as e:
-        raise e
-    #  self._cached_chain_key = chain_key
 
-    # Get data from chain
-    data, inverse_data = self._solving_chain.apply(self)
+#  def solve_kkt(self,
+#                verbose=False,
+#                warm_start=True,  # Unused
+#                *args, **kwargs):
+#
+#      #  chain_key = (KKT)
+#      #  if chain_key != self._cached_chain_key:
+#      try:
+#          self._solving_chain = construct_kkt_solving_chain(self)
+#      except Exception as e:
+#          raise e
+#      #  self._cached_chain_key = chain_key
+#
+#      # Get data from chain
+#      data, inverse_data = self._solving_chain.apply(self)
+#
+#      # Solve problem
+#      solver_output = self._solving_chain.solve_via_data(
+#              self, data, warm_start, verbose, kwargs)
+#
+#      # Unpack results
+#      self.unpack_results(solver_output,
+#                          self._solving_chain,
+#                          inverse_data)
+#
+#      return self.value
+#
+#
+#  # Register solve method
+#  cp.Problem.register_solve(KKT, solve_kkt)
+#
 
-    # Solve problem
-    solver_output = self._solving_chain.solve_via_data(
-            self, data, warm_start, verbose, kwargs)
 
-    # Unpack results
-    self.unpack_results(solver_output,
-                        self._solving_chain,
-                        inverse_data)
-
-    return self.value
-
-
-# Register solve method
-cp.Problem.register_solve(KKT, solve_kkt)
-
-
-
-    # Old function to solve equality constrained QP
+# OLD function to solve equality constrained QP
     #  # Get problem constraints and objective
     #  #  orig_objective = self.objective
     #  orig_variables = self.cvxpy_problem.variables()
