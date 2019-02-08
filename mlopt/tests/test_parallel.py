@@ -156,7 +156,7 @@ class TestParallel(unittest.TestCase):
 
         # Training and testing data
         n_train = 1000
-        n_test = 1  # Choose only one point to check parallel strategy evaluation
+        n_test = 10  # Choose only one point to check parallel strategy evaluation
 
         # Sample points from multivariate ball
         X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
@@ -165,21 +165,29 @@ class TestParallel(unittest.TestCase):
         df_test = pd.DataFrame({'mu': X_d_test.tolist()})
 
         # Train and test using pytorch
-        m.train(df, parallel=True, learner=PYTORCH)
+        params = {
+            'learning_rate': [0.01],
+            'batch_size': [100],
+            'n_epochs': [1000]
+        }
+
+        m.train(df, parallel=True, learner=PYTORCH, params=params)
 
         # Test
         serial = m.solve(df_test, parallel=False)
         parallel = m.solve(df_test)
 
         # Compare x
-        npt.assert_array_almost_equal(serial['x'],
-                                      parallel['x'],
-                                      decimal=TOL)
+        for i in range(n_test):
+            npt.assert_array_almost_equal(serial[i]['x'],
+                                          parallel[i]['x'],
+                                          decimal=TOL)
 
-        # Compare cost
-        npt.assert_array_almost_equal(serial['cost'],
-                                      parallel['cost'],
-                                      decimal=TOL)
+            # Compare cost
+            npt.assert_array_almost_equal(serial[i]['cost'],
+                                          parallel[i]['cost'],
+                                          decimal=TOL)
+
 
 
 if __name__ == '__main__':
