@@ -6,6 +6,7 @@ from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy, suboptimality
 from multiprocessing import Pool
 from mlopt.utils import get_n_processes
+from mlopt.kkt import KKT, create_kkt_matrix
 import cvxpy.settings as cps
 import pandas as pd
 import numpy as np
@@ -48,6 +49,15 @@ class Optimizer(object):
         self.encoding = None
         self.X_train = None
         self.y_train = None
+        self.kkt_factors = None  # KKT factorizations
+
+    @property
+    def n_strategies(self):
+        """Number of strategies."""
+        if self.encoding is None:
+            raise ValueError("Model has been trained yet to return the number of strategies.")
+
+        return len(self.encoding)
 
     @property
     def n_parameters(self):
@@ -180,7 +190,7 @@ class Optimizer(object):
 
         # Check if data is passed, otherwise train
         if X is not None:
-            print("Use new data X")
+            print("Use new data")
             self.X_train = X
             self.y_train = None
             self.encoding = None
@@ -220,6 +230,44 @@ class Optimizer(object):
 
         # Train learner
         self._learner.train(self.X_train, self.y_train)
+
+        # Add factorization faching if
+        # 1. Problem is MIQP
+        # TODO: Add the second point!
+        # 2. Parameters enter only in the problem vectors
+        if self._problem.is_qp():
+            self._cache_factors()
+
+    def _cache_factors(self):
+        """Cache linear system solver factorizations"""
+
+        self.factors = []
+        for strategy_idx in range(self.n_strategies):
+
+            # Get a parameter giving that strategy
+            idx_param = np.where(self.y_train == strategy_idx)
+            strategy = self.encoding(idx_param)
+            theta = self.X_train.iloc[idx_param, :]
+
+            self._problem.populate(theta)
+
+            reduced_problem = \
+                self._problem._construct_reduced_problem(strategy)
+
+            data, full_chain, inverse_data = \
+                reduced_problem.get_problem_data(solver=KKT)
+
+            # Create KKT matrix
+            KKT = create_kkt_matrix(data)
+
+            # Factor and store matrix
+
+            self.factors.append(factor)
+
+            # Store inverse data and chain
+            # for computing the solution
+
+
 
     def choose_best(self, strategies, parallel=True):
         """

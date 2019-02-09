@@ -1,4 +1,3 @@
-import os
 from multiprocessing import Pool
 #  import multiprocessing, logging
 #  logger = multiprocessing.log_to_stderr()
@@ -71,6 +70,12 @@ class Problem(object):
         #  if self.cvxpy_problem.is_qp():  #
         # TODO!
 
+        # Store discrete variables to restore later
+        self.int_vars = [v for v in self.cvxpy_problem.variables()
+                         if v.attributes['integer']]
+        self.bool_vars = [v for v in self.cvxpy_problem.variables()
+                          if v.attributes['boolean']]
+
         # Set options
         self.solver_options = solver_options
 
@@ -136,6 +141,18 @@ class Problem(object):
     def is_mip(self):
         """Check if problem has integer variables."""
         return self.cvxpy_problem.is_mixed_integer()
+
+    def is_qp(self):
+        """Is problem QP representable (LP/QP/MILP/MIQP)"""
+        self.cvxpy_problem.is_qp()
+
+    #  def params_in_vectors(self):
+    #      """Do the parameters affect only problem vectors?"""
+    #      # Use constr parameters()
+    #      #  for c in self.constraints:
+    #          # extract rhs
+    #
+    #          # check if parameters are there
 
     #  def infeasibility(self, variables):
     def infeasibility(self):
@@ -246,6 +263,16 @@ class Problem(object):
         var.boolean_idx = []
         var.integer_idx = []
 
+    def _restore_disc_var(self):
+        """
+        Restore relaxed original variables
+        to be discrete
+        """
+        for var in self.int_vars:  # Integer
+            self._set_int_var(var)
+        for var in self.bool_vars:  # Boolean
+            self._set_bool_var(var)
+
     def solve(self):
         """
         Solve optimization problem
@@ -318,6 +345,48 @@ class Problem(object):
             if not self._is_var_mip(v):
                 raise int_var_error
 
+    def _construct_reduced_problem(self, strategy):
+        """Construct reduced problem using strategy.
+           NB. This function relaxed integrality of the original variables."""
+        # Unpack strategy
+        tight_constraints = strategy.tight_constraints
+        int_vars = strategy.int_vars
+
+        # Unpack original problem
+        objective = self.objective
+        constraints = self.constraints
+
+        # Get only tight constraints in strategy
+        reduced_constraints = []
+        for con in constraints:
+            idx_tight = np.where(tight_constraints[con.id])[0]
+            if len(idx_tight) > 0:
+
+                # Get tight constraints in expression
+                if con.expr.shape == ():
+                    # Scalar case no slicing
+                    tight_expr = con.expr
+                else:
+                    # Get tight constraints
+                    tight_expr = con.expr[idx_tight]
+
+                # Set affine inequalities as equalities
+                new_type = type(con)
+                if (type(con) == NonPos or type(con) == Inequality) \
+                        and tight_expr.is_affine():
+                    new_type = Zero
+
+                reduced_constraints += [new_type(tight_expr)]
+
+        # Fix discrete variables and
+        # set them to continuous.
+        discrete_fix = []
+        for var in self.orig_int_vars + self.orig_bool_vars:
+            self._set_cont_var(var)
+            discrete_fix += [var == int_vars[var.id]]
+
+        return cp.Problem(objective, reduced_constraints + discrete_fix)
+
     def solve_with_strategy(self,
                             strategy):
         """
@@ -338,56 +407,9 @@ class Problem(object):
         """
         self._verify_strategy(strategy)
 
-        # Unpack strategy
-        tight_constraints = strategy.tight_constraints
-        int_vars = strategy.int_vars
-
-        # Unpack original problem
-        orig_objective = self.objective
-        orig_variables = self.cvxpy_problem.variables()
-        orig_constraints = self.constraints
-        orig_int_vars = [v for v in orig_variables
-                         if v.attributes['integer']]
-        orig_bool_vars = [v for v in orig_variables
-                          if v.attributes['boolean']]
-        #  orig_disc_vars = [v for v in orig_variables
-        #                    if (v.attributes['boolean'] or
-        #                        v.attributes['integer'])]
-
-        # Get same objective
-        objective = orig_objective
-
-        # Get only constraints in strategy
-        constraints = []
-        for con in orig_constraints:
-            idx_tight = np.where(tight_constraints[con.id])[0]
-            if len(idx_tight) > 0:
-
-                # Get tight constraints in expression
-                if con.expr.shape == ():
-                    # Scalar case no slicing
-                    tight_expr = con.expr
-                else:
-                    # Get tight constraints
-                    tight_expr = con.expr[idx_tight]
-
-                # Set affine inequalities as equalities
-                new_type = type(con)
-                if (type(con) == NonPos or type(con) == Inequality) \
-                        and tight_expr.is_affine():
-                    new_type = Zero
-
-                constraints += [new_type(tight_expr)]
-
-        # Fix discrete variables and
-        # set them to continuous.
-        discrete_fix = []
-        for var in orig_int_vars + orig_bool_vars:
-            self._set_cont_var(var)
-            discrete_fix += [var == int_vars[var.id]]
+        prob_red = self._construct_reduced_problem(strategy)
 
         # Solve problem
-        prob_red = cp.Problem(objective, constraints + discrete_fix)
         if prob_red.is_qp():
             # If QP, if must be an equality constrained QP because
             # of the loop above fixing linear inequality constraints
@@ -396,11 +418,7 @@ class Problem(object):
         else:
             results = self._solve(prob_red)
 
-        # Make variables discrete again
-        for var in orig_int_vars:  # Integer
-            self._set_int_var(var)
-        for var in orig_bool_vars:  # Boolean
-            self._set_bool_var(var)
+        self._restore_disc_var()
 
         return results
 

@@ -25,6 +25,27 @@ import time
 KKT = "KKT"
 
 
+def create_kkt_matrix(data):
+    """Create KKT matrix from data."""
+    A_con = data['A']
+    n_con = A_con.shape[0]
+    O_con = spa.csc_matrix((n_con, n_con))
+
+    # Create KKT linear system
+    KKT = spa.vstack([spa.hstack([data['P'], A_con.T]),
+                      spa.hstack([A_con, O_con])], format='csc')
+    return KKT
+
+
+def create_kkt_system(data):
+    """Create KKT linear system from data."""
+
+    KKT = create_kkt_matrix(data)
+    rhs = np.concatenate((-data['q'], data['b']))
+
+    return KKT, rhs
+
+
 class KKTSolver(QpSolver):
     """KKT solver for equality constrained QPs"""
 
@@ -61,18 +82,12 @@ class KKTSolver(QpSolver):
                        solver_opts,
                        solver_cache=None):
 
+        n_var = data['P'].shape[0]
+        n_con = len(data['b'])
         if data['F'].shape[0] > 0:
             raise SolverError('KKT supports only equality constrained QPs.')
-        A_con = data['A']
-        b_con = data['b']
-        n_var = data['P'].shape[0]
-        n_con = len(b_con)
-        O_con = spa.csc_matrix((n_con, n_con))
 
-        # Create KKT linear system
-        KKT = spa.vstack([spa.hstack([data['P'], A_con.T]),
-                          spa.hstack([A_con, O_con])], format='csc')
-        rhs = np.concatenate((-data['q'], b_con))
+        KKT, rhs = create_kkt_system(data)
 
         if verbose:
             print("Solving %d x %d linear system A x = b " %
