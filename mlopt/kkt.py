@@ -37,11 +37,16 @@ def create_kkt_matrix(data):
     return KKT
 
 
+def create_kkt_rhs(data):
+    """Create KKT rhs from data."""
+    return np.concatenate((-data['q'], data['b']))
+
+
 def create_kkt_system(data):
     """Create KKT linear system from data."""
 
     KKT = create_kkt_matrix(data)
-    rhs = np.concatenate((-data['q'], data['b']))
+    rhs = create_kkt_rhs(data)
 
     return KKT, rhs
 
@@ -82,25 +87,37 @@ class KKTSolver(QpSolver):
                        solver_opts,
                        solver_cache=None):
 
+        KKT_cache = solver_opts.get('KKT_cache', None)
+
         n_var = data['P'].shape[0]
         n_con = len(data['b'])
         if data['F'].shape[0] > 0:
             raise SolverError('KKT supports only equality constrained QPs.')
 
-        KKT, rhs = create_kkt_system(data)
-
         if verbose:
             print("Solving %d x %d linear system A x = b " %
                   (n_var + n_con, n_var + n_con) + "using pardiso")
 
-        # Solve linear system
-        t_start = time.time()
-        try:
-            x = pardiso.spsolve(KKT, rhs)
-            #  x = spa.linalg.spsolve(KKT, rhs)   # Scipy version (much slower)
-        except ValueError:
-            x = np.full(n_var + n_con, np.nan)
-        t_end = time.time()
+        if KKT_cache is None:
+
+            KKT, rhs = create_kkt_system(data)
+
+            t_start = time.time()
+            try:
+                x = pardiso.spsolve(KKT, rhs)
+            except ValueError:
+                x = np.full(n_var + n_con, np.nan)
+            t_end = time.time()
+
+        else:
+            rhs = create_kkt_rhs(data)
+
+            t_start = time.time()
+            try:
+                x = KKT_cache['factors'](rhs)
+            except ValueError:
+                x = np.full(n_var + n_con, np.nan)
+            t_end = time.time()
 
         # Get results
         results = {}
@@ -123,6 +140,17 @@ class KKTSolver(QpSolver):
 QP_SOLVERS.insert(0, KKT)
 SOLVER_MAP_QP[KKT] = KKTSolver()
 INSTALLED_SOLVERS.append(KKT)
+
+
+class KKTSolverCache(object):
+
+    def __init__(self,
+                 factors,
+                 inverse_data,
+                 inverse_chains):
+        self._factors = factors
+        self._inverse_data = inverse_data
+        self._inverse_chains = inverse_chains
 
 
 # OLD: REGISTER A NEW SOLVE METHOD

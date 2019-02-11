@@ -6,7 +6,7 @@ from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy, suboptimality
 from multiprocessing import Pool
 from mlopt.utils import get_n_processes
-from mlopt.kkt import KKT, create_kkt_matrix
+from mlopt.kkt import KKT, KKTSolverCache, create_kkt_matrix
 import pypardiso as pardiso
 import cvxpy.settings as cps
 import pandas as pd
@@ -50,7 +50,9 @@ class Optimizer(object):
         self.encoding = None
         self.X_train = None
         self.y_train = None
-        self.kkt_factors = None  # KKT factorizations
+
+        # Preallocate cached data
+        self._solver_cache
 
     @property
     def n_strategies(self):
@@ -242,9 +244,7 @@ class Optimizer(object):
     def _cache_factors(self):
         """Cache linear system solver factorizations"""
 
-        self._cached_factors = []
-        self._cached_inverse_data = []
-        self._cached_chain = []
+        self._solver_cache = []
         for strategy_idx in range(self.n_strategies):
 
             # Get a parameter giving that strategy
@@ -257,24 +257,26 @@ class Optimizer(object):
             reduced_problem = \
                 self._problem._construct_reduced_problem(strategy)
 
-            data, full_chain, inverse_data = \
+            data, full_chain, inv_data = \
                 reduced_problem.get_problem_data(solver=KKT)
 
             KKT_mat = create_kkt_matrix(data)
             solve_kkt = pardiso.factorized(KKT_mat)
 
-            self._cached_factors.append(solve_kkt)
-            self._cached_inverse_data.append(inverse_data)
-            self._cached_inverse_chain.append(full_chain)
+            cache['factors'] = solve_kkt
+            cache['inverse_data'] = inv_data
+            cache['chain'] = full_chain
 
-    def choose_best(self, strategies, parallel=True):
+            self._solver_cache += [cache]
+
+    def choose_best(self, labels, parallel=True):
         """
         Choose best strategy between provided ones
 
         Parameters
         ----------
-        strategies : list
-            Strategies to compare.
+        labels : list
+            Strategy labels to compare.
         parallel : bool, optional
             Perform `n_best` strategies evaluation in parallel.
             True by default.
@@ -292,19 +294,26 @@ class Optimizer(object):
         infeas = []
         cost = []
 
+        strategies = [self.encoding[l] for l in labels]
+
+        # Cache is a list of solver caches to pass
+        cache = [None] * n_best
+        if self._solver_cache:
+            cache = [self._solver_cache[l] for l in labels]
+
         if parallel:
-            # Solve in parallel
             n_proc = get_n_processes(max_n=n_best)
             pool = Pool(processes=n_proc)
-            results = pool.map(self._problem.solve_with_strategy, strategies)
+            results = pool.starmap(self._problem.solve_with_strategy,
+                                   zip(strategies, cache))
             x = [r["x"] for r in results]
             time = [r["time"] for r in results]
             infeas = [r["infeasibility"] for r in results]
             cost = [r["cost"] for r in results]
         else:
-            # Solve in serial
             for j in range(n_best):
-                res = self._problem.solve_with_strategy(strategies[j])
+                res = self._problem.solve_with_strategy(strategies[j],
+                                                        cache[j])
                 x.append(res['x'])
                 time.append(res['time'])
                 infeas.append(res['infeasibility'])
@@ -376,14 +385,16 @@ class Optimizer(object):
 
         for i in tqdm(range(n_points), desc=message):
 
-            # Populate problem
+            # Populate problem with i-th data point
             self._problem.populate(X.iloc[i, :])
 
             # Pick strategies from encoding
-            strategies = [self.encoding[classes[i, j]]
-                          for j in range(n_best)]
+            #  strategies = [self.encoding[classes[i, j]]
+            #                for j in range(n_best)]
+            #  results.append(self.choose_best(strategies,
+            #                                  parallel=parallel))
 
-            results.append(self.choose_best(strategies,
+            results.append(self.choose_best(classes[i, :],
                                             parallel=parallel))
 
         return results

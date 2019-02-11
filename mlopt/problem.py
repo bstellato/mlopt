@@ -79,6 +79,9 @@ class Problem(object):
         # Set options
         self.solver_options = solver_options
 
+        # Set solver cache
+        self._solver_cache = None
+
     @property
     def solver(self):
         """Internal optimization solver"""
@@ -201,14 +204,15 @@ class Problem(object):
     #          error = cvx.neg(cvx.lambda_min(mat + mat.T)/2)
     #      return cvx.sum_entries(error)
 
-    def _solve(self, problem, use_KKT=False):
+    def _solve(self, problem, use_KKT=False, KKT_cache=None):
         """
         Solve problem with CVXPY and return results dictionary
         """
         # DEBUG: Remove KKT
         if use_KKT:
             # Solve problem with KKT system
-            problem.solve(solver=KKT, **self.solver_options)
+            problem.solve(solver=KKT, KKT_cache=KKT_cache,
+                          **self.solver_options)
         else:
             problem.solve(solver=self.solver,
                           **self.solver_options)
@@ -388,7 +392,8 @@ class Problem(object):
         return cp.Problem(objective, reduced_constraints + discrete_fix)
 
     def solve_with_strategy(self,
-                            strategy):
+                            strategy,
+                            cache=None):
         """
         Solve problem using strategy
 
@@ -399,6 +404,8 @@ class Problem(object):
         ----------
         strategy : Strategy
             Strategy to be used.
+        cache : dict, optional
+            KKT Solver cache.
 
         Returns
         -------
@@ -414,7 +421,8 @@ class Problem(object):
             # If QP, if must be an equality constrained QP because
             # of the loop above fixing linear inequality constraints
             # to be equalities
-            results = self._solve(prob_red, use_KKT=True)
+            results = self._solve(prob_red, use_KKT=True,
+                                  KKT_cache=cache)
         else:
             results = self._solve(prob_red)
 
