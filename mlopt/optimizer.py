@@ -7,6 +7,7 @@ from mlopt.utils import n_features, accuracy, suboptimality
 from multiprocessing import Pool
 from mlopt.utils import get_n_processes
 from mlopt.kkt import KKT, create_kkt_matrix
+import pypardiso as pardiso
 import cvxpy.settings as cps
 import pandas as pd
 import numpy as np
@@ -241,7 +242,9 @@ class Optimizer(object):
     def _cache_factors(self):
         """Cache linear system solver factorizations"""
 
-        self.factors = []
+        self._cached_factors = []
+        self._cached_inverse_data = []
+        self._cached_chain = []
         for strategy_idx in range(self.n_strategies):
 
             # Get a parameter giving that strategy
@@ -257,17 +260,12 @@ class Optimizer(object):
             data, full_chain, inverse_data = \
                 reduced_problem.get_problem_data(solver=KKT)
 
-            # Create KKT matrix
-            KKT = create_kkt_matrix(data)
+            KKT_mat = create_kkt_matrix(data)
+            solve_kkt = pardiso.factorized(KKT_mat)
 
-            # Factor and store matrix
-
-            self.factors.append(factor)
-
-            # Store inverse data and chain
-            # for computing the solution
-
-
+            self._cached_factors.append(solve_kkt)
+            self._cached_inverse_data.append(inverse_data)
+            self._cached_inverse_chain.append(full_chain)
 
     def choose_best(self, strategies, parallel=True):
         """
@@ -359,7 +357,6 @@ class Optimizer(object):
         """
         n_points = len(X)
         n_best = self._learner.options['n_best']
-
 
         # Change verbose setting
         if verbose:
