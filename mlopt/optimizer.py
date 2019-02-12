@@ -263,6 +263,7 @@ class Optimizer(object):
             KKT_mat = create_kkt_matrix(data)
             solve_kkt = pardiso.factorized(KKT_mat)
 
+            cache = {}
             cache['factors'] = solve_kkt
             cache['inverse_data'] = inv_data
             cache['chain'] = full_chain

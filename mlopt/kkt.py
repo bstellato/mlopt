@@ -142,17 +142,6 @@ SOLVER_MAP_QP[KKT] = KKTSolver()
 INSTALLED_SOLVERS.append(KKT)
 
 
-class KKTSolverCache(object):
-
-    def __init__(self,
-                 factors,
-                 inverse_data,
-                 inverse_chains):
-        self._factors = factors
-        self._inverse_data = inverse_data
-        self._inverse_chains = inverse_chains
-
-
 # OLD: REGISTER A NEW SOLVE METHOD
 #  def construct_kkt_solving_chain(problem):
 #      """
