@@ -1,4 +1,5 @@
 from multiprocessing import Pool
+#  from pathos.multiprocessing import ProcessingPool as Pool
 #  import multiprocessing, logging
 #  logger = multiprocessing.log_to_stderr()
 #  logger.setLevel(multiprocessing.SUBDEBUG)
@@ -32,6 +33,11 @@ import logging
 #      return results
 #
 #  from mlopt.kkt import KKT
+
+
+#  def _solve_with_strategy_multiprocess(problem, strategy, cache):
+#      """Wrapper function to be called with multiprocessing"""
+#      return problem.solve_with_strategy(strategy, cache)
 
 
 class Problem(object):
@@ -232,9 +238,6 @@ class Problem(object):
             tight_constraints = dict()
             for c in problem.constraints:
                 tight_constraints[c.id] = tight_components(c)
-                #  val = c.args[0].value
-                #  tight_constraints[c.id] = np.abs(val) <= TIGHT_CONSTRAINTS_TOL
-                #  import ipdb; ipdb.set_trace()
             results['tight_constraints'] = tight_constraints
         else:
             # DEBUG

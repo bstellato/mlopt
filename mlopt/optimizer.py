@@ -1,13 +1,15 @@
-from mlopt.problem import Problem
+from mlopt.problem import Problem  # , _solve_with_strategy_multiprocess
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy, suboptimality
 from multiprocessing import Pool
+#  from pathos.multiprocessing import ProcessingPool as Pool
 from mlopt.utils import get_n_processes
 from mlopt.kkt import KKT, create_kkt_matrix
-import pypardiso as pardiso
+from pypardiso import factorized
+#  from scipy.sparse.linalg import factorized
 import cvxpy.settings as cps
 import pandas as pd
 import numpy as np
@@ -275,7 +277,7 @@ class Optimizer(object):
                 reduced_problem.get_problem_data(solver=KKT)
 
             KKT_mat = create_kkt_matrix(data)
-            solve_kkt = pardiso.factorized(KKT_mat)
+            solve_kkt = factorized(KKT_mat)
 
             cache = {}
             cache['factors'] = solve_kkt
@@ -284,7 +286,7 @@ class Optimizer(object):
 
             self._solver_cache += [cache]
 
-    def choose_best(self, labels, parallel=True, use_cache=True):
+    def choose_best(self, labels, parallel=False, use_cache=True):
         """
         Choose best strategy between provided ones
 
