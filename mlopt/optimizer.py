@@ -6,7 +6,7 @@ from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy, suboptimality
 from multiprocessing import Pool
 from mlopt.utils import get_n_processes
-from mlopt.kkt import KKT, KKTSolverCache, create_kkt_matrix
+from mlopt.kkt import KKT, create_kkt_matrix
 import pypardiso as pardiso
 import cvxpy.settings as cps
 import pandas as pd
@@ -17,6 +17,7 @@ import tempfile
 import tarfile
 import pickle as pkl
 from tqdm import tqdm
+import logging
 
 
 class Optimizer(object):
@@ -27,6 +28,7 @@ class Optimizer(object):
     def __init__(self,
                  objective, constraints,
                  name="problem",
+                 log_level=logging.INFO,
                  **solver_options):
         """
         Inizialize optimizer.
@@ -42,6 +44,9 @@ class Optimizer(object):
         solver_options : dict, optional
             A dict of options for the internal solver.
         """
+
+        logging.basicConfig(level=log_level)
+
         self._problem = Problem(objective, constraints,
                                 solver=DEFAULT_SOLVER,
                                 **solver_options)
@@ -51,14 +56,16 @@ class Optimizer(object):
         self.X_train = None
         self.y_train = None
 
-        # Preallocate cached data
-        self._solver_cache
+        self._solver_cache = None
 
     @property
     def n_strategies(self):
         """Number of strategies."""
         if self.encoding is None:
-            raise ValueError("Model has been trained yet to return the number of strategies.")
+            err = "Model has been trained yet to " + \
+                "return the number of strategies."
+            logging.error(err)
+            raise ValueError(err)
 
         return len(self.encoding)
 
@@ -82,7 +89,8 @@ class Optimizer(object):
         self._sampler = Sampler(self._problem, sampling_fn)
 
         # Sample parameters
-        self.X_train, self.y_train, self.encoding = self._sampler.sample(parallel=parallel)
+        self.X_train, self.y_train, self.encoding = \
+            self._sampler.sample(parallel=parallel)
 
     def save_data(self, file_name, delete_existing=False):
         """
@@ -116,8 +124,10 @@ class Optimizer(object):
         if (self.X_train is None) or \
             (self.y_train is None) or \
                 (self.encoding is None):
-            raise ValueError("You need to get the strategies " +
-                             "from the data first by training the model.")
+            err = "You need to get the strategies " + \
+                "from the data first by training the model."
+            logging.error(err)
+            raise ValueError(err)
 
         # Save to file
         with open(file_name, 'wb') \
@@ -185,15 +195,18 @@ class Optimizer(object):
 
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
-            raise ValueError("Not enough arguments to train the model")
+            err = "Not enough arguments to train the model"
+            logging.error(err)
+            raise ValueError(err)
 
         if X is not None and sampling_fn is not None:
-            raise ValueError("You can pass only one value between " +
-                             "X and sampling_fn")
+            err = "You can pass only one value between X and sampling_fn"
+            logging.error(err)
+            raise ValueError(err)
 
         # Check if data is passed, otherwise train
         if X is not None:
-            print("Use new data")
+            logging.info("Use new data")
             self.X_train = X
             self.y_train = None
             self.encoding = None
@@ -221,7 +234,7 @@ class Optimizer(object):
             self._sampler.compute_good_turing(self.y_train)
 
         elif sampling_fn is not None:
-            print("Use iterative sampling")
+            logging.info("Use iterative sampling")
             # Create X_train, y_train and encoding from
             # sampling function
             self.sample(sampling_fn, parallel=parallel)
@@ -239,6 +252,7 @@ class Optimizer(object):
         # TODO: Add the second point!
         # 2. Parameters enter only in the problem vectors
         if self._problem.is_qp():
+            logging.info("Caching KKT solver factors for each strategy")
             self._cache_factors()
 
     def _cache_factors(self):
@@ -248,9 +262,9 @@ class Optimizer(object):
         for strategy_idx in range(self.n_strategies):
 
             # Get a parameter giving that strategy
-            idx_param = np.where(self.y_train == strategy_idx)
-            strategy = self.encoding(idx_param)
-            theta = self.X_train.iloc[idx_param, :]
+            strategy = self.encoding[strategy_idx]
+            idx_param = np.where(self.y_train == strategy_idx)[0]
+            theta = self.X_train.iloc[idx_param[0], :]
 
             self._problem.populate(theta)
 
@@ -270,7 +284,7 @@ class Optimizer(object):
 
             self._solver_cache += [cache]
 
-    def choose_best(self, labels, parallel=True):
+    def choose_best(self, labels, parallel=True, use_cache=True):
         """
         Choose best strategy between provided ones
 
@@ -281,6 +295,8 @@ class Optimizer(object):
         parallel : bool, optional
             Perform `n_best` strategies evaluation in parallel.
             True by default.
+        use_cache : bool, optional
+            Use solver cache? True by default.
 
         Returns
         -------
@@ -299,7 +315,7 @@ class Optimizer(object):
 
         # Cache is a list of solver caches to pass
         cache = [None] * n_best
-        if self._solver_cache:
+        if self._solver_cache and use_cache:
             cache = [self._solver_cache[l] for l in labels]
 
         if parallel:
@@ -347,6 +363,7 @@ class Optimizer(object):
     def solve(self, X,
               message="Predict optimal solution",
               parallel=True,
+              use_cache=True,
               verbose=False,
               ):
         """
@@ -359,6 +376,8 @@ class Optimizer(object):
         parallel : bool, optional
             Perform `n_best` strategies evaluation in parallel.
             Defaults to True.
+        use_cache : bool, optional
+            Use solver cache?  Defaults to True.
 
         Returns
         -------
@@ -367,6 +386,12 @@ class Optimizer(object):
         """
         n_points = len(X)
         n_best = self._learner.options['n_best']
+
+        if use_cache and not self._solver_cache:
+            err = "Solver cache requested but the cache has not been" + \
+                "computed for this problem. Is it MIQP representable?"
+            logging.error(err)
+            raise ValueError(err)
 
         # Change verbose setting
         if verbose:
@@ -396,7 +421,8 @@ class Optimizer(object):
             #                                  parallel=parallel))
 
             results.append(self.choose_best(classes[i, :],
-                                            parallel=parallel))
+                                            parallel=parallel,
+                                            use_cache=use_cache))
 
         return results
 
@@ -529,7 +555,7 @@ class Optimizer(object):
             Detailed results summary.
         """
 
-        print("Performance evaluation")
+        logging.info("Performance evaluation")
         # Get strategy for each point
         results_test = self._problem.solve_parametric(theta,
                                                       parallel=parallel,

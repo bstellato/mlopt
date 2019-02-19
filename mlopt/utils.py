@@ -4,6 +4,7 @@ from mlopt.settings import INFEAS_TOL, SUBOPT_TOL
 import os
 import pandas as pd
 import mlopt
+import logging
 
 
 def args_norms(expr):
@@ -90,14 +91,14 @@ def benchmark(m,  # Optimizer
     already_run = os.path.isfile(data_file_general) and \
         os.path.isfile(data_file_detail)
     if already_run:
-        print("Loading data %s" % data_file)
+        logging.info("Loading data %s" % data_file)
         general = pd.read_csv(data_file_general)
         detail = pd.read_csv(data_file_detail)
     else:
-        print("Perform training for %s" % data_file)
+        logging.info("Perform training for %s" % data_file)
 
-        print("Training NN")
-        print("-----------\n")
+        logging.info("Training NN")
+        logging.info("-----------\n")
 
         # Train neural network
         m.train(sampling_fn=sample_fn,
@@ -113,8 +114,8 @@ def benchmark(m,  # Optimizer
         #  Train and test using optimal trees
         if trees:
 
-            print("Training OCT")
-            print("-----------\n")
+            logging.info("Training OCT")
+            logging.info("-----------\n")
 
             # OCT
             m.train(
@@ -130,8 +131,8 @@ def benchmark(m,  # Optimizer
             general = general.append(oct_general)
             detail = detail.append(oct_detail)
 
-            print("Training OCT-H")
-            print("-----------\n")
+            logging.info("Training OCT-H")
+            logging.info("-----------\n")
 
             # OCT-H
             m.train(

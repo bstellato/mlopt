@@ -3,10 +3,10 @@ from mlopt.settings import N_BEST, FRAC_TRAIN, OPTIMAL_TREE
 from mlopt.utils import pandas2array, get_n_processes
 import shutil
 from subprocess import call
-from warnings import warn
 import time
 import os
 import sys
+import logging
 
 
 class OptimalTree(Learner):
@@ -110,11 +110,12 @@ class OptimalTree(Learner):
         self.n_train = len(X)
         X = pandas2array(X)
 
-        print("Training trees ", end='')
+        info_str = "Training trees "
         if self.options['parallel']:
-            print("on %d processors" % self.jl.eval("nprocs()"))
+            info_str += "on %d processors" % self.jl.eval("nprocs()")
         else:
-            print("")
+            info_str += "\n"
+        logging.info(info_str)
 
         # Start time
         start_time = time.time()
@@ -125,7 +126,9 @@ class OptimalTree(Learner):
         # Create classifier
         # Set seed to 1 to make the validation reproducible
         self._lnr = \
-            self._create_classifier(ls_random_seed=self.optimaltrees_options['ls_random_seed'])
+            self._create_classifier(
+                ls_random_seed=self.optimaltrees_options['ls_random_seed']
+            )
 
         # Create grid search
         self._grid = self._create_grid(self._lnr,
@@ -137,7 +140,7 @@ class OptimalTree(Learner):
 
         # End time
         end_time = time.time()
-        print("Tree training time %.2f" % (end_time - start_time))
+        logging.info("Tree training time %.2f" % (end_time - start_time))
 
     def predict(self, X):
 
@@ -168,12 +171,14 @@ class OptimalTree(Learner):
                       file_name + ".svg",
                       file_name + ".dot"])
             else:
-                warn("dot command not found in path")
+                logging.warning("dot command not found in path")
 
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".json"):
-            raise ValueError("Optimal Tree json file does not exist.")
+            err = "Optimal Tree json file does not exist."
+            logging.error(err)
+            raise ValueError(err)
 
         # Load tree from file
         io = self._open(file_name + ".json", "r")

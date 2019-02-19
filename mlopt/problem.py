@@ -3,11 +3,11 @@ from multiprocessing import Pool
 #  logger = multiprocessing.log_to_stderr()
 #  logger.setLevel(multiprocessing.SUBDEBUG)
 #  from itertools import repeat
-from warnings import warn
+#  from warnings import warn
 import numpy as np
-import scipy as sp
-import scipy.sparse as spa
-import scipy.sparse.linalg as sla
+#  import scipy as sp
+#  import scipy.sparse as spa
+#  import scipy.sparse.linalg as sla
 from mlopt.strategy import Strategy
 from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
     DEFAULT_SOLVER, DIVISION_TOL
@@ -20,6 +20,7 @@ from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
 from tqdm import tqdm
 from mlopt.utils import get_n_processes, args_norms
+import logging
 
 #  def populate_and_solve(args):
 #      """Single function to populate the problem with
@@ -31,7 +32,7 @@ from mlopt.utils import get_n_processes, args_norms
 #
 #      return results
 #
-from mlopt.kkt import KKT
+#  from mlopt.kkt import KKT
 
 
 class Problem(object):
@@ -91,7 +92,9 @@ class Problem(object):
     def solver(self, s):
         """Set internal solver."""
         if s not in INSTALLED_SOLVERS:
-            raise ValueError('Solver %s not installed.' % s)
+            err = 'Solver %s not installed.' % s
+            logging.error(err)
+            raise ValueError(err)
         self._solver = s
 
     @property
@@ -147,7 +150,7 @@ class Problem(object):
 
     def is_qp(self):
         """Is problem QP representable (LP/QP/MILP/MIQP)"""
-        self.cvxpy_problem.is_qp()
+        return self.cvxpy_problem.is_qp()
 
     #  def params_in_vectors(self):
     #      """Do the parameters affect only problem vectors?"""
@@ -229,8 +232,10 @@ class Problem(object):
             results['infeasibility'] = self.infeasibility()
             tight_constraints = dict()
             for c in problem.constraints:
+                # FIX CONSTRAINTS
                 val = c.args[0].value
                 tight_constraints[c.id] = np.abs(val) <= TIGHT_CONSTRAINTS_TOL
+                import ipdb; ipdb.set_trace()
             results['tight_constraints'] = tight_constraints
         else:
             # DEBUG
@@ -335,19 +340,23 @@ class Problem(object):
 
         for key in strategy.tight_constraints.keys():
             if key not in con_keys:
-                raise ValueError("Tight constraints not compatible " +
-                                 "with problem. Constaint IDs not matching.")
+                err = "Tight constraints not compatible " + \
+                    "with problem. Constaint IDs not matching."
+                logging.error(err)
+                raise ValueError(err)
 
-        int_var_error = ValueError("Integer variables not compatible " +
-                                   "with problem. Constaint IDs not " +
-                                   "matching an integer variable.")
+        int_var_err = "Integer variables not compatible " + \
+            "with problem. Constaint IDs not " + \
+            "matching an integer variable."
         for key in strategy.int_vars.keys():
             try:
                 v = variables[key]
             except KeyError:
-                raise int_var_error
+                logging.error(err)
+                raise ValueError(int_var_err)
             if not self._is_var_mip(v):
-                raise int_var_error
+                logging.error(int_var_err)
+                raise ValueError(int_var_err)
 
     def _construct_reduced_problem(self, strategy):
         """Construct reduced problem using strategy.
@@ -385,7 +394,7 @@ class Problem(object):
         # Fix discrete variables and
         # set them to continuous.
         discrete_fix = []
-        for var in self.orig_int_vars + self.orig_bool_vars:
+        for var in self.int_vars + self.bool_vars:
             self._set_cont_var(var)
             discrete_fix += [var == int_vars[var.id]]
 
@@ -464,8 +473,8 @@ class Problem(object):
         n_proc = get_n_processes(n)
 
         if parallel:
-            print("Solving for all theta (parallel %i processors)..." %
-                  n_proc)
+            logging.info("Solving for all theta (parallel %i processors)..." %
+                         n_proc)
             #  self.pbar = tqdm(total=n, desc=message + " (parallel)")
             #  with tqdm(total=n, desc=message + " (parallel)") as self.pbar:
             pool = Pool(processes=n_proc)

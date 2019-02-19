@@ -21,6 +21,7 @@ from cvxpy.reductions import Solution
 import numpy as np
 import pypardiso as pardiso
 import time
+import logging
 
 KKT = "KKT"
 
@@ -92,13 +93,16 @@ class KKTSolver(QpSolver):
         n_var = data['P'].shape[0]
         n_con = len(data['b'])
         if data['F'].shape[0] > 0:
-            raise SolverError('KKT supports only equality constrained QPs.')
+            err = 'KKT supports only equality constrained QPs.'
+            logging.error(err)
+            raise SolverError(err)
 
-        if verbose:
-            print("Solving %d x %d linear system A x = b " %
-                  (n_var + n_con, n_var + n_con) + "using pardiso")
+        #  if verbose:
+        logging.info("Solving %d x %d linear system A x = b " %
+                     (n_var + n_con, n_var + n_con) + "using pardiso")
 
         if KKT_cache is None:
+            logging.info("Not using KKT solver cache")
 
             KKT, rhs = create_kkt_system(data)
 
@@ -110,6 +114,8 @@ class KKTSolver(QpSolver):
             t_end = time.time()
 
         else:
+            logging.info("Using KKT solver cache")
+
             rhs = create_kkt_rhs(data)
 
             t_start = time.time()

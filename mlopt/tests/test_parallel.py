@@ -177,17 +177,14 @@ class TestParallel(unittest.TestCase):
         serial = m.solve(df_test, parallel=False)
         parallel = m.solve(df_test)
 
-        # Compare x
         for i in range(n_test):
             npt.assert_array_almost_equal(serial[i]['x'],
                                           parallel[i]['x'],
                                           decimal=TOL)
 
-            # Compare cost
             npt.assert_array_almost_equal(serial[i]['cost'],
                                           parallel[i]['cost'],
                                           decimal=TOL)
-
 
 
 if __name__ == '__main__':

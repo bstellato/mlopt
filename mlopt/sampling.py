@@ -3,6 +3,7 @@ from scipy.special import gammainc
 import pandas as pd
 from mlopt.strategy import encode_strategies
 from mlopt.settings import SAMPLING_TOL as EPS
+import logging
 
 
 class Sampler(object):
@@ -45,7 +46,7 @@ class Sampler(object):
 
         # Check if there are labels appearing only once
         if not any(np.where(freq == 1)[0]):
-            print("No labels appearing only once")
+            logging.info("No labels appearing only once")
             n1 = 0
             #  n1 = np.inf
         else:
@@ -65,7 +66,7 @@ class Sampler(object):
         Iterative sampling.
         """
 
-        print("Iterative sampling")
+        logging.info("Iterative sampling")
 
         # Initialize dataframes
         theta = pd.DataFrame()
@@ -75,9 +76,10 @@ class Sampler(object):
         for self.niter in range(self.max_iter):
             # Sample new points
             theta_new = self.sampling_fn(self.n_samples_iter)
-            s_theta_new = [r['strategy']
-                           for r in self.problem.solve_parametric(theta_new,
-                                                                  parallel=parallel)]
+            s_theta_new = \
+                [r['strategy']
+                 for r in self.problem.solve_parametric(theta_new,
+                                                        parallel=parallel)]
             theta = theta.append(theta_new, ignore_index=True)
             s_theta += s_theta_new
             self.n_samples += self.n_samples_iter
@@ -88,9 +90,10 @@ class Sampler(object):
             # Get Good Turing Estimator
             self.compute_good_turing(labels)
 
-            print("i: %d, gt: %.2e, gt smooth: %.2e, n: %d " %
-                  (self.niter+1, self.good_turing, self.good_turing_smooth,
-                   self.n_samples))
+            logging.info("i: %d, gt: %.2e, gt smooth: %.2e, n: %d " %
+                         (self.niter+1, self.good_turing,
+                          self.good_turing_smooth,
+                          self.n_samples))
 
             if (self.good_turing_smooth < epsilon):
 
@@ -99,13 +102,16 @@ class Sampler(object):
 
                 # Compute ideal number of strategies
                 n_samples_ideal = self.n_samples_strategy * n_strategies
-                n_samples_todo = np.maximum(n_samples_ideal - self.n_samples, 0)
+                n_samples_todo = \
+                    np.maximum(n_samples_ideal - self.n_samples, 0)
 
                 if n_samples_todo > 0:
                     # Sample new points
                     theta_new = self.sampling_fn(n_samples_todo)
-                    s_theta_new = [r['strategy']
-                                   for r in self.problem.solve_parametric(theta_new, parallel=parallel)]
+                    s_theta_new = \
+                        [r['strategy']
+                         for r in self.problem.solve_parametric(theta_new,
+                                                                parallel=parallel)]
                     theta = theta.append(theta_new, ignore_index=True)
                     s_theta += s_theta_new
                     self.n_samples += n_samples_todo

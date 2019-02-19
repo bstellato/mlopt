@@ -9,6 +9,7 @@ import torch.nn.functional as F                         # nonlinearitis
 import torch.optim as optim                             # Optimizer tools
 from torch.utils.data import TensorDataset, DataLoader  # Data manipulaton
 import numpy as np
+import logging
 
 
 def weights_init(m):
@@ -102,8 +103,9 @@ class PyTorchNeuralNet(Learner):
         - learning_rate
         """
 
-        print("Learning Neural Network with parameters: ", end='')
-        print(params)
+        info_str = "Learning Neural Network with parameters: "
+        info_str += str(params)
+        logging.info(info_str)
 
         # Define optimizer
         self.optimizer = optim.SGD(self.net.parameters(),
@@ -169,8 +171,8 @@ class PyTorchNeuralNet(Learner):
         y_train = y[:n_frac_train]
         X_valid = X[n_frac_train:]
         y_valid = y[n_frac_train:]
-        print("Split dataset in %d training and %d validation" %
-              (n_frac_train, n_frac_valid))
+        logging.info("Split dataset in %d training and %d validation" %
+                     (n_frac_train, n_frac_valid))
 
         # Create parameter vector
         params = [{
@@ -183,7 +185,8 @@ class PyTorchNeuralNet(Learner):
             for n_epochs in self.options['params']['n_epochs']]
         n_models = len(params)
 
-        print("Train Neural Network with %d sets of parameters" % n_models)
+        logging.info("Train Neural Network with %d sets of parameters"
+                     % n_models)
 
         # Create vector of results
         accuracy_vec = np.zeros(n_models)
@@ -200,20 +203,21 @@ class PyTorchNeuralNet(Learner):
                 # Get accuracy
                 accuracy_vec[i] = np.sum(
                     np.equal(y_pred.flatten(), y_valid)) / len(y_valid)
-                print("Accuracy: %.2f%%" % (accuracy_vec[i] * 100))
+                logging.info("Accuracy: %.2f%%" % (accuracy_vec[i] * 100))
 
             # Pick best parameters
             self.best_params = params[np.argmax(accuracy_vec)]
-            print("Best parameters")
+            logging.info("Best parameters")
 
-            print("Train neural network with best parameters")
+            logging.info("Train neural network with best parameters")
 
         else:
 
-            print("Train neural network with just one set of parameters")
+            logging.info("Train neural network with "
+                         "just one set of parameters")
             self.best_params = params[0]
 
-        print(self.best_params)
+        logging.info(self.best_params)
         # Retrain network with best parameters over whole dataset
         self.train_instance(X, y, self.best_params)
 
@@ -240,7 +244,9 @@ class PyTorchNeuralNet(Learner):
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".pkl"):
-            raise ValueError("PyTorch pkl file does not exist.")
+            err = "PyTorch pkl file does not exist."
+            logging.error(err)
+            raise ValueError(err)
 
         # Load state dictionary from file
         # https://pytorch.org/tutorials/beginner/saving_loading_models.html

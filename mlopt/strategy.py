@@ -1,5 +1,5 @@
-# Define strategy
 import numpy as np
+import logging
 
 
 class Strategy(object):
@@ -20,8 +20,9 @@ class Strategy(object):
         # Check tight constraints
         for _, v in tight_constraints.items():
             if np.any(np.logical_or(v < 0, v > 1)):
-                raise ValueError("Tight constraints vector "
-                                 "is not boolean.")
+                err = "Tight constraints vector is not boolean."
+                logging.error(err)
+                raise ValueError(err)
 
         # Check that integer variables are non negative
         #  for _, v in int_vars.items():
@@ -134,13 +135,13 @@ def encode_strategies(strategies):
     Strategies array
         Array of unique strategies.
     """
-    print("Encoding strategies")
+    logging.info("Encoding strategies")
     N = len(strategies)
 
-    print("Getting unique set of strategies")
+    logging.info("Getting unique set of strategies")
     unique = unique_strategies(strategies)
     n_unique_strategies = len(unique)
-    print("Found %d unique strategies" % n_unique_strategies)
+    logging.info("Found %d unique strategies" % n_unique_strategies)
 
     # Map strategies to number
     y = -1 * np.ones(N, dtype='int')
