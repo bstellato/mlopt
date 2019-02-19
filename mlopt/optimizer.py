@@ -52,13 +52,14 @@ class Optimizer(object):
         self._problem = Problem(objective, constraints,
                                 solver=DEFAULT_SOLVER,
                                 **solver_options)
+        self._solver_cache = None
+
         self.name = name
+
         self._learner = None
         self.encoding = None
         self.X_train = None
         self.y_train = None
-
-        self._solver_cache = None
 
     @property
     def n_strategies(self):
