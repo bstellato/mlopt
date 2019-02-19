@@ -9,17 +9,16 @@ import numpy as np
 #  import scipy.sparse as spa
 #  import scipy.sparse.linalg as sla
 from mlopt.strategy import Strategy
-from mlopt.settings import TIGHT_CONSTRAINTS_TOL, \
-    DEFAULT_SOLVER, DIVISION_TOL
+from mlopt.settings import DEFAULT_SOLVER, DIVISION_TOL
 from mlopt.kkt import KKT
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos, Inequality
-from cvxpy.constraints.zero import Zero
+from cvxpy.constraints.zero import Zero, Equality
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
 from tqdm import tqdm
-from mlopt.utils import get_n_processes, args_norms
+from mlopt.utils import get_n_processes, args_norms, tight_components
 import logging
 
 #  def populate_and_solve(args):
@@ -232,10 +231,10 @@ class Problem(object):
             results['infeasibility'] = self.infeasibility()
             tight_constraints = dict()
             for c in problem.constraints:
-                # FIX CONSTRAINTS
-                val = c.args[0].value
-                tight_constraints[c.id] = np.abs(val) <= TIGHT_CONSTRAINTS_TOL
-                import ipdb; ipdb.set_trace()
+                tight_constraints[c.id] = tight_components(c)
+                #  val = c.args[0].value
+                #  tight_constraints[c.id] = np.abs(val) <= TIGHT_CONSTRAINTS_TOL
+                #  import ipdb; ipdb.set_trace()
             results['tight_constraints'] = tight_constraints
         else:
             # DEBUG
@@ -385,8 +384,14 @@ class Problem(object):
 
                 # Set affine inequalities as equalities
                 new_type = type(con)
-                if (type(con) == NonPos or type(con) == Inequality) \
-                        and tight_expr.is_affine():
+
+                # Remove inequality and equality constraints
+                if type(con) == Inequality:
+                    new_type = NonPos
+                elif type(con) == Equality:
+                    new_type = Zero
+
+                if new_type == NonPos and tight_expr.is_affine():
                     new_type = Zero
 
                 reduced_constraints += [new_type(tight_expr)]

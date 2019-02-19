@@ -34,14 +34,14 @@ class TestCaching(unittest.TestCase):
         Sample points
         '''
         theta_bar = 10 * np.random.rand(n)
-        radius = 10.0
+        radius = 1.0
 
         '''
         Train and solve
         '''
 
         # Training and testing data
-        n_train = 1000
+        n_train = 100
         n_test = 10
 
         # Sample points from multivariate ball
@@ -79,6 +79,4 @@ class TestCaching(unittest.TestCase):
             npt.assert_array_almost_equal(caching[i]['cost'],
                                           no_caching[i]['cost'],
                                           decimal=TOL)
-
-            import ipdb; ipdb.set_trace()
 

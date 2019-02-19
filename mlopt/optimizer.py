@@ -362,7 +362,7 @@ class Optimizer(object):
 
     def solve(self, X,
               message="Predict optimal solution",
-              parallel=True,
+              parallel=False,
               use_cache=True,
               verbose=False,
               ):

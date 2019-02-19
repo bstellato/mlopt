@@ -23,8 +23,8 @@ class TestParallel(unittest.TestCase):
         c = 1.
         p = 1.
         x_init = 2.
-        radius = 3.
-        N = 100   # Number of points
+        radius = 2.
+        n_train = 100   # Number of samples
 
         # Define problem
         x = cp.Variable(T+1)
@@ -33,7 +33,7 @@ class TestParallel(unittest.TestCase):
         # Define parameter and sampling points
         d = cp.Parameter(T, nonneg=True, name="d")
         d_bar = 3. * np.ones(T)
-        X_d = uniform_sphere_sample(d_bar, radius, n=N)
+        X_d = uniform_sphere_sample(d_bar, radius, n=n_train)
         df = pd.DataFrame({'d': X_d.tolist()})
 
         # Constaints
@@ -57,7 +57,7 @@ class TestParallel(unittest.TestCase):
                                                     parallel=True)
 
         # Assert all results match
-        for i in range(N):
+        for i in range(n_train):
             serial = results_serial[i]
             parallel = results_parallel[i]
 
@@ -98,15 +98,15 @@ class TestParallel(unittest.TestCase):
         Sample points
         '''
         theta_bar = np.random.randn(n)
-        radius = 0.3
+        radius = 0.2
 
         '''
         Train and solve
         '''
 
         # Training and testing data
-        n_train = 1000
-        n_test = 100
+        n_train = 100
+        n_test = 10
         # Sample points from multivariate ball
         X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
         X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
@@ -114,9 +114,15 @@ class TestParallel(unittest.TestCase):
         df_test = pd.DataFrame({'mu': X_d_test.tolist()})
 
         # Train and test using pytorch
+        params = {
+            'learning_rate': [0.01],
+            'batch_size': [32],
+            'n_epochs': [200]
+        }
         m.train(df,
                 parallel=True,
-                learner=PYTORCH)
+                learner=PYTORCH,
+                params=params)
         m.performance(df_test, parallel=True)
 
         # Run parallel loop again to enforce instability
@@ -155,8 +161,8 @@ class TestParallel(unittest.TestCase):
         '''
 
         # Training and testing data
-        n_train = 1000
-        n_test = 10  # Choose only one point to check parallel strategy evaluation
+        n_train = 100
+        n_test = 10
 
         # Sample points from multivariate ball
         X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
@@ -167,7 +173,7 @@ class TestParallel(unittest.TestCase):
         # Train and test using pytorch
         params = {
             'learning_rate': [0.01],
-            'batch_size': [100],
+            'batch_size': [32],
             'n_epochs': [200]
         }
 
@@ -175,7 +181,7 @@ class TestParallel(unittest.TestCase):
 
         # Test
         serial = m.solve(df_test, parallel=False)
-        parallel = m.solve(df_test)
+        parallel = m.solve(df_test, parallel=True)
 
         for i in range(n_test):
             npt.assert_array_almost_equal(serial[i]['x'],

@@ -1,6 +1,6 @@
 import numpy as np
 from multiprocessing import cpu_count
-from mlopt.settings import INFEAS_TOL, SUBOPT_TOL
+from mlopt.settings import INFEAS_TOL, SUBOPT_TOL, TIGHT_CONSTRAINTS_TOL
 import os
 import pandas as pd
 import mlopt
@@ -17,6 +17,11 @@ def args_norms(expr):
         return norms
     else:
         return [np.linalg.norm(expr.value)]
+
+
+def tight_components(con):
+    """Return which components are tight in the constraints."""
+    return np.abs(con.expr.value) <= TIGHT_CONSTRAINTS_TOL
 
 
 def get_n_processes(max_n=np.inf):
