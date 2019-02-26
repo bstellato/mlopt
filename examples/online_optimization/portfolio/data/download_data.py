@@ -11,11 +11,14 @@ import quandl
 SP500_names = 'SP500.csv'
 assets = pd.read_csv('SP500.csv', comment='#').set_index('Symbol')
 
+# Last 10 years
+start_date = dt.date(2008, 1, 1)
+end_date = dt.date(2018, 12, 31)
+
 QUANDL = {
     'authtoken': "Whjs1wx72N2A7BxEbRDV",  # Quandl API key
-    'start_date': dt.date(2008, 1, 1),  # Last 10 years
-    'end_date': dt.date(2018, 12, 31)
-}
+    'start_date': start_date,
+    'end_date': end_date}
 
 RISK_FREE_SYMBOL = "USDOLLAR"
 asset_names = assets.index.tolist()  # + [RISK_FREE_SYMBOL]
@@ -138,9 +141,64 @@ returns[RISK_FREE_SYMBOL] = returns_usdollar['Value']/(250*100)
 returns = returns.fillna(method='ffill')
 n_assets = len(prices.columns)
 
-# TODO: Store values
-# TODO: Compute estimates
+# Compute estimates
 # https://github.com/cvxgrp/cvxportfolio/blob/master/examples/DataEstimatesRiskModel.ipynb
-# Use rolling for r_hat e Sigma_hat
-#  r_hat = returns.rolling(window=250, min_periods=250).mean().shift(1).dropna()
-#  Sigma_hat = returns.rolling(window=250, min_periods=250, closed='neither').cov().dropna()
+r_hat = returns.rolling(window=250).mean().dropna()  # Mean
+Sigma_hat = returns.rolling(window=250, closed='neither').cov().dropna()  # Covariance
+
+# Access to values (example)
+# r_hat.xs('2018-03-27')
+# Sigma_hat.xs('2018-03-27')
+
+# Get factor risk model
+# \Sigma = F \Sigma^F \Sgima^T + D
+
+# Get first days of the month
+# https://github.com/cvxgrp/cvxportfolio/blob/05c8df138a493967668b7c966fb49e722db7c6f2/examples/DataEstimatesRiskModel.ipynb
+#  first_day_month = \
+#      pd.date_range(
+#          start=returns.index[
+#              next(i for (i, el) in
+#                   #  enumerate(returns.index >= pd.Timestamp(start_date))
+#                   enumerate(returns.index >= '2012-01-01')
+#                   if el
+#                   ) - 1],
+#          end=returns.index[-1], freq='MS')
+#
+first_day_month = pd.date_range(start=start_date, end=end_date, freq='MS')
+
+k = 15   # Use only 15 factors
+
+exposures, sigma_factors, idyos = {}, {}, {}
+
+for day in first_day_month:
+
+    sampled_returns = returns.loc[
+        (returns.index >= day - pd.Timedelta("700 days")) &
+        (returns.index < day)
+    ]
+
+    second_moment =  \
+        sampled_returns.values.T @ sampled_returns.values/len(sampled_returns)
+
+    e_val, e_vec = np.linalg.eigh(second_moment)
+
+    # Largest k factors
+    sigma_factors[day] = np.diag(e_val[-k:])  # \Sigma^F
+    exposures[day] = pd.DataFrame(data=e_vec[:, -k:],
+                                  index=returns.columns)
+
+    # All other factors (approximate with the diagonal part of the matrix)
+    idyos[day] = pd.Series(
+        data=np.diag(e_vec[:, :-k] @ np.diag(e_val[:-k]) @ e_vec[:, :-k].T),
+        index=returns.columns
+        )
+
+exposures_df = pd.DataFrame(exposures)
+
+
+
+
+# TODO: Store values
+# TODO: Cleanup
+
