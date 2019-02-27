@@ -1,9 +1,10 @@
 import pandas as pd
 import numpy as np
 import datetime as dt
-from os import path
+from os import path, remove
 import pickle
 import quandl
+np.random.seed(0)
 
 # Asset data download as in
 # https://github.com/cvxgrp/cvxportfolio/blob/master/examples/DataEstimatesRiskModel.ipynb
@@ -17,7 +18,7 @@ SP500_data = path.join(DATA_DIR, 'SP500.pickle')
 assets = pd.read_csv(SP500_names, comment='#').set_index('Symbol')
 
 # Last 10 years
-start_date = dt.date(2007, 1, 1)
+start_date = dt.date(2005, 1, 1)
 end_date = dt.date(2017, 12, 31)   # WIKIP unmaintained after end of march 2018
 
 QUANDL = {
@@ -121,6 +122,19 @@ n_assets = len(prices.columns)
 print("[OK]")
 
 '''
+Generate return estimates
+'''
+std_r = np.round(returns.std().mean(), decimals=2)  # 0.02
+std_n = 0.14142  # std_n^2 ~ 0.02! Also, std_n ~ 10 * std_r
+noise = pd.DataFrame(index=returns.index,
+                     columns=returns.columns,
+                     data=std_n * np.random.randn(*returns.values.shape))
+alpha = std_r**2 / (std_r**2 + std_n**2)
+returns_estimates = alpha * (returns + noise)
+# No uncertainty in cash account
+returns_estimates[RISK_FREE_SYMBOL] = returns[RISK_FREE_SYMBOL]
+
+'''
 Get factor risk model
 
 :math: \\hat{r}
@@ -129,8 +143,20 @@ Get factor risk model
 '''
 print("Computing factor risk model...", end='')
 
-# Average returns
-r_hat_df = returns.rolling(window=250).mean().dropna()  # Mean
+# Average returns for each day
+# NB. Not used because estimated online
+#  r_hat = {}
+#  for day in returns.index:
+#
+#      sampled_returns = returns.loc[
+#          (returns.index >= day - pd.Timedelta("10 days")) &
+#          (returns.index < day)
+#      ]
+#
+#      if not sampled_returns.empty:
+#          r_hat[day] = sampled_returns.mean()
+
+#  r_hat_df = returns.rolling(window=250).mean().dropna()  # Mean
 # r_hat.xs('2018-03-27')  # Example access values
 
 # N.B. We use a factor risk model for Sigma (not this full model)
@@ -139,14 +165,18 @@ r_hat_df = returns.rolling(window=250).mean().dropna()  # Mean
 
 # Get first days of the month
 # https://github.com/cvxgrp/cvxportfolio/blob/05c8df138a493967668b7c966fb49e722db7c6f2/examples/DataEstimatesRiskModel.ipynb
-first_day_month = pd.date_range(start=start_date, end=end_date, freq='MS')
+time_delta = pd.Timedelta("730 days")
+start_date_estimation = start_date + time_delta
+first_day_month = pd.date_range(start=start_date_estimation,
+                                end=end_date, freq='MS')
 
 k = 15   # Use only 15 factors
 exposures, sigma_factors, idyos = {}, {}, {}
+
 for day in first_day_month:
 
     sampled_returns = returns.loc[
-        (returns.index >= day - pd.Timedelta("700 days")) &
+        (returns.index >= day - time_delta) &  # 2 years before
         (returns.index < day)
     ]
 
@@ -182,15 +212,20 @@ sigma_factors_df = pd.concat(sigma_factors.values(), keys=first_day_month)
 
 # Store simulation and risk data
 SIMULATION_DATA = path.join(DATA_DIR, 'simulation_data.h5')
+if path.isfile(SIMULATION_DATA):
+    remove(SIMULATION_DATA)
+
 with pd.HDFStore(SIMULATION_DATA) as simulation:
     simulation['prices'] = prices
     simulation['volumes'] = volumes
     simulation['returns'] = returns
+    simulation['returns_estimates'] = returns_estimates
     simulation['sigmas'] = sigmas
 
 RISK_DATA = path.join(DATA_DIR, 'risk_data.h5')
+if path.isfile(RISK_DATA):
+    remove(RISK_DATA)
 with pd.HDFStore(RISK_DATA) as risk:
-    risk['r_hat'] = r_hat_df
     risk['exposures'] = exposures_df
     risk['idyos'] = idyos_df
     risk['sigma_factors'] = sigma_factors_df
