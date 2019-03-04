@@ -1,6 +1,6 @@
 import pandas as pd
 from simulation.simulation import MarketSimulator
-from simulation.policy import Hold, SinglePeriod
+from simulation.policy import Hold, Optimal
 import datetime as dt
 import logging
 import matplotlib.pylab as plt
@@ -39,9 +39,9 @@ funds = 1e4
 h_init = w_init * funds
 
 # Times
-start = dt.date(2007, 1, 1)
+start = dt.date(2008, 1, 1)
 #  end = dt.date(2017, 1, 1)
-end = dt.date(2009, 1, 1)
+end = dt.date(2013, 1, 1)
 
 
 # For loop propagating the market as in simulator.run_backtest
@@ -55,9 +55,11 @@ simulator = MarketSimulator(returns=returns,
 #  v_hold = [h.sum() for _, h in results_hold['h'].iterrows()]
 
 # SinglePeriod policyy
-sp_policy = SinglePeriod(returns_estimates, risk)
-results_sp = simulator.backtest(h_init, t_start=start, t_end=end,
-                                policy=sp_policy, log_level=logging.WARNING)
+op_policy = Optimal(returns_estimates, risk, periods=2)
+op_results = simulator.backtest(h_init, t_start=start, t_end=end,
+                                policy=op_policy, log_level=logging.WARNING)
+
+print(op_results['stats'])
 
 # Plot results
 #  day = results_sp['h'].index
@@ -73,7 +75,6 @@ results_sp = simulator.backtest(h_init, t_start=start, t_end=end,
 #  plt.title("Apple price")
 #  plt.show(block=False)
 
-print(results_sp['stats'])
 
 #  # TODO
 #  - [x] Write check for randomness! Finish it in tests
