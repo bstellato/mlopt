@@ -48,10 +48,10 @@ class SinglePeriod(BasePolicy):
         self.returns = returns
         self.risk_model = risk_model
         if lambda_cost is None:
-            self.lambda_cost = {'risk': 0.01,
-                                'borrow': 0.001,
-                                'norm1_trade': 0.001,
-                                'norm0_trade': 0.001}
+            self.lambda_cost = {'risk': 40.,
+                                'borrow': 0.0001,
+                                'norm1_trade': 0.01,
+                                'norm0_trade': 0.01}
         else:
             self.lambda_cost = lambda_cost
 
@@ -65,7 +65,7 @@ class SinglePeriod(BasePolicy):
         hat_r = cp.Parameter(n)
         w_init = cp.Parameter(n)
         F = cp.Parameter((n, k))
-        sqrt_Sigma_F = cp.Parameter(k)
+        Sigma_F = cp.Parameter((k, k), PSD=True)
         sqrt_D = cp.Parameter(n)
 
         # Formulate problem
@@ -74,10 +74,10 @@ class SinglePeriod(BasePolicy):
         lam = self.lambda_cost
 
         # Define cost components
-        #  risk_cost = cp.quad_form(F.T * w, Sigma_F) + \
-        #      cp.sum_squares(cp.multiply(np.sqrt(D), w))
-        risk_cost = cp.sum_squares(cp.multiply(F.T * w, sqrt_Sigma_F)) + \
+        risk_cost = \
+            cp.quad_form(F.T * w, Sigma_F) + \
             cp.sum_squares(cp.multiply(sqrt_D, w))
+        risk_cost *= lam['risk']
         holding_cost = lam['borrow'] * \
             cp.sum(self.borrow_cost * cp.neg(w))
         transaction_cost = lam['norm1_trade'] * cp.norm(w - w_init, 1)
@@ -92,7 +92,7 @@ class SinglePeriod(BasePolicy):
         self.params['hat_r'] = hat_r
         self.params['w_init'] = w_init
         self.params['F'] = F
-        self.params['sqrt_Sigma_F'] = sqrt_Sigma_F
+        self.params['Sigma_F'] = Sigma_F
         self.params['sqrt_D'] = sqrt_D
         self.vars['w'] = w
 
@@ -108,13 +108,13 @@ class SinglePeriod(BasePolicy):
         # Risk estimate
         month = dt.date(t.year, t.month, 1)  # Get first day of month
         F = self.risk_model['exposures'].loc[month].values
-        sqrt_Sigma_F = \
-            np.sqrt(self.risk_model['sigma_factors'].loc[month].values)
+        Sigma_F = \
+            np.diag(self.risk_model['sigma_factors'].loc[month].values)
         sqrt_D = np.sqrt(self.risk_model['idyos'].loc[month].values)
 
         # Evaluate parameters
         self.params['F'].value = F
-        self.params['sqrt_Sigma_F'].value = sqrt_Sigma_F
+        self.params['Sigma_F'].value = Sigma_F
         self.params['sqrt_D'].value = sqrt_D
         self.params['hat_r'].value = hat_r
         self.params['w_init'].value = w_init
@@ -128,7 +128,7 @@ class SinglePeriod(BasePolicy):
         self.evaluate_params(portfolio, t)
 
         # Solve
-        self.problem.solve(solver=cp.MOSEK)
+        self.problem.solve(solver=cp.GUROBI)
 
         if self.problem.status not in cp.settings.SOLUTION_PRESENT:
             print("Problem in computing the solution")

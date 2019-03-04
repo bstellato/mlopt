@@ -56,8 +56,6 @@ class MarketSimulator(object):
 
         logging.basicConfig(level=log_level)
 
-        results = 0  # Initialize results
-
         h_log, u_log = pd.DataFrame(), pd.DataFrame()
 
         h = h_init  # Initial portfolio
@@ -79,15 +77,32 @@ class MarketSimulator(object):
             h_log = h_log.append(h, ignore_index=True)
             u_log = u_log.append(u, ignore_index=True)
 
+        logging.info("Backtest ended.")
+
+        # Time data
         t_final = self.returns[self.returns.index > str(t_end)].index[0]
         h_log['t'] = times.append(pd.Index([t_final]))
         h_log = h_log.set_index('t')
         u_log['t'] = times
         u_log = u_log.set_index('t')
+        v = h_log.sum(axis=1)  # Value of the portfolio over time
+        returns = v.values[1:] / v.values[:-1] - 1  # (v_{t+1} - v_{t})/v_{t}
+        risk_free_returns = self.returns.loc[times, self.cash_key]
+        excess_returns = returns - risk_free_returns
 
-        results = {'h': h_log,
-                   'u': u_log}
+        # Statistics
+        mean_return = returns.mean() * 250 * 100
+        mean_excess_return = excess_returns.mean() * 250 * 100
+        sigma_excess_return = \
+            excess_returns.std() * np.sqrt(250) * 100  # 250 days, 100 perc
 
-        logging.info("Backtest ended.")
+        stats = pd.Series({'Mean return (%)': mean_return,
+                           'Mean excess return (%)': mean_excess_return,
+                           'Excess risk (%)': sigma_excess_return})
 
-        return results
+        return {'h': h_log,
+                'u': u_log,
+                'v': v,
+                'returns': returns,
+                'excess_returns': excess_returns,
+                'stats': stats}
