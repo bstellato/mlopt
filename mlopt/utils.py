@@ -2,6 +2,7 @@ import numpy as np
 from multiprocessing import cpu_count
 #  from pathos.multiprocessing import cpu_count
 from mlopt.settings import INFEAS_TOL, SUBOPT_TOL, TIGHT_CONSTRAINTS_TOL
+import cvxpy as cp
 import os
 import pandas as pd
 import mlopt
@@ -14,10 +15,11 @@ def args_norms(expr):
         norms = []
         # Expression contains arguments
         for arg in expr.args:
-            norms += args_norms(arg)
-        return norms
+            #  norms += args_norms(arg)
+            norms += [cp.norm(arg).value]
     else:
-        return [np.linalg.norm(expr.value)]
+        norms = [0.]
+    return norms
 
 
 def tight_components(con):

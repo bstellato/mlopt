@@ -174,12 +174,8 @@ class Problem(object):
         violations = []
         for c in self.constraints:
             # Get constraint arguments norms
-            arg_norms = args_norms(c)
+            arg_norms = args_norms(c.expr)
 
-            try:
-                relative_viol = np.amax(arg_norms)
-            except:
-                import ipdb; ipdb.set_trace()
             # Get relative value for all of the expression arguments
             relative_viol = np.amax(arg_norms)
 
