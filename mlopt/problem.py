@@ -11,12 +11,13 @@ import numpy as np
 #  import scipy.sparse.linalg as sla
 from mlopt.strategy import Strategy
 from mlopt.settings import DEFAULT_SOLVER, DIVISION_TOL
-from mlopt.kkt import KKT
+from mlopt.kkt import KKT, KKTSolver
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos, Inequality
 from cvxpy.constraints.zero import Zero, Equality
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
+from cvxpy.reductions.solvers.solving_chain import SolvingChain
 # Progress bars
 from tqdm import tqdm
 from mlopt.utils import get_n_processes, args_norms, tight_components
@@ -71,10 +72,8 @@ class Problem(object):
         self.cvxpy_problem = cp.Problem(cp.Minimize(cost),
                                         constraints)
 
-        # Reformulate and extract constraints
-        # if problem is QP compatible
-        #  if self.cvxpy_problem.is_qp():  #
-        # TODO!
+        # Canonicalize problem
+        self._canonicalize_problem()
 
         # Store discrete variables to restore later
         self.int_vars = [v for v in self.cvxpy_problem.variables()
@@ -212,42 +211,64 @@ class Problem(object):
     #          error = cvx.neg(cvx.lambda_min(mat + mat.T)/2)
     #      return cvx.sum_entries(error)
 
-    def _solve(self, problem, use_KKT=False, KKT_cache=None):
-        """
-        Solve problem with CVXPY and return results dictionary
-        """
-        # DEBUG: Remove KKT
-        if use_KKT:
-            # Solve problem with KKT system
-            problem.solve(solver=KKT, KKT_cache=KKT_cache,
-                          **self.solver_options)
-        else:
-            problem.solve(solver=self.solver,
-                          **self.solver_options)
+    def _canonicalize_problem(self):
+        prob = self.cvxpy_problem
 
+        # Construct problem chains
+        prob._construct_chains(solver=self.solver)
+
+        # Store intermediate problem
+        #  self._canon_problem = prob._intermediate_problem
+        #  self._canon_chain = prob._intermediate_chain
+        #  self._canon_inverse_data = prob._intermediate_inverse_data
+
+    def _parse_solution(self, problem):
+        """
+        Parse solution of problem.
+
+        NB. It can be a reformulation of the original problem.
+        """
         results = {}
+
+        # Specific to problem
         results['time'] = problem.solver_stats.solve_time
-        results['cost'] = np.inf
         results['status'] = problem.status
+
+        # From original problem (and below)
+        orig_problem = self.cvxpy_problem
+        intermediate_problem = orig_problem._intermediate_problem
+        results['cost'] = np.inf
 
         if results['status'] in cp.settings.SOLUTION_PRESENT:
             results['x'] = np.concatenate([np.atleast_1d(v.value.flatten())
-                                           for v in problem.variables()])
+                                           for v in orig_problem.variables()])
             results['cost'] = self.cost()
             results['infeasibility'] = self.infeasibility()
             tight_constraints = dict()
-            for c in problem.constraints:
+            for c in intermediate_problem.constraints:
                 tight_constraints[c.id] = tight_components(c)
             results['tight_constraints'] = tight_constraints
         else:
-            # DEBUG
-            #  problem.solve(solver=self.solver,
-            #                verbose=True,
-            #                **self.solver_options)
             results['x'] = np.nan * np.ones(self.n_var)
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
-            results['tight_constraints'] = dict()
+            results['tight_constraints'] = {}
+
+        # Get solution and integer variables
+        x_int = {}
+        if self.is_mip():
+            # Get integer variables
+            int_vars = [v for v in orig_problem.variables()
+                        if self._is_var_mip(v)]
+
+            # Get value of integer variables
+            # by rounding them to the nearest integer
+            # NB. Some solvers do not return exactly integers
+            for x in int_vars:
+                x_int[x.id] = np.rint(x.value).astype(int)
+
+        # Get strategy
+        results['strategy'] = Strategy(tight_constraints, x_int)
 
         return results
 
@@ -300,45 +321,19 @@ class Problem(object):
         dict
             Results dictionary.
         """
-        # Solve complete problem with CVXPY
-        results = self._solve(self.cvxpy_problem)
+        problem = self.cvxpy_problem
+        problem.solve(solver=self.solver,
+                      **self.solver_options)
 
-        # Get tight constraints
-        tight_constraints = results['tight_constraints']
-
-        # Get solution and integer variables
-        x_int = dict()
-
-        if self.is_mip():
-            # Get integer variables
-            int_vars = [v for v in self.cvxpy_problem.variables()
-                        if self._is_var_mip(v)]
-
-            # Get value of integer variables
-            # by rounding them to the nearest integer
-            for x in int_vars:
-                x_int[x.id] = np.rint(x.value).astype(int)
-
-        # Get strategy
-        strategy = Strategy(tight_constraints, x_int)
-
-        # Define return dictionary
-        return_dict = {}
-        return_dict['x'] = results['x']
-        return_dict['time'] = results['time']
-        return_dict['cost'] = results['cost']
-        return_dict['infeasibility'] = results['infeasibility']
-        return_dict['strategy'] = strategy
-        return_dict['status'] = results['status']
-
-        return return_dict
+        return self._parse_solution(problem)
 
     def _verify_strategy(self, strategy):
         """Verify that strategy is compatible with current problem."""
         # Compare keys for tight constraints and integer variables
         variables = {v.id: v
                      for v in self.cvxpy_problem.variables()}
-        con_keys = [c.id for c in self.constraints]
+        con_keys = [c.id for c in
+                    self.cvxpy_problem._intermediate_problem.constraints]
 
         for key in strategy.tight_constraints.keys():
             if key not in con_keys:
@@ -361,15 +356,17 @@ class Problem(object):
                 raise ValueError(int_var_err)
 
     def _construct_reduced_problem(self, strategy):
-        """Construct reduced problem using strategy.
+        """Construct reduced problem from intermediate cvxpy problem
+           using strategy information.
+
            NB. This function relaxed integrality of the original variables."""
         # Unpack strategy
         tight_constraints = strategy.tight_constraints
         int_vars = strategy.int_vars
 
-        # Unpack original problem
-        objective = self.objective
-        constraints = self.constraints
+        # Unpack original intermediate problem
+        objective = self.cvxpy_problem._intermediate_problem.objective
+        constraints = self.cvxpy_problem._intermediate_problem.constraints
 
         # Get only tight constraints in strategy
         reduced_constraints = []
@@ -408,6 +405,37 @@ class Problem(object):
 
         return cp.Problem(objective, reduced_constraints + discrete_fix)
 
+    def _solve_lower_chain(self, problem,
+                           KKT_solver=False,
+                           KKT_cache=None,
+                           verbose=False, warm_start=True, **kwargs):
+        """Solve using cvxpy and lower part of the chain"""
+
+        orig_problem = self.cvxpy_problem
+        intermediate_chain = orig_problem._intermediate_chain
+        intermediate_inverse_data = orig_problem._intermediate_inverse_data
+        solving_chain = orig_problem._solving_chain
+
+        if KKT_solver:
+            # Change solving chain to use KKT solver
+            solving_chain = SolvingChain(
+                reductions=solving_chain.reductions[:-1] + [KKTSolver()]
+            )
+
+        # Apply directly to problem, not to intermediate problem
+        data, solving_inverse_data = solving_chain.apply(problem)
+        solution = solving_chain.solve_via_data(orig_problem,
+                                                data,
+                                                warm_start,
+                                                verbose, kwargs)
+
+        # Reconstruct solution
+        full_chain = solving_chain.prepend(intermediate_chain)
+        inverse_data = intermediate_inverse_data + solving_inverse_data
+
+        # Unpack solution into problem
+        problem.unpack_results(solution, full_chain, inverse_data)
+
     def solve_with_strategy(self,
                             strategy,
                             cache=None):
@@ -433,15 +461,17 @@ class Problem(object):
 
         prob_red = self._construct_reduced_problem(strategy)
 
-        # Solve problem
+        # Solve lower part of the chain
+        KKT_solver = False
         if prob_red.is_qp():
-            # If QP, if must be an equality constrained QP because
-            # of the loop above fixing linear inequality constraints
-            # to be equalities
-            results = self._solve(prob_red, use_KKT=True,
-                                  KKT_cache=cache)
-        else:
-            results = self._solve(prob_red)
+            KKT_solver = True
+
+        self._solve_lower_chain(prob_red,
+                                KKT_solver=KKT_solver,
+                                KKT_cache=cache,
+                                **self.solver_options)
+
+        results = self._parse_solution(prob_red)
 
         self._restore_disc_var()
 

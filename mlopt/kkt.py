@@ -6,14 +6,15 @@
 #  from cvxpy.problems.objective import Maximize
 #  from cvxpy.reductions.solvers.solving_chain import SolvingChain
 from cvxpy.reductions.solvers.qp_solvers.qp_solver import QpSolver
-from cvxpy.constraints import Zero
-from cvxpy.reductions.utilities import are_args_affine
+#  from cvxpy.constraints import Zero
+#  from cvxpy.reductions.utilities import are_args_affine
 from cvxpy.error import SolverError
 from cvxpy.reductions.solvers import utilities
-from cvxpy.problems.objective import Minimize
-from cvxpy.reductions.solvers.qp_solvers.qp_solver \
-    import is_stuffed_qp_objective
-from cvxpy.reductions.solvers.defines import SOLVER_MAP_QP, QP_SOLVERS, INSTALLED_SOLVERS
+#  from cvxpy.problems.objective import Minimize
+#  from cvxpy.reductions.solvers.qp_solvers.qp_solver \
+#      import is_stuffed_qp_objective
+from cvxpy.reductions.solvers.defines import \
+    SOLVER_MAP_QP, QP_SOLVERS, INSTALLED_SOLVERS
 import cvxpy.interface as intf
 import cvxpy.settings as s
 import scipy.sparse as spa
