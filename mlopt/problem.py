@@ -405,36 +405,36 @@ class Problem(object):
 
         return cp.Problem(objective, reduced_constraints + discrete_fix)
 
-    def _solve_lower_chain(self, problem,
-                           KKT_solver=False,
-                           KKT_cache=None,
-                           verbose=False, warm_start=True, **kwargs):
-        """Solve using cvxpy and lower part of the chain"""
-
-        orig_problem = self.cvxpy_problem
-        intermediate_chain = orig_problem._intermediate_chain
-        intermediate_inverse_data = orig_problem._intermediate_inverse_data
-        solving_chain = orig_problem._solving_chain
-
-        if KKT_solver:
-            # Change solving chain to use KKT solver
-            solving_chain = SolvingChain(
-                reductions=solving_chain.reductions[:-1] + [KKTSolver()]
-            )
-
-        # Apply directly to problem, not to intermediate problem
-        data, solving_inverse_data = solving_chain.apply(problem)
-        solution = solving_chain.solve_via_data(orig_problem,
-                                                data,
-                                                warm_start,
-                                                verbose, kwargs)
-
-        # Reconstruct solution
-        full_chain = solving_chain.prepend(intermediate_chain)
-        inverse_data = intermediate_inverse_data + solving_inverse_data
-
-        # Unpack solution into problem
-        problem.unpack_results(solution, full_chain, inverse_data)
+    #  def _solve_lower_chain(self, problem,
+    #                         KKT_solver=False,
+    #                         KKT_cache=None,
+    #                         verbose=False, warm_start=True, **kwargs):
+    #      """Solve using cvxpy and lower part of the chain"""
+    #
+    #      orig_problem = self.cvxpy_problem
+    #      intermediate_chain = orig_problem._intermediate_chain
+    #      intermediate_inverse_data = orig_problem._intermediate_inverse_data
+    #      solving_chain = orig_problem._solving_chain
+    #
+    #      if KKT_solver:
+    #          # Change solving chain to use KKT solver
+    #          solving_chain = SolvingChain(
+    #              reductions=solving_chain.reductions[:-1] + [KKTSolver()]
+    #          )
+    #
+    #      # Apply directly to problem, not to intermediate problem
+    #      data, solving_inverse_data = solving_chain.apply(problem)
+    #      solution = solving_chain.solve_via_data(orig_problem,
+    #                                              data,
+    #                                              warm_start,
+    #                                              verbose, kwargs)
+    #
+    #      # Reconstruct solution
+    #      full_chain = solving_chain.prepend(intermediate_chain)
+    #      inverse_data = intermediate_inverse_data + solving_inverse_data
+    #
+    #      # Unpack solution into problem
+    #      problem.unpack_results(solution, full_chain, inverse_data)
 
     def solve_with_strategy(self,
                             strategy,
@@ -462,14 +462,19 @@ class Problem(object):
         prob_red = self._construct_reduced_problem(strategy)
 
         # Solve lower part of the chain
-        KKT_solver = False
         if prob_red.is_qp():
-            KKT_solver = True
+            prob_red.solve(solver=KKT,
+                           KKT_cache=cache,
+                           **self.solver_options)
+        else:
+            prob_red.solve(solver=self.solver,
+                           **self.solver_options)
 
-        self._solve_lower_chain(prob_red,
-                                KKT_solver=KKT_solver,
-                                KKT_cache=cache,
-                                **self.solver_options)
+        # Solve only lower chain. It does not seem to work
+        #  self._solve_lower_chain(prob_red,
+        #                          KKT_solver=KKT_solver,
+        #                          KKT_cache=cache,
+        #                          **self.solver_options)
 
         results = self._parse_solution(prob_red)
 
