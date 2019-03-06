@@ -72,9 +72,6 @@ class Problem(object):
         self.cvxpy_problem = cp.Problem(cp.Minimize(cost),
                                         constraints)
 
-        # Canonicalize problem
-        self._canonicalize_problem()
-
         # Store discrete variables to restore later
         self.int_vars = [v for v in self.cvxpy_problem.variables()
                          if v.attributes['integer']]
@@ -207,17 +204,6 @@ class Problem(object):
     #          error = cvx.neg(cvx.lambda_min(mat + mat.T)/2)
     #      return cvx.sum_entries(error)
 
-    def _canonicalize_problem(self):
-        prob = self.cvxpy_problem
-
-        # Construct problem chains
-        prob._construct_chains(solver=self.solver)
-
-        # Store intermediate problem
-        #  self._canon_problem = prob._intermediate_problem
-        #  self._canon_chain = prob._intermediate_chain
-        #  self._canon_inverse_data = prob._intermediate_inverse_data
-
     def _parse_solution(self, problem):
         """
         Parse solution of problem.
@@ -240,15 +226,13 @@ class Problem(object):
                                            for v in orig_problem.variables()])
             results['cost'] = self.cost()
             results['infeasibility'] = self.infeasibility()
-            tight_constraints = dict()
+            tight_constraints = {}
             for c in intermediate_problem.constraints:
                 tight_constraints[c.id] = tight_components(c)
-            results['tight_constraints'] = tight_constraints
         else:
             results['x'] = np.nan * np.ones(self.n_var)
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
-            results['tight_constraints'] = {}
 
         # Get solution and integer variables
         x_int = {}
@@ -318,8 +302,8 @@ class Problem(object):
             Results dictionary.
         """
         problem = self.cvxpy_problem
-        problem.solve(solver=self.solver,
-                      **self.solver_options)
+        self._solve(problem, solver=self.solver,
+                    **self.solver_options)
 
         return self._parse_solution(problem)
 
@@ -432,6 +416,38 @@ class Problem(object):
     #      # Unpack solution into problem
     #      problem.unpack_results(solution, full_chain, inverse_data)
 
+    def _solve(self, problem,
+               solver=None,
+               verbose=False, warm_start=True, **kwargs):
+        """
+        Custom solve method replacing cvxpy one to store intermediate
+        problem results.
+        """
+
+        problem._construct_chains(solver=solver)
+        intermediate_problem = problem._intermediate_problem
+
+        data, solving_inverse_data = \
+            problem._solving_chain.apply(intermediate_problem)
+
+        solution = problem._solving_chain.solve_via_data(problem, data,
+                                                         warm_start,
+                                                         verbose, kwargs)
+
+        # Unpack intermediate results
+        intermediate_problem.unpack_results(solution, problem._solving_chain,
+                                            solving_inverse_data)
+
+        # Unpack final results
+        full_chain = \
+            problem._solving_chain.prepend(problem._intermediate_chain)
+        inverse_data = problem._intermediate_inverse_data + \
+            solving_inverse_data
+
+        problem.unpack_results(solution, full_chain, inverse_data)
+
+        return problem.value
+
     def solve_with_strategy(self,
                             strategy,
                             cache=None):
@@ -459,12 +475,13 @@ class Problem(object):
 
         # Solve lower part of the chain
         if prob_red.is_qp():
-            prob_red.solve(solver=KKT,
-                           KKT_cache=cache,
-                           **self.solver_options)
+            self._solve(prob_red,
+                        solver=KKT,
+                        KKT_cache=cache,
+                        **self.solver_options)
         else:
-            prob_red.solve(solver=self.solver,
-                           **self.solver_options)
+            self._solve(solver=self.solver,
+                        **self.solver_options)
 
         # Solve only lower chain. It does not seem to work
         #  self._solve_lower_chain(prob_red,

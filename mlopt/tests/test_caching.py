@@ -22,7 +22,7 @@ class TestCaching(unittest.TestCase):
         gamma = 1.0
         mu = cp.Parameter(n, name='mu')
         x = cp.Variable(n)
-        cost = - mu * x + gamma * cp.quad_form(x, Sigma)
+        cost = - mu * x + gamma * cp.quad_form(x, Sigma) + .5 * cp.norm(x, 1)
         constraints = [cp.sum(x) == 1, x >= 0]
 
         # Define optimizer

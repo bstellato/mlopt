@@ -257,6 +257,104 @@ class TestSolveStrategy(unittest.TestCase):
                                 results_new['cost'],
                                 decimal=TOL)
 
+    def test_random_reform_integer(self):
+        """Mixed-integer random reformulated LP test"""
+
+        # Seed for reproducibility
+        np.random.seed(1)
+
+        # Define problem
+        n = 20
+        m = 70
+
+        # Define constraints
+        v = np.random.rand(n)   # Solution
+        A = spa.random(m, n, density=0.8,
+                       data_rvs=np.random.randn,
+                       format='csc')
+        b = A.dot(v) + 10 * np.random.rand(m)
+
+        # Split in 2 parts
+        A1 = A[:int(m/2), :]
+        b1 = b[:int(m/2)]
+        A2 = A[int(m/2):, :]
+        b2 = b[int(m/2):]
+
+        # Cost
+        c = np.random.rand(n)
+        x = cp.Variable(n)  # Variable
+        y = cp.Variable(integer=True)  # Variable
+        cost = c * x - cp.sum(y) + y + 0.1 * cp.sum(cp.pos(x))
+
+        # Define constraints
+        constraints = [A1 * x - y <= b1,
+                       A2 * x + y <= b2,
+                       y >= 2]
+
+        # Problem
+        problem = Problem(cp.Minimize(cost), constraints)
+        results = problem.solve()
+
+        # Solve just with strategy
+        results_new = problem.solve_with_strategy(results['strategy'])
+
+        # Verify both solutions are equal
+        npt.assert_almost_equal(results['x'],
+                                results_new['x'],
+                                decimal=TOL)
+        npt.assert_almost_equal(results['cost'],
+                                results_new['cost'],
+                                decimal=TOL)
+
+    def test_random_cont_qp_reform(self):
+        """Test random continuous QP reform test"""
+
+        # Seed for reproducibility
+        np.random.seed(1)
+
+        # Define problem
+        n = 100
+        m = 250
+
+        # Define constraints
+        v = np.random.rand(n)   # Solution
+        A = spa.random(m, n, density=0.8,
+                       data_rvs=np.random.randn,
+                       format='csc')
+        b = A.dot(v) + np.random.rand(m)
+
+        # Split in 2 parts
+        A1 = A[:int(m/2), :]
+        b1 = b[:int(m/2)]
+        A2 = A[int(m/2):, :]
+        b2 = b[int(m/2):]
+
+        # Cost
+        c = np.random.rand(n)
+        x = cp.Variable(n)  # Variable
+        cost = cp.sum_squares(c * x) + cp.norm(x, 1)
+
+        # Define constraints
+        constraints = [A1 * x <= b1,
+                       A2 * x <= b2]
+
+        # Problem
+        problem = Problem(cp.Minimize(cost), constraints)
+
+        # Solve and compute strategy
+        results = problem.solve()
+
+        # Solve just with strategy
+        results_new = problem.solve_with_strategy(results['strategy'])
+
+        # Verify both solutions are equal
+        npt.assert_almost_equal(results['x'],
+                                results_new['x'],
+                                decimal=TOL)
+        npt.assert_almost_equal(results['cost'],
+                                results_new['cost'],
+                                decimal=TOL)
+
 
 if __name__ == '__main__':
     unittest.main()
