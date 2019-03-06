@@ -10,6 +10,8 @@ from mlopt.sampling import uniform_sphere_sample
 def sample_portfolio(n, k, T=5, N=100):
     """Sample portfolio parameters."""
 
+    rad = 0.00001
+
     # mean values
     np.random.seed(0)
     F_bar = np.random.randn(n, k)
@@ -21,11 +23,11 @@ def sample_portfolio(n, k, T=5, N=100):
     df = pd.DataFrame()
     for i in range(N):
 
-        w_init = uniform_sphere_sample(w_init_bar, 0.01)
+        w_init = uniform_sphere_sample(w_init_bar, rad)
         w_init /= np.sum(w_init)
 
-        F = uniform_sphere_sample(F_bar.flatten(), 0.01).reshape(n, k)
-        Sigma_F = np.diag(uniform_sphere_sample(Sigma_F_diag_bar, 0.01)[0])
+        F = uniform_sphere_sample(F_bar.flatten(), rad).reshape(n, k)
+        Sigma_F = np.diag(uniform_sphere_sample(Sigma_F_diag_bar, rad)[0])
 
         x = pd.Series(
             {
