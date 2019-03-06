@@ -65,12 +65,12 @@ class Problem(object):
         # Assign solver
         self.solver = solver
 
-        # Get problem cost
-        cost = objective.args[0]
-
         # Define problem
-        self.cvxpy_problem = cp.Problem(cp.Minimize(cost),
+        self.cvxpy_problem = cp.Problem(objective,
                                         constraints)
+
+        # Canonicalize problem
+        self._canonicalize()
 
         # Store discrete variables to restore later
         self.int_vars = [v for v in self.cvxpy_problem.variables()
@@ -83,6 +83,9 @@ class Problem(object):
 
         # Set solver cache
         self._solver_cache = None
+
+    def _canonicalize(self):
+        self.cvxpy_problem._construct_chains(solver=self.solver)
 
     @property
     def solver(self):
@@ -128,7 +131,7 @@ class Problem(object):
         for p in self.cvxpy_problem.parameters():
             theta_val = theta[p.name()]
             if len(theta_val) == 1:
-                theta_val = theta_val[0]  # Make it a scaler in case
+                theta_val = theta_val[0]  # Make it a scalar in case
             p.value = theta_val
 
     @property
@@ -229,26 +232,23 @@ class Problem(object):
             tight_constraints = {}
             for c in intermediate_problem.constraints:
                 tight_constraints[c.id] = tight_components(c)
+            # Get integer variables
+            x_int = {}
+            if self.is_mip():
+                # Get integer variables
+                int_vars = [v for v in orig_problem.variables()
+                            if self._is_var_mip(v)]
+
+                # Get value of integer variables
+                # by rounding them to the nearest integer
+                # NB. Some solvers do not return exactly integers
+                for x in int_vars:
+                    x_int[x.id] = np.rint(x.value).astype(int)
+            results['strategy'] = Strategy(tight_constraints, x_int)
         else:
             results['x'] = np.nan * np.ones(self.n_var)
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
-
-        # Get solution and integer variables
-        x_int = {}
-        if self.is_mip():
-            # Get integer variables
-            int_vars = [v for v in orig_problem.variables()
-                        if self._is_var_mip(v)]
-
-            # Get value of integer variables
-            # by rounding them to the nearest integer
-            # NB. Some solvers do not return exactly integers
-            for x in int_vars:
-                x_int[x.id] = np.rint(x.value).astype(int)
-
-        # Get strategy
-        results['strategy'] = Strategy(tight_constraints, x_int)
 
         return results
 

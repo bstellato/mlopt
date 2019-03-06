@@ -179,13 +179,16 @@ def n_features(df):
     int
         Number of features.
     """
-    n = 0
-    for c in df.columns.values:
-        if isinstance(df[c].iloc[0], list):  # If list add length
-            n += len(df[c].iloc[0])
-        else:  # If number add 1
-            n += 1
-    return n
+    return np.sum(x.size for x in df.iloc[0])
+
+    #  n = 0
+    #  for c in df.columns.values:
+    #
+    #      if isinstance(df[c].iloc[0], list):  # If list add length
+    #          n += len(df[c].iloc[0])
+    #      else:  # If number add 1
+    #          n += 1
+    #  return n
 
 
 def pandas2array(X):
@@ -209,13 +212,9 @@ def pandas2array(X):
         # Unroll
         # TODO: Speedup this process
         for i in range(n_data):
-            x_temp = np.array([])
             x_data = X.iloc[i, :].values
-            for i in x_data:
-                if isinstance(i, list):
-                    x_temp = np.concatenate((x_temp, np.array(i)))
-                else:
-                    x_temp = np.append(x_temp, i)
+            x_temp = np.concatenate([np.atleast_1d(v).flatten()
+                                     for v in x_data])
             X_new = np.vstack((X_new, x_temp))
 
     return X_new
