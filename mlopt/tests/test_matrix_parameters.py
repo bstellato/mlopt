@@ -132,8 +132,8 @@ class TestMatrixParams(unittest.TestCase):
         #  # Sample points from multivariate ball
         #  X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
         #  X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
-        #  df = pd.DataFrame({"mu": X_d.tolist()})
-        #  df_test = pd.DataFrame({"mu": X_d_test.tolist()})
+        #  df = pd.DataFrame({"mu": list(X_d)})
+        #  df_test = pd.DataFrame({"mu": list(X_d_test)})
         #
         #  # Train and test using pytorch
         #  params = {

@@ -129,10 +129,11 @@ class Problem(object):
         Populate problem using parameter theta
         """
         for p in self.cvxpy_problem.parameters():
-            theta_val = theta[p.name()]
-            if len(theta_val) == 1:
-                theta_val = theta_val[0]  # Make it a scalar in case
-            p.value = theta_val
+            #  theta_val = theta[p.name()]
+            #  if len(theta_val) == 1:
+            #      theta_val = theta_val[0]  # Make it a scalar in case
+            #  p.value = theta_val
+            p.value = theta[p.name()]
 
     @property
     def objective(self):
@@ -178,6 +179,7 @@ class Problem(object):
 
             # Get relative value for all of the expression arguments
             relative_viol = np.amax(arg_norms)
+            print(relative_viol)
 
             # Normalize relative tolerance if too small
             relative_viol = relative_viol \
@@ -189,10 +191,6 @@ class Problem(object):
 
         # Create numpy array
         violations = np.concatenate(violations)
-
-        # Compute violations
-        #  violations = np.concatenate([np.atleast_1d(c.violation())
-        #                               for c in self.constraints])
 
         return np.linalg.norm(violations, np.inf)
 

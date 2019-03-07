@@ -20,7 +20,7 @@ def sampling_function(n):
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, 1, n=n)
 
-    df = pd.DataFrame({'d': X.tolist()})
+    df = pd.DataFrame({'d': list(X)})
 
     return df
 

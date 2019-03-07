@@ -16,7 +16,7 @@ def sample(theta_bar, radius, n=100):
     # Sample points from multivariate ball
     X = uniform_sphere_sample(theta_bar, radius, n=n)
 
-    df = pd.DataFrame({'d': X.tolist()})
+    df = pd.DataFrame({'d': list(X)})
 
     return df
 
@@ -45,8 +45,8 @@ class TestSave(unittest.TestCase):
         self.d_bar = 3. * np.ones(T)
         X_d = uniform_sphere_sample(self.d_bar, self.radius, n=n)
         X_d_test = uniform_sphere_sample(self.d_bar, self.radius, n=n_test)
-        self.df = pd.DataFrame({'d': X_d.tolist()})
-        self.df_test = pd.DataFrame({'d': X_d_test.tolist()})
+        self.df = pd.DataFrame({'d': list(X_d)})
+        self.df_test = pd.DataFrame({'d': list(X_d_test)})
 
         # Constaints
         constraints = [x[0] == x_init]

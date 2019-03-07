@@ -16,7 +16,7 @@ def args_norms(expr):
         # Expression contains arguments
         for arg in expr.args:
             #  norms += args_norms(arg)
-            norms += [cp.norm(arg).value]
+            norms += [cp.norm(arg, np.inf).value]
     else:
         norms = [0.]
     return norms

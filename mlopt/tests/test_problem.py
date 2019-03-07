@@ -9,7 +9,6 @@ from copy import deepcopy
 
 
 class TestProblem(unittest.TestCase):
-
     def setUp(self):
         pass
 
@@ -33,8 +32,12 @@ class TestProblem(unittest.TestCase):
 
         # Check violation
         viol_cvxpy = mlprob.infeasibility()
-        viol_manual = np.linalg.norm(np.maximum(A.dot(x_val) - b,
-                                                0))
+        viol_manual_rel = np.amax(
+            [np.linalg.norm(A.dot(x_val), np.inf), np.linalg.norm(b, np.inf)]
+        )
+        viol_manual_vec = np.maximum(A.dot(x_val) - b, 0) / viol_manual_rel
+        viol_manual = np.linalg.norm(viol_manual_vec, np.inf)
+
         self.assertTrue(abs(viol_cvxpy - viol_manual) <= TOL)
 
     def test_solve_cvxpy(self):
@@ -59,13 +62,9 @@ class TestProblem(unittest.TestCase):
         x_problem = deepcopy(x.value)
         cost_problem = cost.value
 
-        npt.assert_almost_equal(x_problem,
-                                x_cvxpy,
-                                decimal=TOL)
-        npt.assert_almost_equal(cost_problem,
-                                cost_cvxpy,
-                                decimal=TOL)
+        npt.assert_almost_equal(x_problem, x_cvxpy, decimal=TOL)
+        npt.assert_almost_equal(cost_problem, cost_cvxpy, decimal=TOL)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

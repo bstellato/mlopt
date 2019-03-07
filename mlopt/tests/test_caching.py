@@ -46,7 +46,7 @@ class TestCaching(unittest.TestCase):
 
         # Sample points from multivariate ball
         X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
-        df = pd.DataFrame({'mu': X_d.tolist()})
+        df = pd.DataFrame({'mu': list(X_d)})
 
         # Train and test using pytorch
         params = {
@@ -59,7 +59,7 @@ class TestCaching(unittest.TestCase):
 
         # Testing data
         X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
-        df_test = pd.DataFrame({'mu': X_d_test.tolist()})
+        df_test = pd.DataFrame({'mu': list(X_d_test)})
 
         # Store stuff
         self.m = m

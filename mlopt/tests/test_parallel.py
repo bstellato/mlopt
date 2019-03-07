@@ -34,7 +34,7 @@ class TestParallel(unittest.TestCase):
         d = cp.Parameter(T, nonneg=True, name="d")
         d_bar = 3. * np.ones(T)
         X_d = uniform_sphere_sample(d_bar, radius, n=n_train)
-        df = pd.DataFrame({'d': X_d.tolist()})
+        df = pd.DataFrame({'d': list(X_d)})
 
         # Constaints
         constraints = [x[0] == x_init]
@@ -110,8 +110,8 @@ class TestParallel(unittest.TestCase):
         # Sample points from multivariate ball
         X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
         X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
-        df = pd.DataFrame({'mu': X_d.tolist()})
-        df_test = pd.DataFrame({'mu': X_d_test.tolist()})
+        df = pd.DataFrame({'mu': list(X_d)})
+        df_test = pd.DataFrame({'mu': list(X_d_test)})
 
         # Train and test using pytorch
         params = {
@@ -167,9 +167,9 @@ class TestParallel(unittest.TestCase):
     #
     #      # Sample points from multivariate ball
     #      X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
-    #      df = pd.DataFrame({'mu': X_d.tolist()})
+    #      df = pd.DataFrame({'mu': list(X_d)})
     #      X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
-    #      df_test = pd.DataFrame({'mu': X_d_test.tolist()})
+    #      df_test = pd.DataFrame({'mu': list(X_d_test)})
     #
     #      # Train and test using pytorch
     #      params = {
