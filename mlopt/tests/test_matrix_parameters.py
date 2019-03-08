@@ -10,13 +10,14 @@ from mlopt.sampling import uniform_sphere_sample
 def sample_portfolio(n, k, T=5, N=100):
     """Sample portfolio parameters."""
 
-    rad = 0.00001
+    rad = 0.001
 
     # mean values
     np.random.seed(0)
     F_bar = np.random.randn(n, k)
     sqrt_D_bar = np.random.rand(n)
     Sigma_F_diag_bar = np.random.rand(k)
+    hat_r_bar = np.random.rand(n)
     w_init_bar = np.random.rand(n)
     w_init_bar /= np.sum(w_init_bar)
 
@@ -32,14 +33,15 @@ def sample_portfolio(n, k, T=5, N=100):
         x = pd.Series(
             {
                 "F": F,
-                "sqrt_D": uniform_sphere_sample(sqrt_D_bar, 0.01).flatten(),
+                "sqrt_D": uniform_sphere_sample(sqrt_D_bar, rad).flatten(),
                 "Sigma_F": Sigma_F,
                 "w_init": w_init,
             }
         )
 
         for t in range(1, T + 1):
-            x["hat_r_%s" % str(t)] = np.random.rand(n)
+            x["hat_r_%s" % str(t)] = uniform_sphere_sample(hat_r_bar,
+                                                           rad).flatten()
 
         df = df.append(x, ignore_index=True)
 
@@ -50,9 +52,9 @@ class TestMatrixParams(unittest.TestCase):
     def test_matrix_multiperiod_portfolio(self):
         np.random.seed(1)
 
-        k = 5
+        k = 10
         n = 50
-        T = 3
+        T = 5
         borrow_cost = 0.0001
         lam = {
             "risk": 50,
@@ -83,9 +85,7 @@ class TestMatrixParams(unittest.TestCase):
                 + cp.sum_squares(cp.multiply(sqrt_D, w[t]))
             )
 
-            holding_cost = lam["borrow"] * cp.sum(
-                borrow_cost * cp.neg(w[t])
-            )
+            holding_cost = lam["borrow"] * cp.sum(borrow_cost * cp.neg(w[t]))
 
             transaction_cost = lam["norm1_trade"] * cp.norm(w[t] - w[t - 1], 1)
 
@@ -99,51 +99,38 @@ class TestMatrixParams(unittest.TestCase):
             constraints += [cp.sum(w[t]) == 1.0]
 
         # Define optimizer
-        m = Optimizer(cp.Maximize(cost), constraints, name="portfolio")
+        m = Optimizer(
+            cp.Maximize(cost),
+            constraints,
+            name="portfolio",
+            #  Method=0,  # Simplex
+        )
 
         # Sample parameters
         df_train = sample_portfolio(n, k, N=100)
-        df_test = sample_portfolio(n, k, N=10)
 
-        # Train and test using pytorch
+        # DEBUG: Compare strategy and samples
+        # Populate and solve and againj
+        #  res = []
+        #  m._problem.populate(df_train.iloc[0])
+        #  res.append(m._problem.solve())
+        #  m._problem.populate(df_train.iloc[0])
+        #  res.append(m._problem.solve())
+        #  print(res[0]['strategy'] == res[1]['strategy'])
+        #  for c in df_train.columns:
+        #      print("%s" % (c), (df_train.iloc[0][c] == df_train.iloc[5][c]).all())
+        # Populate and solve again
+        #  import ipdb; ipdb.set_trace()
+
+        #
+        #  # Train and test using pytorch
         params = {
             "learning_rate": [0.01],
             "batch_size": [32],
-            "n_epochs": [200],
+            "n_epochs": [100],
         }
-        m.train(df_train, parallel=False, learner=PYTORCH, params=params)
-        m.performance(df_test, parallel=False)
+        m.train(df_train, parallel=True, learner=PYTORCH, params=params)
 
-        # Fill parameters
-
-        #  """
-        #  Sample points
-        #  """
-        #  theta_bar = np.random.randn(n)
-        #  radius = 0.2
-        #
-        #  """
-        #  Train and solve
-        #  """
-        #
-        #  # Training and testing data
-        #  n_train = 100
-        #  n_test = 10
-        #  # Sample points from multivariate ball
-        #  X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
-        #  X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
-        #  df = pd.DataFrame({"mu": list(X_d)})
-        #  df_test = pd.DataFrame({"mu": list(X_d_test)})
-        #
-        #  # Train and test using pytorch
-        #  params = {
-        #      "learning_rate": [0.01],
-        #      "batch_size": [32],
-        #      "n_epochs": [200],
-        #  }
-        #  m.train(df, parallel=True, learner=PYTORCH, params=params)
-        #  m.performance(df_test, parallel=True)
-        #
-        #  # Run parallel loop again to enforce instability
-        #  # in multiprocessing
-        #  m.performance(df_test, parallel=True)
+        # Assert fewer strategies than training samples
+        self.assertTrue(len(m.encoding) < len(df_train))
+        self.assertTrue(len(m.encoding) > 1)
