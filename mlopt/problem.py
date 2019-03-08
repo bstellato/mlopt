@@ -179,7 +179,6 @@ class Problem(object):
 
             # Get relative value for all of the expression arguments
             relative_viol = np.amax(arg_norms)
-            print(relative_viol)
 
             # Normalize relative tolerance if too small
             relative_viol = relative_viol \

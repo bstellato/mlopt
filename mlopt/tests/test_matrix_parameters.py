@@ -23,7 +23,7 @@ def sample_portfolio(n, k, T=5, N=100):
     df = pd.DataFrame()
     for i in range(N):
 
-        w_init = uniform_sphere_sample(w_init_bar, rad)
+        w_init = uniform_sphere_sample(w_init_bar, rad).flatten()
         w_init /= np.sum(w_init)
 
         F = uniform_sphere_sample(F_bar.flatten(), rad).reshape(n, k)
@@ -32,7 +32,7 @@ def sample_portfolio(n, k, T=5, N=100):
         x = pd.Series(
             {
                 "F": F,
-                "sqrt_D": uniform_sphere_sample(sqrt_D_bar, 0.01),
+                "sqrt_D": uniform_sphere_sample(sqrt_D_bar, 0.01).flatten(),
                 "Sigma_F": Sigma_F,
                 "w_init": w_init,
             }
@@ -111,8 +111,8 @@ class TestMatrixParams(unittest.TestCase):
             "batch_size": [32],
             "n_epochs": [200],
         }
-        m.train(df_train, parallel=True, learner=PYTORCH, params=params)
-        m.performance(df_test, parallel=True)
+        m.train(df_train, parallel=False, learner=PYTORCH, params=params)
+        m.performance(df_test, parallel=False)
 
         # Fill parameters
 
