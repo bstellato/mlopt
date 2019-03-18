@@ -70,6 +70,7 @@ def create_mlopt_problem(df):
 
 m = create_mlopt_problem(df_real)
 
+import ipdb; ipdb.set_trace()
 params = {
     'learning_rate': [0.01],
     'batch_size': [32],
@@ -78,16 +79,16 @@ params = {
 
 
 # Test repeat first element of df_real
-df_train = pd.DataFrame()
+#  df_train = pd.DataFrame()
+#
+#  for i in range(1000):
+#      df_train = df_train.append(df_real.iloc[0])
 
-for i in range(1000):
-    df_train = df_train.append(df_real.iloc[0])
 
-
-m.train(df_train,
-        parallel=True,
-        learner=mlopt.PYTORCH,
-        params=params)
+#  m.train(df_real,
+#          parallel=True,
+#          learner=mlopt.PYTORCH,
+#          params=params)
 
 # Function to sample points
 # Use portfolio data
