@@ -95,9 +95,9 @@ class Optimizer(object):
         self.X_train, self.y_train, self.encoding = \
             self._sampler.sample(parallel=parallel)
 
-    def save_data(self, file_name, delete_existing=False):
+    def save_training_data(self, file_name, delete_existing=False):
         """
-        Save data points to file.
+        Save training data to file.
 
 
         Avoids the need to recompute data.
@@ -124,9 +124,7 @@ class Optimizer(object):
             else:
                 os.remove(file_name)
 
-        if (self.X_train is None) or \
-            (self.y_train is None) or \
-                (self.encoding is None):
+        if not self.samples_present():
             err = "You need to get the strategies " + \
                 "from the data first by training the model."
             logging.error(err)
@@ -137,13 +135,13 @@ class Optimizer(object):
                 as data:
             data_dict = {'X_train': self.X_train,
                          'y_train': self.y_train,
-                         'problem': self._problem,
+                         '_problem': self._problem,
                          'encoding': self.encoding}
             pkl.dump(data_dict, data)
 
-    def load_data(self, file_name):
+    def load_training_data(self, file_name):
         """
-        Load pickled data from file name.
+        Load pickled training data from file name.
 
         Parameters
         ----------
@@ -162,7 +160,7 @@ class Optimizer(object):
         # Store data internally
         self.X_train = data_dict['X_train']
         self.y_train = data_dict['y_train']
-        self._problem = data_dict['problem']
+        self._problem = data_dict['_problem']
         self.encoding = data_dict['encoding']
 
         # Compute Good turing estimates
@@ -208,7 +206,7 @@ class Optimizer(object):
             raise ValueError(err)
 
         # Check if data is passed, otherwise train
-        if X is not None:
+        if (X is not None) and not self.samples_present():
             logging.info("Use new data")
             self.X_train = X
             self.y_train = None
@@ -236,7 +234,7 @@ class Optimizer(object):
             self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
             self._sampler.compute_good_turing(self.y_train)
 
-        elif sampling_fn is not None:
+        elif sampling_fn is not None and not self.samples_present():
             logging.info("Use iterative sampling")
             # Create X_train, y_train and encoding from
             # sampling function
@@ -477,12 +475,12 @@ class Optimizer(object):
             # Save optimizer
             with open(os.path.join(tmpdir, "optimizer.pkl"), 'wb') \
                     as optimizer:
-                file_dict = {'name': self.name,
+                file_dict = {'_problem': self._problem,
+                             '_solver_cache': self._solver_cache,
                              'learner_name': self._learner.name,
                              'learner_options': self._learner.options,
-                             'encoding': self.encoding,
-                             'objective': self._problem.objective,
-                             'constraints': self._problem.constraints}
+                             'encoding': self.encoding
+                             }
                 pkl.dump(file_dict, optimizer)
 
             # Create archive with the files
@@ -524,21 +522,28 @@ class Optimizer(object):
             f.close()
 
             # Create optimizer using loaded dict
-            optimizer = cls(optimizer_dict['objective'],
-                            optimizer_dict['constraints'],
+            problem = optimizer_dict['_problem'].cvxpy_problem
+            optimizer = cls(problem.objective,
+                            problem.constraints,
                             name=optimizer_dict['name'])
 
             # Assign strategies encoding
             optimizer.encoding = optimizer_dict['encoding']
-            learner_name = optimizer_dict['learner_name']
-            learner_options = optimizer_dict['learner_options']
+            optimizer._sampler = optimizer_dict['_sampler']
 
             # Load learner
+            learner_name = optimizer_dict['learner_name']
+            learner_options = optimizer_dict['learner_options']
             optimizer._learner = \
                 LEARNER_MAP[learner_name](n_input=optimizer.n_parameters,
                                           n_classes=len(optimizer.encoding),
                                           **learner_options)
             optimizer._learner.load(os.path.join(tmpdir, "learner"))
+
+        # Compute Good turing estimates
+        optimizer._sampler = Sampler(optimizer._problem,
+                                     n_samples=len(optimizer.X_train))
+        optimizer._sampler.compute_good_turing(optimizer.y_train)
 
         return optimizer
 

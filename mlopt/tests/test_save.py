@@ -11,14 +11,14 @@ import pandas as pd
 import cvxpy as cp
 
 
-def sample(theta_bar, radius, n=100):
-
-    # Sample points from multivariate ball
-    X = uniform_sphere_sample(theta_bar, radius, n=n)
-
-    df = pd.DataFrame({'d': list(X)})
-
-    return df
+#  def sample(theta_bar, radius, n=100):
+#
+#      # Sample points from multivariate ball
+#      X = uniform_sphere_sample(theta_bar, radius, n=n)
+#
+#      df = pd.DataFrame({'d': list(X)})
+#
+#      return df
 
 
 class TestSave(unittest.TestCase):
@@ -33,7 +33,7 @@ class TestSave(unittest.TestCase):
         p = 1.
         x_init = 2.
         self.radius = 3.
-        n = 100   # Number of points
+        n = 2000   # Number of points
         n_test = 10
 
         # Define problem
@@ -64,7 +64,7 @@ class TestSave(unittest.TestCase):
 
         # Define learners
         self.learners = [
-            s.OPTIMAL_TREE,
+            #  s.OPTIMAL_TREE,  # Disable. Too slow
             s.PYTORCH
         ]
 
@@ -81,9 +81,10 @@ class TestSave(unittest.TestCase):
                 data_file = os.path.join(tmpdir, "data.pkl")
 
                 # Sample and store
-                m.train(sampling_fn=lambda n: sample(self.d_bar,
-                                                     self.radius,
-                                                     n),
+                m.train(self.df,
+                        #  sampling_fn=lambda n: sample(self.d_bar,
+                        #                               self.radius,
+                        #                               n),
                         parallel=True,
                         learner=learner,
                         params=nn_params)
@@ -91,14 +92,14 @@ class TestSave(unittest.TestCase):
                                                             parallel=True)
 
                 # Save datafile
-                m.save_data(data_file, delete_existing=True)
+                m.save_training_data(data_file, delete_existing=True)
 
                 # Create new optimizer, load data, train and
                 # evaluate performance
                 self.optimizer = Optimizer(cp.Minimize(self.cost),
                                            self.constraints)
                 m = self.optimizer
-                m.load_data(data_file)
+                m.load_training_data(data_file)
                 m.train(parallel=True,
                         learner=learner,
                         params=nn_params)
