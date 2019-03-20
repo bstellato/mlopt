@@ -271,6 +271,8 @@ class Optimizer(object):
 
             self._problem.populate(theta)
 
+            self._problem._relax_disc_var()
+
             reduced_problem = \
                 self._problem._construct_reduced_problem(strategy)
 
@@ -286,6 +288,8 @@ class Optimizer(object):
             cache['chain'] = full_chain
 
             self._solver_cache += [cache]
+
+            self._problem._restore_disc_var()
 
     def choose_best(self, labels, parallel=False, use_cache=True):
         """

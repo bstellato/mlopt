@@ -73,9 +73,11 @@ class Problem(object):
         self._canonicalize()
 
         # Store discrete variables to restore later
-        self.int_vars = [v for v in self.cvxpy_problem.variables()
+        self.int_vars = [v for v in
+                         self.cvxpy_problem._intermediate_problem.variables()
                          if v.attributes['integer']]
-        self.bool_vars = [v for v in self.cvxpy_problem.variables()
+        self.bool_vars = [v for v in
+                          self.cvxpy_problem._intermediate_problem.variables()
                           if v.attributes['boolean']]
 
         # Set options
@@ -272,6 +274,13 @@ class Problem(object):
         var.boolean_idx = []
         var.integer_idx = []
 
+    def _relax_disc_var(self):
+        """Relax variables"""
+        for var in self.int_vars:  # Integer
+            self._set_cont_var(var)
+        for var in self.bool_vars:  # Boolean
+            self._set_cont_var(var)
+
     def _restore_disc_var(self):
         """
         Restore relaxed original variables
@@ -307,10 +316,12 @@ class Problem(object):
     def _verify_strategy(self, strategy):
         """Verify that strategy is compatible with current problem."""
         # Compare keys for tight constraints and integer variables
+        intermediate_problem = self.cvxpy_problem._intermediate_problem
         variables = {v.id: v
-                     for v in self.cvxpy_problem.variables()}
+                     for v in intermediate_problem.variables()
+                     if self._is_var_mip(v)}
         con_keys = [c.id for c in
-                    self.cvxpy_problem._intermediate_problem.constraints]
+                    intermediate_problem.constraints]
 
         for key in strategy.tight_constraints.keys():
             if key not in con_keys:
@@ -320,7 +331,7 @@ class Problem(object):
                 raise ValueError(err)
 
         int_var_err = "Integer variables not compatible " + \
-            "with problem. Constaint IDs not " + \
+            "with problem. IDs not " + \
             "matching an integer variable."
         for key in strategy.int_vars.keys():
             try:
@@ -336,7 +347,7 @@ class Problem(object):
         """Construct reduced problem from intermediate cvxpy problem
            using strategy information.
 
-           NB. This function relaxed integrality of the original variables."""
+           NB. This function assumes all the variables to be continuous."""
         # Unpack strategy
         tight_constraints = strategy.tight_constraints
         int_vars = strategy.int_vars
@@ -377,7 +388,6 @@ class Problem(object):
         # set them to continuous.
         discrete_fix = []
         for var in self.int_vars + self.bool_vars:
-            self._set_cont_var(var)
             discrete_fix += [var == int_vars[var.id]]
 
         return cp.Problem(objective, reduced_constraints + discrete_fix)
@@ -468,6 +478,9 @@ class Problem(object):
         """
         self._verify_strategy(strategy)
 
+        # Relax discrete variables
+        self._relax_disc_var()
+
         prob_red = self._construct_reduced_problem(strategy)
 
         # Solve lower part of the chain
@@ -479,12 +492,6 @@ class Problem(object):
         else:
             self._solve(solver=self.solver,
                         **self.solver_options)
-
-        # Solve only lower chain. It does not seem to work
-        #  self._solve_lower_chain(prob_red,
-        #                          KKT_solver=KKT_solver,
-        #                          KKT_cache=cache,
-        #                          **self.solver_options)
 
         results = self._parse_solution(prob_red)
 
