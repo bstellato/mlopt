@@ -203,6 +203,8 @@ def pandas2array(X):
         # Already numpy array. Return it.
         return X
     else:
+        if isinstance(X, pd.Series):
+            X = pd.DataFrame(X).transpose()
         # get number of datapoints
         n_data = len(X)
         # Get dimensions by inspecting first row
@@ -214,7 +216,7 @@ def pandas2array(X):
         # Unroll
         # TODO: Speedup this process
         for i in range(n_data):
-            x_data = X.iloc[i, :].values
+            x_data = X.iloc[i].values
             x_temp = np.concatenate([np.atleast_1d(v).flatten()
                                      for v in x_data])
             X_new = np.vstack((X_new, x_temp))

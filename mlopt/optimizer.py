@@ -30,7 +30,7 @@ class Optimizer(object):
     def __init__(self,
                  objective, constraints,
                  name="problem",
-                 log_level=logging.INFO,
+                 log_level=logging.WARNING,
                  **solver_options):
         """
         Inizialize optimizer.
@@ -253,7 +253,9 @@ class Optimizer(object):
         # TODO: Add the second point!
         # 2. Parameters enter only in the problem vectors
         if self._problem.is_qp():
-            logging.info("Caching KKT solver factors for each strategy")
+            logging.info("Caching KKT solver factors for each strategy "
+                         "(it works only for QP-representable problems "
+                         "with parameters only in constraints RHS)")
             self._cache_factors()
 
     def _cache_factors(self):
@@ -376,7 +378,7 @@ class Optimizer(object):
 
         Parameters
         ----------
-        X : pandas dataframe
+        X : pandas DataFrame or Series
             Data points.
         parallel : bool, optional
             Perform `n_best` strategies evaluation in parallel.
@@ -389,6 +391,10 @@ class Optimizer(object):
         list
             List of result dictionaries.
         """
+
+        if isinstance(X, pd.Series):
+            X = pd.DataFrame(X).transpose()
+
         n_points = len(X)
         n_best = self._learner.options['n_best']
 
@@ -417,7 +423,7 @@ class Optimizer(object):
         for i in tqdm(range(n_points), desc=message):
 
             # Populate problem with i-th data point
-            self._problem.populate(X.iloc[i, :])
+            self._problem.populate(X.iloc[i])
 
             # Pick strategies from encoding
             #  strategies = [self.encoding[classes[i, j]]
@@ -428,6 +434,9 @@ class Optimizer(object):
             results.append(self.choose_best(classes[i, :],
                                             parallel=parallel,
                                             use_cache=use_cache))
+
+        if len(results) == 1:
+            results = results[0]
 
         return results
 

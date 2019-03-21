@@ -100,11 +100,11 @@ class KKTSolver(QpSolver):
             raise SolverError(err)
 
         #  if verbose:
-        logging.info("Solving %d x %d linear system A x = b " %
-                     (n_var + n_con, n_var + n_con) + "using pardiso")
+        logging.debug("Solving %d x %d linear system A x = b " %
+                      (n_var + n_con, n_var + n_con) + "using pardiso")
 
         if KKT_cache is None:
-            logging.info("Not using KKT solver cache")
+            logging.debug("Not using KKT solver cache")
 
             KKT, rhs = create_kkt_system(data)
 
@@ -116,7 +116,7 @@ class KKTSolver(QpSolver):
             t_end = time.time()
 
         else:
-            logging.info("Using KKT solver cache")
+            logging.debug("Using KKT solver cache")
 
             rhs = create_kkt_rhs(data)
 
