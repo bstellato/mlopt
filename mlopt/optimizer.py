@@ -30,7 +30,7 @@ class Optimizer(object):
     def __init__(self,
                  objective, constraints,
                  name="problem",
-                 log_level=logging.INFO,
+                 log_level=logging.WARNING,
                  **solver_options):
         """
         Inizialize optimizer.
@@ -95,9 +95,9 @@ class Optimizer(object):
         self.X_train, self.y_train, self.encoding = \
             self._sampler.sample(parallel=parallel)
 
-    def save_data(self, file_name, delete_existing=False):
+    def save_training_data(self, file_name, delete_existing=False):
         """
-        Save data points to file.
+        Save training data to file.
 
 
         Avoids the need to recompute data.
@@ -124,9 +124,7 @@ class Optimizer(object):
             else:
                 os.remove(file_name)
 
-        if (self.X_train is None) or \
-            (self.y_train is None) or \
-                (self.encoding is None):
+        if not self.samples_present():
             err = "You need to get the strategies " + \
                 "from the data first by training the model."
             logging.error(err)
@@ -137,13 +135,13 @@ class Optimizer(object):
                 as data:
             data_dict = {'X_train': self.X_train,
                          'y_train': self.y_train,
-                         'problem': self._problem,
+                         '_problem': self._problem,
                          'encoding': self.encoding}
             pkl.dump(data_dict, data)
 
-    def load_data(self, file_name):
+    def load_training_data(self, file_name):
         """
-        Load pickled data from file name.
+        Load pickled training data from file name.
 
         Parameters
         ----------
@@ -162,12 +160,60 @@ class Optimizer(object):
         # Store data internally
         self.X_train = data_dict['X_train']
         self.y_train = data_dict['y_train']
-        self._problem = data_dict['problem']
+        self._problem = data_dict['_problem']
         self.encoding = data_dict['encoding']
 
         # Compute Good turing estimates
         self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
         self._sampler.compute_good_turing(self.y_train)
+
+    def _get_samples(self, X=None, sampling_fn=None, parallel=True):
+        """Get samples either from data or from sampling function"""
+        # Assert we have data to train or already trained
+        if X is None and sampling_fn is None and not self.samples_present():
+            err = "Not enough arguments to train the model"
+            logging.error(err)
+            raise ValueError(err)
+
+        if X is not None and sampling_fn is not None:
+            err = "You can pass only one value between X and sampling_fn"
+            logging.error(err)
+            raise ValueError(err)
+
+        # Check if data is passed, otherwise train
+        if (X is not None) and not self.samples_present():
+            logging.info("Use new data")
+            self.X_train = X
+            self.y_train = None
+            self.encoding = None
+
+            # Encode training strategies by solving
+            # the problem for all the points
+            results = self._problem.solve_parametric(X,
+                                                     parallel=parallel,
+                                                     message="Compute " +
+                                                     "tight constraints " +
+                                                     "for training set")
+            train_strategies = [r['strategy'] for r in results]
+
+            # Check if the problems are solvable
+            for r in results:
+                assert r['status'] in cps.SOLUTION_PRESENT, \
+                    "The training points must be feasible"
+
+            # Encode strategies
+            self.y_train, self.encoding = \
+                encode_strategies(train_strategies)
+
+            # Compute Good turing estimates
+            self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
+            self._sampler.compute_good_turing(self.y_train)
+
+        elif sampling_fn is not None and not self.samples_present():
+            logging.info("Use iterative sampling")
+            # Create X_train, y_train and encoding from
+            # sampling function
+            self.sample(sampling_fn, parallel=parallel)
 
     def train(self, X=None, sampling_fn=None,
               parallel=True,
@@ -196,51 +242,8 @@ class Optimizer(object):
             A dict of options for the learner.
         """
 
-        # Assert we have data to train or already trained
-        if X is None and sampling_fn is None and not self.samples_present():
-            err = "Not enough arguments to train the model"
-            logging.error(err)
-            raise ValueError(err)
-
-        if X is not None and sampling_fn is not None:
-            err = "You can pass only one value between X and sampling_fn"
-            logging.error(err)
-            raise ValueError(err)
-
-        # Check if data is passed, otherwise train
-        if X is not None:
-            logging.info("Use new data")
-            self.X_train = X
-            self.y_train = None
-            self.encoding = None
-
-            # Encode training strategies by solving
-            # the problem for all the points
-            results = self._problem.solve_parametric(X,
-                                                     parallel=parallel,
-                                                     message="Compute " +
-                                                     "tight constraints " +
-                                                     "for training set")
-            train_strategies = [r['strategy'] for r in results]
-
-            # Check if the problems are solvable
-            for r in results:
-                assert r['status'] in cps.SOLUTION_PRESENT, \
-                    "The training points must be feasible"
-
-            # Encode strategies
-            self.y_train, self.encoding = \
-                encode_strategies(train_strategies)
-
-            # Compute Good turing estimates
-            self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
-            self._sampler.compute_good_turing(self.y_train)
-
-        elif sampling_fn is not None:
-            logging.info("Use iterative sampling")
-            # Create X_train, y_train and encoding from
-            # sampling function
-            self.sample(sampling_fn, parallel=parallel)
+        # Get training samples
+        self._get_samples(X, sampling_fn, parallel)
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
@@ -255,7 +258,9 @@ class Optimizer(object):
         # TODO: Add the second point!
         # 2. Parameters enter only in the problem vectors
         if self._problem.is_qp():
-            logging.info("Caching KKT solver factors for each strategy")
+            logging.info("Caching KKT solver factors for each strategy "
+                         "(it works only for QP-representable problems "
+                         "with parameters only in constraints RHS)")
             self._cache_factors()
 
     def _cache_factors(self):
@@ -270,6 +275,8 @@ class Optimizer(object):
             theta = self.X_train.iloc[idx_param[0], :]
 
             self._problem.populate(theta)
+
+            self._problem._relax_disc_var()
 
             reduced_problem = \
                 self._problem._construct_reduced_problem(strategy)
@@ -286,6 +293,8 @@ class Optimizer(object):
             cache['chain'] = full_chain
 
             self._solver_cache += [cache]
+
+            self._problem._restore_disc_var()
 
     def choose_best(self, labels, parallel=False, use_cache=True):
         """
@@ -374,7 +383,7 @@ class Optimizer(object):
 
         Parameters
         ----------
-        X : pandas dataframe
+        X : pandas DataFrame or Series
             Data points.
         parallel : bool, optional
             Perform `n_best` strategies evaluation in parallel.
@@ -387,6 +396,10 @@ class Optimizer(object):
         list
             List of result dictionaries.
         """
+
+        if isinstance(X, pd.Series):
+            X = pd.DataFrame(X).transpose()
+
         n_points = len(X)
         n_best = self._learner.options['n_best']
 
@@ -415,7 +428,7 @@ class Optimizer(object):
         for i in tqdm(range(n_points), desc=message):
 
             # Populate problem with i-th data point
-            self._problem.populate(X.iloc[i, :])
+            self._problem.populate(X.iloc[i])
 
             # Pick strategies from encoding
             #  strategies = [self.encoding[classes[i, j]]
@@ -426,6 +439,9 @@ class Optimizer(object):
             results.append(self.choose_best(classes[i, :],
                                             parallel=parallel,
                                             use_cache=use_cache))
+
+        if len(results) == 1:
+            results = results[0]
 
         return results
 
@@ -473,12 +489,12 @@ class Optimizer(object):
             # Save optimizer
             with open(os.path.join(tmpdir, "optimizer.pkl"), 'wb') \
                     as optimizer:
-                file_dict = {'name': self.name,
+                file_dict = {'_problem': self._problem,
+                             '_solver_cache': self._solver_cache,
                              'learner_name': self._learner.name,
                              'learner_options': self._learner.options,
-                             'encoding': self.encoding,
-                             'objective': self._problem.objective,
-                             'constraints': self._problem.constraints}
+                             'encoding': self.encoding
+                             }
                 pkl.dump(file_dict, optimizer)
 
             # Create archive with the files
@@ -520,21 +536,28 @@ class Optimizer(object):
             f.close()
 
             # Create optimizer using loaded dict
-            optimizer = cls(optimizer_dict['objective'],
-                            optimizer_dict['constraints'],
+            problem = optimizer_dict['_problem'].cvxpy_problem
+            optimizer = cls(problem.objective,
+                            problem.constraints,
                             name=optimizer_dict['name'])
 
             # Assign strategies encoding
             optimizer.encoding = optimizer_dict['encoding']
-            learner_name = optimizer_dict['learner_name']
-            learner_options = optimizer_dict['learner_options']
+            optimizer._sampler = optimizer_dict['_sampler']
 
             # Load learner
+            learner_name = optimizer_dict['learner_name']
+            learner_options = optimizer_dict['learner_options']
             optimizer._learner = \
                 LEARNER_MAP[learner_name](n_input=optimizer.n_parameters,
                                           n_classes=len(optimizer.encoding),
                                           **learner_options)
             optimizer._learner.load(os.path.join(tmpdir, "learner"))
+
+        # Compute Good turing estimates
+        optimizer._sampler = Sampler(optimizer._problem,
+                                     n_samples=len(optimizer.X_train))
+        optimizer._sampler.compute_good_turing(optimizer.y_train)
 
         return optimizer
 

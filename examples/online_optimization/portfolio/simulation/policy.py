@@ -44,6 +44,7 @@ class Optimal(BasePolicy):
 
     def __init__(self, returns, risk_model,
                  periods=1,  # Default one period
+                 k=10,  # Sparsity
                  lambda_cost=None,
                  borrow_cost=0.0001):
         self.returns = returns
@@ -51,8 +52,8 @@ class Optimal(BasePolicy):
         if lambda_cost is None:
             self.lambda_cost = {'risk': 50,
                                 'borrow': 0.0001,
-                                'norm1_trade': 0.01,
-                                'norm0_trade': 1.}
+                                'norm1_trade': 0.02,
+                                'norm0_trade': 0.01}
         else:
             self.lambda_cost = lambda_cost
         lam = self.lambda_cost  # More readable code
@@ -77,6 +78,9 @@ class Optimal(BasePolicy):
         # Formulate problem
         w = [cp.Variable(n) for t in range(self.periods + 1)]
 
+        # Sparsity constraints
+        #  s = [cp.Variable(n, boolean=True) for t in range(self.periods)]
+
         # Define cost components
         cost = 0
         constraints = [w[0] == w_init]
@@ -89,12 +93,17 @@ class Optimal(BasePolicy):
             holding_cost = lam['borrow'] * \
                 cp.sum(self.borrow_cost * cp.neg(w[t]))
 
-            transaction_cost = lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
+            transaction_cost = \
+                lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
 
             cost += hat_r[t-1] * w[t] + \
                 - risk_cost - holding_cost - transaction_cost
 
             constraints += [cp.sum(w[t]) == 1.]
+
+            # Cardinality constraint (big-M)
+            #  constraints += [-s[t-1] <= w[t] - w[t-1], w[t] - w[t-1] <= s[t-1],
+            #                  cp.sum(s[t-1]) <= k]
 
         self.problem = cp.Problem(cp.Maximize(cost), constraints)
 

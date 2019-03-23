@@ -208,7 +208,7 @@ class PyTorchNeuralNet(Learner):
             # Pick best parameters
             self.best_params = params[np.argmax(accuracy_vec)]
             logging.info("Best parameters")
-
+            logging.info(str(self.best_params))
             logging.info("Train neural network with best parameters")
 
         else:

@@ -10,18 +10,103 @@ import numpy as np
 import scipy.sparse as spa
 import cvxpy as cp
 import pandas as pd
+import datetime as dt
 
 
 np.random.seed(1)
 
-# Output folder
-name = "portfolio"
-output_folder = "online_output/%s" % name
-if not os.path.exists(output_folder):
-    os.makedirs(output_folder)
+# Get real data for learning
+with pd.HDFStore("./data/learn_data.h5") as sim_data:
+    df_real = sim_data['data']
 
 
-# Download stock data
+def create_mlopt_problem(df):
+
+    # Get number of periods from data
+    n_periods = len([col for col in df_real.columns if 'hat_r' in col])
+
+    lam = {'risk': 50,
+           'borrow': 0.0001,
+           'norm1_trade': 0.02,
+           'norm0_trade': 1.}
+
+    borrow_cost = 0.0001
+
+    # Initialize problem
+    n, k = df_real.iloc[0]['F'].shape
+
+    # Parameters
+    hat_r = [cp.Parameter(n, name="hat_r_%s" % (t + 1))
+             for t in range(n_periods)]
+    w_init = cp.Parameter(n, name="w_init")
+    F = cp.Parameter((n, k), name="F")
+    Sigma_F = cp.Parameter((k, k), PSD=True, name="Sigma_F")
+    sqrt_D = cp.Parameter(n, name="sqrt_D")
+
+    # Formulate problem
+    w = [cp.Variable(n) for t in range(n_periods + 1)]
+
+    # Define cost components
+    cost = 0
+    constraints = [w[0] == w_init]
+    for t in range(1, n_periods + 1):
+
+        risk_cost = lam['risk'] * (
+            cp.quad_form(F.T * w[t], Sigma_F) +
+            cp.sum_squares(cp.multiply(sqrt_D, w[t])))
+
+        holding_cost = lam['borrow'] * \
+            cp.sum(borrow_cost * cp.neg(w[t]))
+
+        transaction_cost = lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
+
+        cost += hat_r[t-1] * w[t] + \
+            - risk_cost - holding_cost - transaction_cost
+
+        constraints += [cp.sum(w[t]) == 1.]
+
+    return mlopt.Optimizer(cp.Maximize(cost), constraints)
+
+
+m = create_mlopt_problem(df_real)
+
+params = {
+    'learning_rate': [0.01],
+    'batch_size': [32],
+    'n_epochs': [200]
+}
+
+m._get_samples(df_real, parallel=True)
+m.save_training_data("./data/train_data.pkl",
+                     delete_existing=True)
+#  m.load_training_data("./data/train_data.pkl")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Test repeat first element of df_real
+#  df_train = pd.DataFrame()
+#
+#  for i in range(1000):
+#      df_train = df_train.append(df_real.iloc[0])
+
+
+#  m.train(df_real,
+#          parallel=True,
+#          learner=mlopt.PYTORCH,
+#          params=params)
 
 # Function to sample points
 # Use portfolio data
