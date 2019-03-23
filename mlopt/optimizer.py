@@ -167,33 +167,8 @@ class Optimizer(object):
         self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
         self._sampler.compute_good_turing(self.y_train)
 
-    def train(self, X=None, sampling_fn=None,
-              parallel=True,
-              learner=DEFAULT_LEARNER,
-              **learner_options):
-        """
-        Train optimizer using parameter X.
-
-        This function needs one argument between data points X
-        or sampling function sampling_fn. It will raise an error
-        otherwise because there is no way to sample data.
-
-        Parameters
-        ----------
-        X : pandas dataframe or numpy array, optional
-            Data samples. Each row is a new sample points.
-        sampling_fn : function, optional
-            Function to sample data taking one argument being
-            the number of data points to be sampled and returning
-            a structure of the same type as X.
-        parallel : bool
-            Perform training in parallel.
-        learner : str
-            Learner to use. Learners are defined in :mod:`mlopt.settings`
-        learner_options : dict, optional
-            A dict of options for the learner.
-        """
-
+    def _get_samples(self, X=None, sampling_fn=None, parallel=True):
+        """Get samples either from data or from sampling function"""
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
             err = "Not enough arguments to train the model"
@@ -239,6 +214,36 @@ class Optimizer(object):
             # Create X_train, y_train and encoding from
             # sampling function
             self.sample(sampling_fn, parallel=parallel)
+
+    def train(self, X=None, sampling_fn=None,
+              parallel=True,
+              learner=DEFAULT_LEARNER,
+              **learner_options):
+        """
+        Train optimizer using parameter X.
+
+        This function needs one argument between data points X
+        or sampling function sampling_fn. It will raise an error
+        otherwise because there is no way to sample data.
+
+        Parameters
+        ----------
+        X : pandas dataframe or numpy array, optional
+            Data samples. Each row is a new sample points.
+        sampling_fn : function, optional
+            Function to sample data taking one argument being
+            the number of data points to be sampled and returning
+            a structure of the same type as X.
+        parallel : bool
+            Perform training in parallel.
+        learner : str
+            Learner to use. Learners are defined in :mod:`mlopt.settings`
+        learner_options : dict, optional
+            A dict of options for the learner.
+        """
+
+        # Get training samples
+        self._get_samples(X, sampling_fn, parallel)
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),

@@ -27,7 +27,7 @@ def create_mlopt_problem(df):
 
     lam = {'risk': 50,
            'borrow': 0.0001,
-           'norm1_trade': 0.01,
+           'norm1_trade': 0.02,
            'norm0_trade': 1.}
 
     borrow_cost = 0.0001
@@ -70,12 +70,30 @@ def create_mlopt_problem(df):
 
 m = create_mlopt_problem(df_real)
 
-import ipdb; ipdb.set_trace()
 params = {
     'learning_rate': [0.01],
     'batch_size': [32],
     'n_epochs': [200]
 }
+
+m._get_samples(df_real, parallel=True)
+m.save_training_data("./data/train_data.pkl",
+                     delete_existing=True)
+#  m.load_training_data("./data/train_data.pkl")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Test repeat first element of df_real
