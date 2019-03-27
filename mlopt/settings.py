@@ -3,7 +3,7 @@ import cvxpy as cp
 # Define constants
 INFEAS_TOL = 1e-04
 SUBOPT_TOL = 1e-04
-TIGHT_CONSTRAINTS_TOL = 1e-6
+TIGHT_CONSTRAINTS_TOL = 1e-5
 DIVISION_TOL = 1e-6
 
 # Define default solver
