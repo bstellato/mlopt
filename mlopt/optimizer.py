@@ -194,6 +194,9 @@ class Optimizer(object):
                                                      message="Compute " +
                                                      "tight constraints " +
                                                      "for training set")
+            #  test = {i: x for i, x in enumerate(results)
+            #          if 'strategy' not in x.keys()}
+            #  import ipdb; ipdb.set_trace()
             train_strategies = [r['strategy'] for r in results]
 
             # Check if the problems are solvable

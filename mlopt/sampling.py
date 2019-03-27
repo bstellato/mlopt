@@ -135,6 +135,42 @@ class Sampler(object):
         return theta, labels, encoding
 
 
+def sample_around_points(df,
+                         n_total=10000,
+                         radius={}):
+    """
+    Sample around points provided in the dataframe for a total of
+    n_total points. We sample each parameter using a uniform
+    distribution over a ball centered at the point in df row.
+    """
+    n_samples_per_point = np.round(n_total / len(df), decimals=0).astype(int)
+
+    df_samples = pd.DataFrame()
+
+    for idx, row in df.iterrows():
+        df_row = pd.DataFrame()
+
+        # For each column sample points and create series
+        for col in df.columns:
+
+            if col in radius:
+                rad = radius[col]
+            else:
+                rad = 0.1
+
+            samples = uniform_sphere_sample(row[col], rad,
+                                            n=n_samples_per_point).tolist()
+            if len(samples[0]) == 1:
+                # Flatten list
+                samples = [item for sublist in samples for item in sublist]
+
+            df_row[col] = samples
+
+        df_samples = df_samples.append(df_row)
+
+    return df_samples
+
+
 def uniform_sphere_sample(center, radius, n=1):
     """
     Generate a single vector sample to x
@@ -164,6 +200,7 @@ def uniform_sphere_sample(center, radius, n=1):
         Array of points with dimension m x n. n is the number of points and
         m the dimension.
     """
+    center = np.atleast_1d(center)
     n_dim = len(center)
     x = np.random.normal(size=(n, n_dim))
     ssq = np.sum(x ** 2, axis=1)

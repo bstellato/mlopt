@@ -1,5 +1,8 @@
 import cvxpy as cp
 import numpy as np
+import pandas as pd
+import mlopt
+from mlopt.sampling import uniform_sphere_sample
 import matplotlib.pylab as plt
 from tqdm import tqdm
 
@@ -35,15 +38,15 @@ def P_load_profile(horizon):
     return P_des
 
 
-def control_problem(T=10, tau=1.0):
-    # Parameters
-    alpha = 6.7 * 1e-04
-    beta = 0.2
-    gamma = 80
-    E_min = 5.2
-    E_max = 10.2
-    P_max = 1.2
-    n_switch = 20
+def control_problem(T=10,
+                    tau=1.0,
+                    alpha=6.7 * 1e-04,
+                    beta=0.2,
+                    gamma=80,
+                    E_min=5.2,
+                    E_max=10.2,
+                    P_max=1.2,
+                    n_switch=2):
 
     # Initial values
     E_init = cp.Parameter(name='E_init')
@@ -151,12 +154,12 @@ def update_past_d(problem, past_d):
 
 
 '''
-Main code
+Get trajectory
 '''
-T_total = 100
-T_horizon = 10
+T_total = 180
+T_horizon = 20
 tau = 1.0
-P_load = P_load_profile(T_total) + 0.05
+P_load = P_load_profile(T_total)
 #  P_load = 0.25 * np.ones(T_total)
 
 # Define problem
@@ -166,7 +169,7 @@ problem = control_problem(T_horizon, tau=tau)
 E_vec = [7.7]
 z_vec = [0.]
 s_vec = [0.]
-P_vec = [0.]
+P_vec = []
 past_d_vec = [np.zeros(T_horizon - 1)]
 P_load_vec = [P_load[:T_horizon]]
 
@@ -196,39 +199,95 @@ for t in tqdm(range(n_sim)):
     P_vec.append(sol['P'][0])
 
 
-#  t = range(len(P_load))
-#  plt.figure()
-#  plt.step(t, P_load, where='post')
-#  plt.show(block=False)
-#
-# P_vec
-#  P_vec = [x['P'][0] for x in sol_vec]
-
-#  t_plot = t[:n_sim]
+# Plot
 t_plot = range(n_sim)
 plt.figure()
-f, axarr = plt.subplots(4, sharex=True)
-axarr[0].step(t_plot, E_vec[:n_sim], where='post', label="E")
+f, axarr = plt.subplots(5, sharex=True)
+axarr[0].plot(t_plot, E_vec[:n_sim], label="E")
 axarr[0].legend()
-axarr[1].step(t_plot, P_load[:n_sim], where='post', label='P_load')
+axarr[1].plot(t_plot, P_load[:n_sim], label='P_load')
 axarr[1].legend()
 axarr[2].step(t_plot, P_vec[:n_sim], where='post', label='P_vec')
 axarr[2].legend()
 axarr[3].step(t_plot, z_vec[:n_sim], where='post', label='z')
 axarr[3].legend()
+axarr[4].step(t_plot, s_vec[:n_sim], where='post', label='s')
+axarr[4].legend()
 plt.show(block=False)
 
 
 # Store parameter values
+df = pd.DataFrame(
+        {'E_init': E_vec,
+         'z_init': z_vec,
+         's_init': s_vec,
+         'past_d': past_d_vec,
+         'P_load': P_load_vec})
 
+
+# Sample over balls around all the parameters
+def sample_around_points(df,
+                         n_total=10000,
+                         radius={}):
+    """
+    Sample around points provided in the dataframe for a total of
+    n_total points. We sample each parameter using a uniform
+    distribution over a ball centered at the point in df row.
+    """
+    n_samples_per_point = np.round(n_total / len(df), decimals=0).astype(int)
+
+    df_samples = pd.DataFrame()
+
+    for idx, row in df.iterrows():
+        df_row = pd.DataFrame()
+
+        # For each column sample points and create series
+        for col in df.columns:
+
+            if col in radius:
+                rad = radius[col]
+            else:
+                rad = 0.1
+
+            samples = uniform_sphere_sample(row[col], rad,
+                                            n=n_samples_per_point).tolist()
+            if len(samples[0]) == 1:
+                # Flatten list
+                samples = [item for sublist in samples for item in sublist]
+
+            # Round stuff
+            if col in ['s_init', 'past_d']:
+                samples = np.maximum(np.around(samples, decimals=0),
+                                     0).astype(int).tolist()
+            elif col == 'z_init':
+                samples = np.minimum(np.maximum(
+                    np.around(samples, decimals=0), 0), 1).astype(int).tolist()
+
+            elif col in ['P_load']:
+                samples = np.maximum(samples, 0).tolist()
+
+            df_row[col] = samples
+
+        df_samples = df_samples.append(df_row)
+
+    return df_samples
+
+
+df_train = sample_around_points(df,
+                                radius={'z_init': 1.0,
+                                        's_init': 1.0},
+                                n_total=3000)
 
 # Get number of strategies just from parameters
+m_mlopt = mlopt.Optimizer(problem.objective, problem.constraints)
+m_mlopt._get_samples(df_train)
 
 
-# Sample with balls around all the parameters
+# Learn optimizer
 
 
-# Try to learn optimizer
+# TEST: Try closed loop with similar load profile
+
 
 #  P_load = P_load[100:]  # Choose only last one
 
