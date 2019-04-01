@@ -194,9 +194,10 @@ class Optimizer(object):
                                                      message="Compute " +
                                                      "tight constraints " +
                                                      "for training set")
-            #  test = {i: x for i, x in enumerate(results)
-            #          if 'strategy' not in x.keys()}
-            #  import ipdb; ipdb.set_trace()
+            test = {i: x for i, x in enumerate(results)
+                    if 'strategy' not in x.keys()}
+            logging.debug("number of infeasible points %d" % len(test))
+
             train_strategies = [r['strategy'] for r in results]
 
             # Check if the problems are solvable
@@ -618,6 +619,10 @@ class Optimizer(object):
         # accuracy
         test_accuracy, idx_correct = accuracy(results_pred, results_test)
 
+        # Time statistics
+        avg_time_improv = 1. - np.mean(time_pred)/np.mean(time_test)
+        max_time_improv = 1. - np.max(time_pred)/np.max(time_test)
+
         # Create dataframes to return
         df = pd.DataFrame(
             {
@@ -643,9 +648,9 @@ class Optimizer(object):
                                                       INFEAS_TOL)[0]])],
                 "max_infeas": [np.max(infeas)],
                 "max_subopt": [np.max(subopt)],
-                "avg_time_improv": [100 * np.mean(time_comp)],
-                "max_time_improv": [100 * np.max(time_comp)],
-                "std_time_improv": [100 * np.std(time_comp)],
+                "avg_time_improv": [100 * avg_time_improv],
+                "max_time_improv": [100 * max_time_improv],
+                #  "std_time_improv": [100 * np.std(time_comp)],
                 "mean_time_pred": [np.mean(time_pred)],
                 "std_time_pred": [np.std(time_pred)],
                 "mean_time_full": [np.mean(time_test)],

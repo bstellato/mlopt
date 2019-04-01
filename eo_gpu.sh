@@ -29,4 +29,9 @@ echo $IAI_LICENSE_FILE
 # python examples/paper/benchmarks/transportation/transportation.py
 # python examples/paper/benchmarks/portfolio/portfolio.py
 # python examples/paper/benchmarks/facility/facility.py
-python examples/paper/benchmarks/control/control.py
+# python examples/paper/benchmarks/control/control.py
+
+
+
+# Online
+python examples/online_optimization/control/online_control.py

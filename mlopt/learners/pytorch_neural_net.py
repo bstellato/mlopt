@@ -31,14 +31,20 @@ class Net(nn.Module):
         self.f2 = nn.Linear(n_hidden, n_hidden)
         self.f3 = nn.Linear(n_hidden, n_hidden)
         self.f4 = nn.Linear(n_hidden, n_hidden)
-        self.f5 = nn.Linear(n_hidden, n_classes)
+        self.f5 = nn.Linear(n_hidden, n_hidden)
+        self.f6 = nn.Linear(n_hidden, n_hidden)
+        self.f7 = nn.Linear(n_hidden, n_hidden)
+        self.f8 = nn.Linear(n_hidden, n_classes)
 
     def forward(self, x):
         x = F.relu(self.f1(x))  # First layer
         x = F.relu(self.f2(x))  # Second layer
         x = F.relu(self.f3(x))  # Third layer
         x = F.relu(self.f4(x))  # Fourth layer
-        x = self.f5(x)  # Last layer (no relu)
+        x = F.relu(self.f5(x))  # Fifth layer
+        x = F.relu(self.f6(x))  # Sixth layer
+        x = F.relu(self.f7(x))  # Seventh layer
+        x = self.f8(x)  # Last layer (no relu)
         return x
 
 
@@ -108,9 +114,11 @@ class PyTorchNeuralNet(Learner):
         logging.info(info_str)
 
         # Define optimizer
-        self.optimizer = optim.SGD(self.net.parameters(),
-                                   lr=params['learning_rate'],
-                                   momentum=0.9)
+        #  self.optimizer = optim.SGD(self.net.parameters(),
+        #                             lr=params['learning_rate'],
+        #                             momentum=0.9)
+        self.optimizer = optim.Adam(self.net.parameters(),
+                                    lr=params['learning_rate'])
 
         # Convert data to tensor dataset
         X = torch.tensor(pandas2array(X), dtype=torch.float)
