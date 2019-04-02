@@ -7,6 +7,7 @@ import matplotlib.pylab as plt
 
 np.random.seed(0)
 
+DATA_FILE = 'online_control.pkl'
 
 '''
 Get trajectory
@@ -42,35 +43,37 @@ df = u.sim_data_to_params(sim_data)
 
 
 # Sample over balls around all the parameters
-df_train = u.sample_around_points(df,
-                                  radius={'z_init': .2,
-                                          's_init': .2,
-                                          'P_load': 0.01},
-                                  n_total=20000)
+#  df_train = u.sample_around_points(df,
+#                                    radius={'z_init': .2,
+#                                            's_init': .2,
+#                                            'P_load': 0.01},
+#                                    n_total=10000)
 
 
 # DEBUG Check number of strategies in simulation
-print("Get samples from simulation")
+#  print("Get samples from simulation")
+#  m_mlopt = mlopt.Optimizer(problem.objective, problem.constraints,
+#                            log_level=logging.DEBUG)
+#  m_mlopt._get_samples(df, parallel=False)
+#
+#  # Get number of strategies just from parameters
+#  print("Get samples normally")
 m_mlopt = mlopt.Optimizer(problem.objective, problem.constraints,
                           log_level=logging.DEBUG)
-m_mlopt._get_samples(df)
-
-# Get number of strategies just from parameters
-print("Get samples normally")
-m_mlopt = mlopt.Optimizer(problem.objective, problem.constraints,
-                          log_level=logging.DEBUG)
-m_mlopt._get_samples(df_train)
+#  m_mlopt._get_samples(df_train, parallel=False)
+#  m_mlopt.save_training_data(DATA_FILE, delete_existing=True)
 
 
 # Learn optimizer
-
 params = {
     'learning_rate': [0.001, 0.01, 0.1],
     'batch_size': [32, 64, 128],
     'n_epochs': [1000, 1500]
 }
+m_mlopt.load_training_data(DATA_FILE)
 m_mlopt.train(parallel=True,
               learner=mlopt.PYTORCH,
+              n_best=10,
               params=params)
 
 # Generate test trajectory and collect points
@@ -84,7 +87,7 @@ df_test = u.sim_data_to_params(sim_data_test)
 
 
 # Evaluate performance on those parameters
-res_general, res_detail = m_mlopt.performance(df_test, parallel=True)
+res_general, res_detail = m_mlopt.performance(df_test, parallel=False)
 res_general.to_csv("./output/online_control_general.csv")
 res_detail.to_csv("./output/online_control_detail.csv")
 
