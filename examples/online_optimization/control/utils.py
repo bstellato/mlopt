@@ -34,6 +34,7 @@ def P_load_profile(horizon,
     # Get only positive values
     P_des = np.maximum(P_des, 0)
 
+
     return P_des
 
 
@@ -41,11 +42,11 @@ def control_problem(T=10,
                     tau=1.0,
                     alpha=6.7 * 1e-04,
                     beta=0.2,
-                    gamma=80,
+                    gamma=0.08,
                     E_min=5.2,
                     E_max=10.2,
                     P_max=1.2,
-                    n_switch=2):
+                    n_switch=5):
 
     # Initial values
     E_init = cp.Parameter(name='E_init')
@@ -62,22 +63,25 @@ def control_problem(T=10,
     # t = T - 2 => t - T = -2 => past_d[0]
     # t = 0 => t - T = -T => past_d[T-2]
     #  past_d = np.zeros(T - 1)
-    past_d = cp.Parameter(T - 1, 'past_d')
+
+    # past_d[0] => t - T = 0 - T
+    # past_d[T-1] => t - T = T -1 - T = -1
+    past_d = cp.Parameter(T, 'past_d')
 
     # Variables
     E = cp.Variable(T, name='E')  # Capacitor
     P = cp.Variable(T, name='P')      # Cell power
-    s = cp.Variable(T, name='s')
-    z = cp.Variable(T, name='z', boolean=True)
+    s = cp.Variable(T+1, name='s')
+    z = cp.Variable(T, name='z')
     w = cp.Variable(T, name='w')
     d = cp.Variable(T, name='d', boolean=True)
-    d.value = np.zeros(T)
 
     # Constraints
     bounds = []
     bounds += [E_min <= E, E <= E_max]
     bounds += [0 <= P, P <= z * P_max]
     bounds += [-1 <= w, w <= 1]
+    bounds += [0. <= z, z <= 1]
 
     # Capacitor dynamics
     capacitor_dynamics = []
@@ -88,13 +92,8 @@ def control_problem(T=10,
     switch_positions = [z[t+1] == z[t] + w[t] for t in range(T-1)]
 
     switch_accumulation = []
-    for t in range(T - 1):
-        if t - T >= 0:
-            switch_accumulation += [s[t+1] == s[t] + d[t]
-                                    - d[t - T]]
-        else:
-            switch_accumulation += [s[t+1] == s[t] + d[t]
-                                    - past_d[abs(t - T + 2)]]
+    for t in range(T):
+        switch_accumulation += [s[t+1] == s[t] + d[t] - past_d[t]]
 
     # Number of switchings
     number_switchings = [s <= n_switch]
@@ -114,7 +113,8 @@ def control_problem(T=10,
     initial_values = [E[0] == E_init, z[0] == z_init, s[0] == s_init]
 
     constraints = bounds + \
-        capacitor_dynamics + initial_values + \
+        capacitor_dynamics + \
+        initial_values + \
         switch_positions + \
         switch_accumulation + \
         number_switchings + \
@@ -124,6 +124,10 @@ def control_problem(T=10,
     cost = 0
     for t in range(T-1):
         cost += alpha * (P[t]) ** 2 + beta * P[t] + gamma * z[t]
+
+    # DEBUG: Regularize for consistency
+    #  cost += 0.2 * cp.sum_squares(z)
+
     objective = cp.Minimize(cost)
 
     prob = cp.Problem(objective, constraints)
@@ -131,7 +135,7 @@ def control_problem(T=10,
     return prob
 
 
-def populate_parameters(problem, **params):
+def populate_parameters(problem, params):
     for p in problem.parameters():
         p.value = params[p.name()]
 
@@ -144,7 +148,7 @@ def get_solution(problem):
 
 
 def update_past_d(problem, past_d):
-    past_d_new = past_d[1:]
+    past_d_new = np.copy(past_d[1:])  # DEBUG
     for v in problem.variables():
         if v.name() == 'd':
             d_0 = v.value[0]
@@ -162,9 +166,21 @@ def sim_data_to_params(sim_data):
 
 
 def basic_loop_solve(problem, params):
-    populate_parameters(problem, **params)
-    problem.solve(solver=cp.GUROBI)
+    populate_parameters(problem, params)
+    problem.solve(solver=cp.MOSEK)
+    if problem.status != 'optimal':
+        import ipdb; ipdb.set_trace()
     return get_solution(problem)
+
+
+def is_sol_equal(sol1, sol2):
+    comparison = True
+    for k in sol1.keys():
+        if k is not 'sol':
+            if not np.allclose(sol1[k], sol2[k]):
+                print("Different %s" % k)
+                comparison = False
+    return comparison
 
 
 def simulate_loop(problem,
@@ -188,18 +204,26 @@ def simulate_loop(problem,
                   's_init': sim_data['s'][-1],
                   'past_d': sim_data['past_d'][-1],
                   'P_load': sim_data['P_load'][-1]}
+        # DEBUG: First try
         solve_fn(problem, params)
-        #  populate_parameters(problem, **params)
-        #  problem.solve(solver=cp.GUROBI)
-        sol = get_solution(problem)
+        sol1 = get_solution(problem)
+        #  solve_fn(problem, params)
+        #  sol2 = get_solution(problem)
+        #  if not is_sol_equal(sol1, sol2):
+        #      import ipdb; ipdb.set_trace()
+        #      # populate_parameters(problem,params); problem.solve(solver=cp.GUROBI, verbose=True)
+        sol = sol1
+
         sim_data['sol'].append(sol)
 
         # Apply and propagate state
         sim_data['E'].append(sim_data['E'][-1] +
                              tau * (sol['P'][0] - P_load[t]))
         sim_data['z'].append(sim_data['z'][-1] + sol['w'][0])
+        #  sim_data['s'].append(sim_data['s'][-1] + sol['d'][0]
+        #                       - sim_data['past_d'][-1][T_horizon - 2])
         sim_data['s'].append(sim_data['s'][-1] + sol['d'][0]
-                             - sim_data['past_d'][-1][T_horizon - 2])
+                             - sim_data['past_d'][-1][0])
         sim_data['past_d'].append(update_past_d(problem,
                                                 sim_data['past_d'][-1]))
         sim_data['P_load'].append(P_load[t+1:t+1 + T_horizon])
