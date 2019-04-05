@@ -33,5 +33,7 @@ echo $IAI_LICENSE_FILE
 
 
 
+export PYTHONHASHSEED=0
+
 # Online
 python examples/online_optimization/control/online_control.py
