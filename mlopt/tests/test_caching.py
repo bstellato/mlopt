@@ -5,6 +5,7 @@ import mlopt
 from mlopt.sampling import uniform_sphere_sample
 import pandas as pd
 import numpy.testing as npt
+import logging
 from mlopt.tests.settings import TEST_TOL as TOL
 
 
@@ -28,13 +29,14 @@ class TestCaching(unittest.TestCase):
         # Define optimizer
         # Force mosek to be single threaded
         m = mlopt.Optimizer(cp.Minimize(cost),
-                            constraints)
+                            constraints,
+                            log_level=logging.DEBUG)
 
         '''
         Sample points
         '''
         theta_bar = 10 * np.random.rand(n)
-        radius = 1.0
+        radius = 5.0
 
         '''
         Train and solve

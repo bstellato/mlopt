@@ -3,11 +3,12 @@ import cvxpy as cp
 # Define constants
 INFEAS_TOL = 1e-04
 SUBOPT_TOL = 1e-04
-TIGHT_CONSTRAINTS_TOL = 5e-5
+TIGHT_CONSTRAINTS_TOL = 1e-5
 DIVISION_TOL = 1e-6
 
 # Define default solver
 DEFAULT_SOLVER = cp.GUROBI
+#  DEFAULT_SOLVER = cp.CPLEX
 #  DEFAULT_SOLVER = cp.MOSEK
 #  DEFAULT_SOLVER = cp.ECOS
 
