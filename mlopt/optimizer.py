@@ -233,14 +233,14 @@ class Optimizer(object):
         n_samples = len(self.X_train)
         n_strategies = len(self.encoding)
 
-        print("n_samples ", n_samples)
-        print("n_strategies ", n_strategies)
+        logging.info("Condensing strategies")
+        logging.info("n_samples = %d, n_strategies = %d" % (n_samples, n_strategies))
 
-        # Compute sample-strategy pairs
+        # Compute costs
         alpha_strategies = [[] for _ in range(n_samples)]
-        alpha_samples = [[] for _ in range(n_strategies)]
-        cost_diff = {}
-        M = [0 for _ in range(self.n_strategies)]
+        #  alpha_samples = [[] for _ in range(n_strategies)]
+        c = {}
+        #  M = [0 for _ in range(self.n_strategies)]
         for i in tqdm(range(n_samples), desc='computing alpha strategies'):
 
             theta = self.X_train.iloc[i]
@@ -252,44 +252,121 @@ class Optimizer(object):
                 if np.abs(results['cost'] - self.obj_train[i]) \
                         < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
                     alpha_strategies[i].append(j)
-                    alpha_samples[j].append(i)
-                    cost_diff[i, j] = results['cost'] - self.obj_train[i]
-                    M[j] += 1
+                    #  alpha_samples[j].append(i)
+                    c[i, j] = np.abs(results['cost'] - self.obj_train[i])
+                    #  M[j] += 1
 
-        # Formulate problem
-        x = {(i, j): cp.Variable(nonneg=True)
+        # Formulate the problem
+        x = {(i, j): cp.Variable(boolean=True)
              for i in range(n_samples)
              for j in alpha_strategies[i]}
         y = cp.Variable(n_strategies, boolean=True)
 
-        cost = cp.sum(y)
+        # Cost
+        cost = cp.sum([x[i, j] * c[i, j]
+                       for i in range(n_samples)
+                       for j in alpha_strategies[i]])
+
+        # Constraints
         constr = []
         for i in range(n_samples):
             constr += [cp.sum([x[i, j] for j in alpha_strategies[i]]) == 1]
 
-        for j in range(self.n_strategies):
-            constr += [cp.sum([x[i, j] for i in alpha_samples[j]]) <= M[j] * y[j]]
+        constr += [x[i, j] <= y[j]
+                   for i in range(n_samples)
+                   for j in alpha_strategies[i]]
+
+        constr += [cp.sum(y) <= k_max_strategies]
 
         problem = cp.Problem(cp.Minimize(cost), constr)
         problem.solve(solver=cp.GUROBI, verbose=True)
 
-        # Get chosen strategies
-        chosen_strategies = np.where(y.value)[0]
 
-        # Assign new labels and encodings
-        self.encoding_condensed = [self.encoding[i] for i in chosen_strategies]
-        self.y_train_condensed = np.zeros(n_samples, dtype=int)
-        for i in range(n_samples):
-            # Get best strategy per sample
-            best_diff = np.inf
-            for j in alpha_strategies[i]:
-                if x[i, j].value == 1:  # Chosen
-                    if cost_diff[i, j] < best_diff:
-                        best_diff = cost_diff[i, j]
-                        best_strategy = j
+        # TODO:
+        # 0) Add k_max_strategies as CONSTANT + optimzier option
+        # 1) Get new strategies
+        # 2) Reassign encodings
+        # 3) Add parallelism
 
-            self.y_train_condensed[i] = best_strategy
 
+        #  # Get chosen strategies
+        #  chosen_strategies = np.where(y.value)[0]
+        #
+        #  # Assign new labels and encodings
+        #  self.encoding_condensed = [self.encoding[i] for i in chosen_strategies]
+        #  self.y_train_condensed = np.zeros(n_samples, dtype=int)
+        #  for i in range(n_samples):
+        #      # Get best strategy per sample
+        #      best_diff = np.inf
+        #      for j in alpha_strategies[i]:
+        #          if x[i, j].value == 1:  # Chosen
+        #              if cost_diff[i, j] < best_diff:
+        #                  best_diff = cost_diff[i, j]
+        #                  best_strategy = j
+        #
+        #      self.y_train_condensed[i] = best_strategy
+
+
+
+
+        # Julia's formulation
+        #  print("n_samples ", n_samples)
+        #  print("n_strategies ", n_strategies)
+        #
+        #  # Compute sample-strategy pairs
+        #  alpha_strategies = [[] for _ in range(n_samples)]
+        #  alpha_samples = [[] for _ in range(n_strategies)]
+        #  cost_diff = {}
+        #  M = [0 for _ in range(self.n_strategies)]
+        #  for i in tqdm(range(n_samples), desc='computing alpha strategies'):
+        #
+        #      theta = self.X_train.iloc[i]
+        #      self._problem.populate(theta)  # Populate parameters
+        #
+        #      for j in range(self.n_strategies):
+        #          strategy = self.encoding[j]
+        #          results = self._problem.solve_with_strategy(strategy)
+        #          if np.abs(results['cost'] - self.obj_train[i]) \
+        #                  < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
+        #              alpha_strategies[i].append(j)
+        #              alpha_samples[j].append(i)
+        #              cost_diff[i, j] = results['cost'] - self.obj_train[i]
+        #              M[j] += 1
+        #
+        #  # Formulate problem
+        #  x = {(i, j): cp.Variable(nonneg=True)
+        #       for i in range(n_samples)
+        #       for j in alpha_strategies[i]}
+        #  y = cp.Variable(n_strategies, boolean=True)
+        #
+        #  cost = cp.sum(y)
+        #  constr = []
+        #  for i in range(n_samples):
+        #      constr += [cp.sum([x[i, j] for j in alpha_strategies[i]]) == 1]
+        #
+        #  for j in range(self.n_strategies):
+        #      constr += [cp.sum([x[i, j] for i in alpha_samples[j]]) <= M[j] * y[j]]
+        #
+        #  problem = cp.Problem(cp.Minimize(cost), constr)
+        #  problem.solve(solver=cp.GUROBI, verbose=True)
+        #
+        #  # Get chosen strategies
+        #  chosen_strategies = np.where(y.value)[0]
+        #
+        #  # Assign new labels and encodings
+        #  self.encoding_condensed = [self.encoding[i] for i in chosen_strategies]
+        #  self.y_train_condensed = np.zeros(n_samples, dtype=int)
+        #  for i in range(n_samples):
+        #      # Get best strategy per sample
+        #      best_diff = np.inf
+        #      for j in alpha_strategies[i]:
+        #          if x[i, j].value == 1:  # Chosen
+        #              if cost_diff[i, j] < best_diff:
+        #                  best_diff = cost_diff[i, j]
+        #                  best_strategy = j
+        #
+        #      self.y_train_condensed[i] = best_strategy
+        #
     def train(self, X=None, sampling_fn=None,
               parallel=True,
               learner=DEFAULT_LEARNER,
