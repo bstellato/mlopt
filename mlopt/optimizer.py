@@ -1,5 +1,7 @@
 from mlopt.problem import Problem  # , _solve_with_strategy_multiprocess
-from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL
+import cvxpy as cp
+from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
+    ALPHA_CONDENSE
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
@@ -135,6 +137,7 @@ class Optimizer(object):
                 as data:
             data_dict = {'X_train': self.X_train,
                          'y_train': self.y_train,
+                         'obj_train': self.obj_train,
                          '_problem': self._problem,
                          'encoding': self.encoding}
             pkl.dump(data_dict, data)
@@ -160,6 +163,7 @@ class Optimizer(object):
         # Store data internally
         self.X_train = data_dict['X_train']
         self.y_train = data_dict['y_train']
+        self.obj_train = data_dict['obj_train']
         self._problem = data_dict['_problem']
         self.encoding = data_dict['encoding']
 
@@ -194,10 +198,11 @@ class Optimizer(object):
                                                      message="Compute " +
                                                      "tight constraints " +
                                                      "for training set")
-            test = {i: x for i, x in enumerate(results)
-                    if 'strategy' not in x.keys()}
-            logging.debug("number of infeasible points %d" % len(test))
+            #  test = {i: x for i, x in enumerate(results)
+            #          if 'strategy' not in x.keys()}
+            #  logging.debug("number of infeasible points %d" % len(test))
 
+            self.obj_train = [r['cost'] for r in results]
             train_strategies = [r['strategy'] for r in results]
 
             # Check if the problems are solvable
@@ -218,6 +223,72 @@ class Optimizer(object):
             # Create X_train, y_train and encoding from
             # sampling function
             self.sample(sampling_fn, parallel=parallel)
+
+        # Condense strategies
+        # TODO: Complete
+
+    def condense_strategies(self):
+        """Condense strategies using MIO."""
+
+        n_samples = len(self.X_train)
+        n_strategies = len(self.encoding)
+
+        print("n_samples ", n_samples)
+        print("n_strategies ", n_strategies)
+
+        # Compute sample-strategy pairs
+        alpha_strategies = [[] for _ in range(n_samples)]
+        alpha_samples = [[] for _ in range(n_strategies)]
+        cost_diff = {}
+        M = [0 for _ in range(self.n_strategies)]
+        for i in tqdm(range(n_samples), desc='computing alpha strategies'):
+
+            theta = self.X_train.iloc[i]
+            self._problem.populate(theta)  # Populate parameters
+
+            for j in range(self.n_strategies):
+                strategy = self.encoding[j]
+                results = self._problem.solve_with_strategy(strategy)
+                if np.abs(results['cost'] - self.obj_train[i]) \
+                        < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
+                    alpha_strategies[i].append(j)
+                    alpha_samples[j].append(i)
+                    cost_diff[i, j] = results['cost'] - self.obj_train[i]
+                    M[j] += 1
+
+        # Formulate problem
+        x = {(i, j): cp.Variable(nonneg=True)
+             for i in range(n_samples)
+             for j in alpha_strategies[i]}
+        y = cp.Variable(n_strategies, boolean=True)
+
+        cost = cp.sum(y)
+        constr = []
+        for i in range(n_samples):
+            constr += [cp.sum([x[i, j] for j in alpha_strategies[i]]) == 1]
+
+        for j in range(self.n_strategies):
+            constr += [cp.sum([x[i, j] for i in alpha_samples[j]]) <= M[j] * y[j]]
+
+        problem = cp.Problem(cp.Minimize(cost), constr)
+        problem.solve(solver=cp.GUROBI, verbose=True)
+
+        # Get chosen strategies
+        chosen_strategies = np.where(y.value)[0]
+
+        # Assign new labels and encodings
+        self.encoding_condensed = [self.encoding[i] for i in chosen_strategies]
+        self.y_train_condensed = np.zeros(n_samples, dtype=int)
+        for i in range(n_samples):
+            # Get best strategy per sample
+            best_diff = np.inf
+            for j in alpha_strategies[i]:
+                if x[i, j].value == 1:  # Chosen
+                    if cost_diff[i, j] < best_diff:
+                        best_diff = cost_diff[i, j]
+                        best_strategy = j
+
+            self.y_train_condensed[i] = best_strategy
 
     def train(self, X=None, sampling_fn=None,
               parallel=True,
@@ -565,7 +636,9 @@ class Optimizer(object):
 
         return optimizer
 
-    def performance(self, theta, parallel=True):
+    def performance(self, theta,
+                    parallel=True,
+                    use_cache=True):
         """
         Evaluate optimizer performance on data theta by comparing the
         solution to the optimal one.
@@ -599,7 +672,8 @@ class Optimizer(object):
         # Get predicted strategy for each point
         results_pred = self.solve(theta,
                                   message="Predict tight constraints for " +
-                                  "test set")
+                                  "test set",
+                                  use_cache=use_cache)
         time_pred = [r['time'] for r in results_pred]
         #  strategy_pred = [r['strategy'] for r in results_pred]
         cost_pred = [r['cost'] for r in results_pred]

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=10
 #SBATCH --mem-per-cpu=8G
 #SBATCH --gres=gpu:1
 #SBATCH --partition=sched_mit_sloan_gpu
@@ -14,7 +14,7 @@
 module load sloan/cuda/9.0
 
 # Activate environment
-source activate python36
+source activate python37
 
 SLURM_PARTITION=`squeue -h -o "%P" -j$SLURM_JOB_ID`;
 if [[ $SLURM_PARTITION == *"interactive"* ]]; then
@@ -32,8 +32,6 @@ echo $IAI_LICENSE_FILE
 # python examples/paper/benchmarks/control/control.py
 
 
-
-export PYTHONHASHSEED=0
 
 # Online
 python examples/online_optimization/control/online_control.py

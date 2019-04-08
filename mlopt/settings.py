@@ -3,8 +3,9 @@ import cvxpy as cp
 # Define constants
 INFEAS_TOL = 1e-04
 SUBOPT_TOL = 1e-04
-TIGHT_CONSTRAINTS_TOL = 1e-5
+TIGHT_CONSTRAINTS_TOL = 1e-4
 DIVISION_TOL = 1e-6
+ALPHA_CONDENSE = 0.05
 
 # Define default solver
 DEFAULT_SOLVER = cp.GUROBI

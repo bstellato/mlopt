@@ -59,7 +59,7 @@ class TestProblem(unittest.TestCase):
         cost_cvxpy = cost.value
         problem = Problem(cp.Minimize(cost), constraints)
         problem.solve()
-        x_problem = deepcopy(x.value)
+        x_problem = x.value
         cost_problem = cost.value
 
         npt.assert_almost_equal(x_problem, x_cvxpy, decimal=TOL)

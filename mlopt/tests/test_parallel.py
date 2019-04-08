@@ -65,7 +65,6 @@ class TestParallel(unittest.TestCase):
             npt.assert_array_almost_equal(serial['x'],
                                           parallel['x'],
                                           decimal=TOL)
-
             # Compare cost
             npt.assert_array_almost_equal(serial['cost'],
                                           parallel['cost'],

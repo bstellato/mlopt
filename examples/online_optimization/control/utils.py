@@ -167,7 +167,8 @@ def sim_data_to_params(sim_data):
 
 def basic_loop_solve(problem, params):
     populate_parameters(problem, params)
-    problem.solve(solver=cp.MOSEK)
+    #  problem.get_problem_data(cp.GUROBI)
+    problem.solve(solver=cp.GUROBI)
     if problem.status != 'optimal':
         import ipdb; ipdb.set_trace()
     return get_solution(problem)

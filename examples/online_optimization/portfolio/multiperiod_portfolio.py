@@ -11,6 +11,7 @@ import scipy.sparse as spa
 import cvxpy as cp
 import pandas as pd
 import datetime as dt
+import logging
 
 
 np.random.seed(1)
@@ -65,7 +66,9 @@ def create_mlopt_problem(df):
 
         constraints += [cp.sum(w[t]) == 1.]
 
-    return mlopt.Optimizer(cp.Maximize(cost), constraints)
+    return mlopt.Optimizer(cp.Maximize(cost),
+                           constraints,
+                           log_level=logging.INFO)
 
 
 m = create_mlopt_problem(df_real)

@@ -550,7 +550,7 @@ class Problem(object):
             #                                                   for i in range(n)])),
             #                      total=n))
             results = list(tqdm(pool.imap(self.populate_and_solve,
-                                          [theta.iloc[i, :]
+                                          [theta.iloc[i]
                                            for i in range(n)]),
                                 total=n))
             pool.close()
@@ -561,6 +561,6 @@ class Problem(object):
             results = []
             for i in tqdm(range(n), desc=message + " (serial)"):
                 #  results.append(populate_and_solve((self, theta.iloc[i, :])))
-                results.append(self.populate_and_solve(theta.iloc[i, :]))
+                results.append(self.populate_and_solve(theta.iloc[i]))
 
         return results
