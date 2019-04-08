@@ -1,7 +1,8 @@
 from mlopt.problem import Problem  # , _solve_with_strategy_multiprocess
+from multiprocessing import Pool
 import cvxpy as cp
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
-    ALPHA_CONDENSE
+    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
@@ -227,8 +228,57 @@ class Optimizer(object):
         # Condense strategies
         # TODO: Complete
 
-    def condense_strategies(self):
-        """Condense strategies using MIO."""
+    def _compute_cost_differences(self, i):
+        """Compute cost differences for sample i.
+
+        Parameters
+        ----------
+        i : int
+            Sample index.
+
+        Returns
+        -------
+        int list
+            List of strategies compatible with sample i with degradation
+            less than alpha %.
+        dict
+            Dictionary of cost differences between optimal strategy for sample
+            i and strategy j.
+        """
+
+        theta = self.X_train.iloc[i]
+        self._problem.populate(theta)  # Populate parameters
+
+        c = {}
+        alpha_strategies = []
+
+        for j in range(self.n_strategies):
+            strategy = self.encoding[j]
+            results = self._problem.solve_with_strategy(strategy)
+            if np.abs(results['cost'] - self.obj_train[i]) \
+                    < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
+                alpha_strategies.append(j)
+                c[i, j] = np.abs(results['cost'] - self.obj_train[i])/np.abs(self.obj_train[i] + DIVISION_TOL)
+
+
+        return alpha_strategies, c
+
+    def condense_strategies(self,
+                            solver=DEFAULT_SOLVER,
+                            k_max_strategies=K_MAX_STRATEGIES,
+                            parallel=True):
+        """Condense strategies using MIO.
+
+
+        Parameters
+        ----------
+        solver : string
+            Solver to use.
+        k_max_strategies : int
+            Maximum number of strategies allowed.
+        parallel : bool
+            Parallelize strategies computations over samples.
+        """
 
         n_samples = len(self.X_train)
         n_strategies = len(self.encoding)
@@ -238,23 +288,46 @@ class Optimizer(object):
 
         # Compute costs
         alpha_strategies = [[] for _ in range(n_samples)]
-        #  alpha_samples = [[] for _ in range(n_strategies)]
         c = {}
-        #  M = [0 for _ in range(self.n_strategies)]
-        for i in tqdm(range(n_samples), desc='computing alpha strategies'):
 
-            theta = self.X_train.iloc[i]
-            self._problem.populate(theta)  # Populate parameters
+        if parallel:
+            n_proc = get_n_processes(n_samples)
+            logging.info("Computing alpha strategies (parallel %i processors)..." %
+                         n_proc)
+            pool = Pool(processes=n_proc)
 
-            for j in range(self.n_strategies):
-                strategy = self.encoding[j]
-                results = self._problem.solve_with_strategy(strategy)
-                if np.abs(results['cost'] - self.obj_train[i]) \
-                        < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
-                    alpha_strategies[i].append(j)
-                    #  alpha_samples[j].append(i)
-                    c[i, j] = np.abs(results['cost'] - self.obj_train[i])
-                    #  M[j] += 1
+            results = list(tqdm(pool.imap(self._compute_cost_differences,
+                                          range(n_samples)),
+                                total=n_samples))
+
+            pool.close()
+            pool.join()
+
+            for i in range(n_samples):
+                alpha_strategies[i] = results[i][0]
+                c.update(results[i][1])
+
+        else:
+
+            for i in tqdm(range(n_samples), desc='Computing alpha strategies (serial)'):
+                alpha_strategies[i], c_i = self._compute_cost_differences(i)
+                c.update(c_i)
+
+        # Older code
+        #  for i in tqdm(range(n_samples), desc='computing alpha strategies'):
+        #
+        #      theta = self.X_train.iloc[i]
+        #      self._problem.populate(theta)  # Populate parameters
+        #
+        #      for j in range(self.n_strategies):
+        #          strategy = self.encoding[j]
+        #          results = self._problem.solve_with_strategy(strategy)
+        #          if np.abs(results['cost'] - self.obj_train[i]) \
+        #                  < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
+        #              alpha_strategiedfs[i].append(j)
+        #              c[i, j] = np.abs(results['cost'] - self.obj_train[i])
+
+        logging.info("Formulating and solving MIO condensing problem.")
 
         # Formulate the problem
         x = {(i, j): cp.Variable(boolean=True)
@@ -262,10 +335,10 @@ class Optimizer(object):
              for j in alpha_strategies[i]}
         y = cp.Variable(n_strategies, boolean=True)
 
-        # Cost
-        cost = cp.sum([x[i, j] * c[i, j]
-                       for i in range(n_samples)
-                       for j in alpha_strategies[i]])
+        # Cost: average degradation over samples
+        cost = 1. / n_samples * cp.sum([x[i, j] * c[i, j]
+                                        for i in range(n_samples)
+                                        for j in alpha_strategies[i]])
 
         # Constraints
         constr = []
@@ -279,34 +352,28 @@ class Optimizer(object):
         constr += [cp.sum(y) <= k_max_strategies]
 
         problem = cp.Problem(cp.Minimize(cost), constr)
-        problem.solve(solver=cp.GUROBI, verbose=True)
+        problem.solve(solver=solver, verbose=True)
+
+        logging.info("Average cost degradation = %.2e %%" % 100 * problem.value)
+
+        # Get chosen strategies
+        chosen_strategies = np.where(y.value)[0]
+
+        # Assign new labels and encodings
+        self.encoding_condensed = [self.encoding[i] for i in chosen_strategies]
+        self.y_train_condensed = np.zeros(n_samples, dtype=int)
+        for i in range(n_samples):
+            # Get best strategy per sample
+            for j in alpha_strategies[i]:
+                if x[i, j].value == 1:
+                    self.y_train_condensed[i] = j
+                    break
 
 
         # TODO:
-        # 0) Add k_max_strategies as CONSTANT + optimzier option
         # 1) Get new strategies
         # 2) Reassign encodings
         # 3) Add parallelism
-
-
-        #  # Get chosen strategies
-        #  chosen_strategies = np.where(y.value)[0]
-        #
-        #  # Assign new labels and encodings
-        #  self.encoding_condensed = [self.encoding[i] for i in chosen_strategies]
-        #  self.y_train_condensed = np.zeros(n_samples, dtype=int)
-        #  for i in range(n_samples):
-        #      # Get best strategy per sample
-        #      best_diff = np.inf
-        #      for j in alpha_strategies[i]:
-        #          if x[i, j].value == 1:  # Chosen
-        #              if cost_diff[i, j] < best_diff:
-        #                  best_diff = cost_diff[i, j]
-        #                  best_strategy = j
-        #
-        #      self.y_train_condensed[i] = best_strategy
-
-
 
 
         # Julia's formulation
@@ -366,7 +433,7 @@ class Optimizer(object):
         #                  best_strategy = j
         #
         #      self.y_train_condensed[i] = best_strategy
-        #
+
     def train(self, X=None, sampling_fn=None,
               parallel=True,
               learner=DEFAULT_LEARNER,
