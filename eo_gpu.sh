@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=20
 #SBATCH --mem-per-cpu=8G
 #SBATCH --gres=gpu:1
 #SBATCH --partition=sched_mit_sloan_gpu
@@ -34,4 +34,4 @@ echo $IAI_LICENSE_FILE
 
 
 # Online
-python examples/online_optimization/control/online_control.py
+python examples/online_optimization/control/online_control_condense.py

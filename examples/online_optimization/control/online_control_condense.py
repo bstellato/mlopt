@@ -30,10 +30,10 @@ init_data = {'E': [7.7],
              'P_load': [P_load[:T_horizon]],
              'sol': []}
 
-sim_data = u.simulate_loop(problem, init_data,
-                           u.basic_loop_solve,
-                           P_load,
-                           T_total)
+#  sim_data = u.simulate_loop(problem, init_data,
+#                             u.basic_loop_solve,
+#                             P_load,
+#                             T_total)
 
 
 # Store simulation data as parameter values (avoid sol parameter)
@@ -62,7 +62,8 @@ m_mlopt = mlopt.Optimizer(problem.objective, problem.constraints,
 #      'n_epochs': [1000, 1500]
 #  }
 m_mlopt.load_training_data(DATA_FILE)
-m_mlopt.condense_strategies(k_max_strategies=100, parallel=False)
+m_mlopt.condense_strategies(k_max_strategies=100, parallel=True)
+m_mlopt.save_training_data(DATA_FILE, delete_existing=True)
 
 #  m_mlopt.train(parallel=False,
 #                learner=mlopt.PYTORCH,

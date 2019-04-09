@@ -141,6 +141,13 @@ class Optimizer(object):
                          'obj_train': self.obj_train,
                          '_problem': self._problem,
                          'encoding': self.encoding}
+
+            # Store full encodings backup if condensing happened
+            if hasattr(self, 'y_train_full') and \
+                    hasattr(self, 'encoding_full'):
+                data_dict['y_train_full'] = self.y_train_full
+                data_dict['encoding_full'] = self.encoding_full
+
             pkl.dump(data_dict, data)
 
     def load_training_data(self, file_name):
@@ -167,6 +174,12 @@ class Optimizer(object):
         self.obj_train = data_dict['obj_train']
         self._problem = data_dict['_problem']
         self.encoding = data_dict['encoding']
+
+        # Full strategies backup after condensing
+        if ('y_train_full' in data_dict) and \
+                ('encoding_train_full' in data_dict):
+            self.y_train_full = data_dict['y_train_full']
+            self.encoding_full = data_dict['encoding_full']
 
         # Compute Good turing estimates
         self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
@@ -226,9 +239,10 @@ class Optimizer(object):
             self.sample(sampling_fn, parallel=parallel)
 
         # Condense strategies
-        # TODO: Complete
+        if len(self.encoding) > K_MAX_STRATEGIES:
+            self.condense_strategies(parallel=parallel)
 
-    def _compute_cost_differences(self, i):
+    def _compute_cost_differences(self, i, pool=None):
         """Compute cost differences for sample i.
 
         Parameters
@@ -244,6 +258,9 @@ class Optimizer(object):
         dict
             Dictionary of cost differences between optimal strategy for sample
             i and strategy j.
+        pool : Pool
+            Pool of workers to distribute process to.
+
         """
 
         theta = self.X_train.iloc[i]
@@ -252,14 +269,22 @@ class Optimizer(object):
         c = {}
         alpha_strategies = []
 
+
+        # Parallelize solution over strategies
+        if pool is not None:
+            results = pool.map(self._problem.solve_with_strategy, self.encoding)
+        else:
+            results = []
+            for strategy in self.encoding:
+                results.append(self._problem.solve_with_strategy(strategy))
+
+
+        # Process results
         for j in range(self.n_strategies):
-            strategy = self.encoding[j]
-            results = self._problem.solve_with_strategy(strategy)
-            if np.abs(results['cost'] - self.obj_train[i]) \
+            if np.abs(results[j]['cost'] - self.obj_train[i]) \
                     < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
                 alpha_strategies.append(j)
-                c[i, j] = np.abs(results['cost'] - self.obj_train[i])/np.abs(self.obj_train[i] + DIVISION_TOL)
-
+                c[i, j] = np.abs(results[j]['cost'] - self.obj_train[i])/np.abs(self.obj_train[i] + DIVISION_TOL)
 
         return alpha_strategies, c
 
@@ -295,23 +320,37 @@ class Optimizer(object):
             logging.info("Computing alpha strategies (parallel %i processors)..." %
                          n_proc)
             pool = Pool(processes=n_proc)
-
-            results = list(tqdm(pool.imap(self._compute_cost_differences,
-                                          range(n_samples)),
-                                total=n_samples))
-
-            pool.close()
-            pool.join()
-
-            for i in range(n_samples):
-                alpha_strategies[i] = results[i][0]
-                c.update(results[i][1])
-
         else:
+            logging.info("Computing alpha strategies (serial)...")
+            pool = None
 
-            for i in tqdm(range(n_samples), desc='Computing alpha strategies (serial)'):
-                alpha_strategies[i], c_i = self._compute_cost_differences(i)
-                c.update(c_i)
+        for i in tqdm(range(n_samples), desc='Computing alpha strategies'):
+            alpha_strategies[i], c_i = self._compute_cost_differences(i, pool=pool)
+            c.update(c_i)
+
+        # Old parallel
+        #  if parallel:
+        #      n_proc = get_n_processes(n_samples)
+        #      logging.info("Computing alpha strategies (parallel %i processors)..." %
+        #                   n_proc)
+        #      pool = Pool(processes=n_proc)
+        #
+        #      results = list(tqdm(pool.imap(self._compute_cost_differences,
+        #                                    range(n_samples)),
+        #                          total=n_samples))
+        #
+        #      pool.close()
+        #      pool.join()
+        #
+        #      for i in range(n_samples):
+        #          alpha_strategies[i] = results[i][0]
+        #          c.update(results[i][1])
+        #
+        #  else:
+        #
+        #      for i in tqdm(range(n_samples), desc='Computing alpha strategies (serial)'):
+        #          alpha_strategies[i], c_i = self._compute_cost_differences(i)
+        #          c.update(c_i)
 
         # Older code
         #  for i in tqdm(range(n_samples), desc='computing alpha strategies'):
@@ -354,27 +393,24 @@ class Optimizer(object):
         problem = cp.Problem(cp.Minimize(cost), constr)
         problem.solve(solver=solver, verbose=True)
 
-        logging.info("Average cost degradation = %.2e %%" % 100 * problem.value)
+        logging.info("Average cost degradation = %.2e %%" % (100 * problem.value))
 
         # Get chosen strategies
         chosen_strategies = np.where(y.value)[0]
 
+        # Backup full strategies
+        self.encoding_full = self.encoding
+        self.y_train_full = self.y_train
+
         # Assign new labels and encodings
-        self.encoding_condensed = [self.encoding[i] for i in chosen_strategies]
-        self.y_train_condensed = np.zeros(n_samples, dtype=int)
+        self.encoding = [self.encoding[i] for i in chosen_strategies]
+        self.y_train = np.zeros(n_samples, dtype=int)
         for i in range(n_samples):
             # Get best strategy per sample
             for j in alpha_strategies[i]:
                 if x[i, j].value == 1:
                     self.y_train_condensed[i] = j
                     break
-
-
-        # TODO:
-        # 1) Get new strategies
-        # 2) Reassign encodings
-        # 3) Add parallelism
-
 
         # Julia's formulation
         #  print("n_samples ", n_samples)
