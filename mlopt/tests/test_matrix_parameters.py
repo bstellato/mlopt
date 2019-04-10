@@ -125,9 +125,9 @@ class TestMatrixParams(unittest.TestCase):
         #
         #  # Train and test using pytorch
         params = {
-            "learning_rate": [0.01],
-            "batch_size": [32],
-            "n_epochs": [100],
+            "learning_rate": [0.001],
+            "batch_size": [64],
+            "n_epochs": [200],
         }
         m.train(df_train, parallel=True, learner=PYTORCH, params=params)
 

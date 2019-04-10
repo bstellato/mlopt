@@ -36,7 +36,7 @@ class TestCaching(unittest.TestCase):
         Sample points
         '''
         theta_bar = 10 * np.random.rand(n)
-        radius = 5.0
+        radius = 1.0
 
         '''
         Train and solve
@@ -54,7 +54,8 @@ class TestCaching(unittest.TestCase):
         params = {
             'learning_rate': [0.01],
             'batch_size': [100],
-            'n_epochs': [200]
+            'n_epochs': [200],
+            'n_layers': [5]
         }
 
         m.train(df, parallel=False, learner=mlopt.PYTORCH, params=params)

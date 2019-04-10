@@ -74,7 +74,9 @@ class TestSave(unittest.TestCase):
 
         nn_params = {'learning_rate': [0.01],
                      'batch_size': [32],
-                     'n_epochs': [100]}
+                     'n_epochs': [100],
+                     'n_layers': [5]
+                     }
 
         for learner in self.learners:
             with tempfile.TemporaryDirectory() as tmpdir:

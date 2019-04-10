@@ -199,7 +199,8 @@ class Optimizer(object):
             raise ValueError(err)
 
         # Check if data is passed, otherwise train
-        if (X is not None) and not self.samples_present():
+        #  if (X is not None) and not self.samples_present():
+        if X is not None:
             logging.info("Use new data")
             self.X_train = X
             self.y_train = None
@@ -269,22 +270,22 @@ class Optimizer(object):
         c = {}
         alpha_strategies = []
 
-
         # Parallelize solution over strategies
         if pool is not None:
-            results = pool.map(self._problem.solve_with_strategy, self.encoding)
+            logging.debug("Applying pool to sample %i" % i)
+            results = pool.map(self._problem.solve_with_strategy,
+                               self.encoding)
         else:
-            results = []
-            for strategy in self.encoding:
-                results.append(self._problem.solve_with_strategy(strategy))
-
+            results = [self._problem.solve_with_strategy(s)
+                       for s in self.encoding]
 
         # Process results
         for j in range(self.n_strategies):
             if np.abs(results[j]['cost'] - self.obj_train[i]) \
                     < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
                 alpha_strategies.append(j)
-                c[i, j] = np.abs(results[j]['cost'] - self.obj_train[i])/np.abs(self.obj_train[i] + DIVISION_TOL)
+                c[i, j] = np.abs(results[j]['cost'] - self.obj_train[i]) / \
+                    np.abs(self.obj_train[i] + DIVISION_TOL)
 
         return alpha_strategies, c
 
@@ -309,7 +310,8 @@ class Optimizer(object):
         n_strategies = len(self.encoding)
 
         logging.info("Condensing strategies")
-        logging.info("n_samples = %d, n_strategies = %d" % (n_samples, n_strategies))
+        logging.info("n_samples = %d, n_strategies = %d" %
+                     (n_samples, n_strategies))
 
         # Compute costs
         alpha_strategies = [[] for _ in range(n_samples)]
@@ -317,7 +319,8 @@ class Optimizer(object):
 
         if parallel:
             n_proc = get_n_processes(n_samples)
-            logging.info("Computing alpha strategies (parallel %i processors)..." %
+            logging.info("Computing alpha strategies "
+                         "(parallel %i processors)..." %
                          n_proc)
             pool = Pool(processes=n_proc)
         else:
@@ -325,7 +328,8 @@ class Optimizer(object):
             pool = None
 
         for i in tqdm(range(n_samples), desc='Computing alpha strategies'):
-            alpha_strategies[i], c_i = self._compute_cost_differences(i, pool=pool)
+            alpha_strategies[i], c_i = \
+                self._compute_cost_differences(i, pool=pool)
             c.update(c_i)
 
         # Old parallel
@@ -393,7 +397,8 @@ class Optimizer(object):
         problem = cp.Problem(cp.Minimize(cost), constr)
         problem.solve(solver=solver, verbose=True)
 
-        logging.info("Average cost degradation = %.2e %%" % (100 * problem.value))
+        logging.info("Average cost degradation = %.2e %%" %
+                     (100 * problem.value))
 
         # Get chosen strategies
         chosen_strategies = np.where(y.value)[0]
@@ -409,7 +414,7 @@ class Optimizer(object):
             # Get best strategy per sample
             for j in alpha_strategies[i]:
                 if x[i, j].value == 1:
-                    self.y_train_condensed[i] = j
+                    self.y_train[i] = j
                     break
 
         # Julia's formulation

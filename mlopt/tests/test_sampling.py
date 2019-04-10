@@ -71,7 +71,8 @@ class TestSampling(unittest.TestCase):
                              learner=PYTORCH,
                              params={'learning_rate': [0.01],
                                      'batch_size': [32],
-                                     'n_epochs': [1000]})
+                                     'n_epochs': [200],
+                                     'n_layers': [5]})
 
         # Check tolerance
         self.assertTrue(self.optimizer._sampler.good_turing_smooth
