@@ -1,5 +1,6 @@
 from mlopt.problem import Problem  # , _solve_with_strategy_multiprocess
 from multiprocessing import Pool
+from itertools import repeat
 import cvxpy as cp
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
     ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL
@@ -7,12 +8,10 @@ from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.utils import n_features, accuracy, suboptimality
-from multiprocessing import Pool
-#  from pathos.multiprocessing import ProcessingPool as Pool
 from mlopt.utils import get_n_processes
 from mlopt.kkt import KKT, create_kkt_matrix
-from pypardiso import factorized
-#  from scipy.sparse.linalg import factorized
+#  from pypardiso import factorized
+from scipy.sparse.linalg import factorized
 import cvxpy.settings as cps
 import pandas as pd
 import numpy as np
@@ -243,51 +242,35 @@ class Optimizer(object):
         if len(self.encoding) > K_MAX_STRATEGIES:
             self.condense_strategies(parallel=parallel)
 
-    def _compute_cost_differences(self, i, pool=None):
-        """Compute cost differences for sample i.
+    @staticmethod
+    def _compute_cost_differences(args):
+        """
+        Compute cost differences for sample theta.
 
-        Parameters
-        ----------
-        i : int
-            Sample index.
-
-        Returns
-        -------
-        int list
-            List of strategies compatible with sample i with degradation
-            less than alpha %.
-        dict
-            Dictionary of cost differences between optimal strategy for sample
-            i and strategy j.
-        pool : Pool
-            Pool of workers to distribute process to.
+        To be used in parallel multiprocessing.
 
         """
+        i, theta, obj_train, problem, encoding = args
 
-        theta = self.X_train.iloc[i]
-        self._problem.populate(theta)  # Populate parameters
+        n_strategies = len(encoding)
+
+        problem.populate(theta)  # Populate parameters
 
         c = {}
         alpha_strategies = []
 
-        # Parallelize solution over strategies
-        if pool is not None:
-            logging.debug("Applying pool to sample %i" % i)
-            results = pool.map(self._problem.solve_with_strategy,
-                               self.encoding)
-        else:
-            results = [self._problem.solve_with_strategy(s)
-                       for s in self.encoding]
+        # Serialized solution over the strategies
+        results = [problem.solve_with_strategy(s) for s in encoding]
 
         # Process results
-        for j in range(self.n_strategies):
-            if np.abs(results[j]['cost'] - self.obj_train[i]) \
-                    < ALPHA_CONDENSE * np.abs(self.obj_train[i]):
+        for j in range(n_strategies):
+            if np.abs(results[j]['cost'] - obj_train) \
+                    < ALPHA_CONDENSE * np.abs(obj_train):
                 alpha_strategies.append(j)
-                c[i, j] = np.abs(results[j]['cost'] - self.obj_train[i]) / \
-                    np.abs(self.obj_train[i] + DIVISION_TOL)
+                c[j] = np.abs(results[j]['cost'] - obj_train) / \
+                    np.abs(obj_train + DIVISION_TOL)
 
-        return alpha_strategies, c
+        return alpha_strategies, c, i
 
     def condense_strategies(self,
                             solver=DEFAULT_SOLVER,
@@ -318,43 +301,50 @@ class Optimizer(object):
         c = {}
 
         if parallel:
+            theta_arr = [self.X_train.iloc[i] for i in range(n_samples)]
             n_proc = get_n_processes(n_samples)
-            logging.info("Computing alpha strategies "
-                         "(parallel %i processors)..." %
-                         n_proc)
-            pool = Pool(processes=n_proc)
+            with Pool(processes=n_proc) as pool:
+                logging.info("Computing alpha strategies "
+                             "(parallel %i processors)..." %
+                             n_proc)
+
+                results = list(tqdm(pool.imap_unordered(
+                    self._compute_cost_differences,
+                    zip(range(n_samples), theta_arr, self.obj_train,
+                        repeat(self._problem), repeat(self.encoding))
+                    ), total=n_samples))
+
+            for r in results:
+                i, c_i = r[-1], r[1]
+                alpha_strategies[i] = r[0]
+                c.update({(i, j): val for j, val in c_i.items()})
+
         else:
-            logging.info("Computing alpha strategies (serial)...")
-            pool = None
 
-        for i in tqdm(range(n_samples), desc='Computing alpha strategies'):
-            alpha_strategies[i], c_i = \
-                self._compute_cost_differences(i, pool=pool)
-            c.update(c_i)
+            for i in tqdm(range(n_samples),
+                          desc='Computing alpha strategies (serial)'):
+                alpha_strategies[i], c_i, _ = \
+                    self._compute_cost_differences((i, self.X_train.iloc[i],
+                                                    self.obj_train[i],
+                                                    self._problem,
+                                                    self.encoding))
+                c.update({(i, j): val for j, val in c_i.items()})
 
-        # Old parallel
+        # Parallel try
         #  if parallel:
         #      n_proc = get_n_processes(n_samples)
-        #      logging.info("Computing alpha strategies (parallel %i processors)..." %
+        #      logging.info("Computing alpha strategies "
+        #                   "(parallel %i processors)..." %
         #                   n_proc)
         #      pool = Pool(processes=n_proc)
-        #
-        #      results = list(tqdm(pool.imap(self._compute_cost_differences,
-        #                                    range(n_samples)),
-        #                          total=n_samples))
-        #
-        #      pool.close()
-        #      pool.join()
-        #
-        #      for i in range(n_samples):
-        #          alpha_strategies[i] = results[i][0]
-        #          c.update(results[i][1])
-        #
         #  else:
+        #      logging.info("Computing alpha strategies (serial)...")
+        #      pool = None
         #
-        #      for i in tqdm(range(n_samples), desc='Computing alpha strategies (serial)'):
-        #          alpha_strategies[i], c_i = self._compute_cost_differences(i)
-        #          c.update(c_i)
+        #  for i in tqdm(range(n_samples), desc='Computing alpha strategies'):
+        #      alpha_strategies[i], c_i = \
+        #          self._compute_cost_differences(i, pool=pool)
+        #      c.update(c_i)
 
         # Older code
         #  for i in tqdm(range(n_samples), desc='computing alpha strategies'):

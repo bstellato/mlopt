@@ -20,9 +20,10 @@ import cvxpy.settings as s
 import scipy.sparse as spa
 from cvxpy.reductions import Solution
 import numpy as np
-from pypardiso import spsolve
-from pypardiso.pardiso_wrapper import PyPardisoError
-#  from scipy.sparse.linalg import spsolve
+
+#  from pypardiso import spsolve
+#  from pypardiso.pardiso_wrapper import PyPardisoError
+from scipy.sparse.linalg import spsolve
 import time
 import logging
 
@@ -111,8 +112,9 @@ class KKTSolver(QpSolver):
 
             t_start = time.time()
             try:
-                x = spsolve(KKT, rhs)
-            except (ValueError, PyPardisoError):
+                x = spsolve(KKT, rhs, use_umfpack=True)
+            #  except (ValueError, PyPardisoError):
+            except:
                 x = np.full(n_var + n_con, np.nan)
             t_end = time.time()
 
