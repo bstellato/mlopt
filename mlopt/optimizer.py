@@ -339,6 +339,11 @@ class Optimizer(object):
                                                     self.encoding))
                 c.update({(i, j): val for j, val in c_i.items()})
 
+        n_pairs = sum(len(x) for x in alpha_strategies)
+        logging.info("Pruned %.2f %% suboptimal pairs" %
+                     (100*(1 - n_pairs / (n_samples * n_strategies))))
+        logging.info("Remaining number of pairs %d" % n_pairs)
+
         self._c = c
         self._alpha_strategies = alpha_strategies
 
@@ -357,8 +362,8 @@ class Optimizer(object):
         parallel : bool
             Parallelize strategies computations over samples.
         """
-        if (self._c is None) or \
-                (self._alpha_strategies is None):
+        if not hasattr(self, '_c') or \
+                not hasattr(self, '_alpha_strategies'):
             self._compute_sample_strategy_pairs()
         c = self._c
         alpha_strategies = self._alpha_strategies
@@ -389,7 +394,7 @@ class Optimizer(object):
             for j in alpha_strategies[i]:
                 model.addConstr(x[i, j] <= y[j])
         model.addConstr(grb.quicksum(y[j] for j in range(n_strategies))
-                        <= k_max_strategies)
+                        == k_max_strategies)
 
         # Objective
         model.setObjective(1. / n_samples *

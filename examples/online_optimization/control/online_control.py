@@ -64,26 +64,24 @@ def main():
     # Get samples
     #  m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
     #  m_mlopt._compute_sample_strategy_pairs()
-    #  m_mlopt.save_training_data(DATA_FILE, delete_existing=True)
 
     # Load training data
-    #  m_mlopt.load_training_data(DATA_FILE)
-    #  m_mlopt.condense_strategies(parallel=True)
-    #  m_mlopt.save_training_data(EXAMPLE_NAME + '_condensed.pkl',
-    #                             delete_existing=True)
-
-    m_mlopt = mlopt.Optimizer(problem.objective, problem.constraints,
-                              log_level=logging.INFO)
-    m_mlopt.load_training_data(EXAMPLE_NAME + '_condensed.pkl')
+    m_mlopt.load_training_data(DATA_FILE)
+    m_mlopt.condense_strategies(parallel=True)
+    m_mlopt.save_training_data(EXAMPLE_NAME + '_condensed.pkl',
+                               delete_existing=True)
 
     # Learn optimizer
     params = {
+        #  'learning_rate': [0.01],
+        #  'batch_size': [64],
+        #  'n_epochs': [200],
+        #  'n_layers': [10]
         'learning_rate': [0.0001, 0.001, 0.01],
         'batch_size': [32, 64],
         'n_epochs': [200, 300],
         'n_layers': [7, 10]
     }
-    m_mlopt.load_training_data(DATA_FILE)
     m_mlopt.train(parallel=False,
                   learner=mlopt.PYTORCH,
                   n_best=10,

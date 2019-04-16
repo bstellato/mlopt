@@ -1,7 +1,7 @@
 import numpy as np
 from multiprocessing import cpu_count
 #  from pathos.multiprocessing import cpu_count
-from mlopt.settings import INFEAS_TOL, SUBOPT_TOL, TIGHT_CONSTRAINTS_TOL
+from mlopt.settings import INFEAS_TOL, SUBOPT_TOL, TIGHT_CONSTRAINTS_TOL, DIVISION_TOL
 import cvxpy as cp
 import os
 import pandas as pd
@@ -226,7 +226,11 @@ def pandas2array(X):
 
 def suboptimality(cost_pred, cost_test):
     """Compute suboptimality"""
-    return (cost_pred - cost_test)/(np.abs(cost_test) + 1e-10)
+    if np.abs(cost_test) < DIVISION_TOL:
+        cost_norm = 1.
+    else:
+        cost_norm = np.abs(cost_test)
+    return (cost_pred - cost_test)/cost_norm
 
 
 def accuracy(results_pred, results_test):
