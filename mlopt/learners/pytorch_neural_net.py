@@ -1,6 +1,6 @@
 from mlopt.learners.learner import Learner
 from mlopt.settings import N_BEST, FRAC_TRAIN, PYTORCH, \
-        NET_TRAINING_PARAMS
+        NET_TRAINING_PARAMS, DIVISION_TOL
 from mlopt.utils import pandas2array
 from tqdm import trange
 import os
@@ -168,6 +168,11 @@ class PyTorchNeuralNet(Learner):
         """Normalize data. Recompute mean and std if training mode."""
         if recompute_stats:
             self.X_mean, self.X_std = X.mean(axis=0), X.std(axis=0)
+
+            # Ignore small values of standard deviation
+            for i in range(len(self.X_std)):
+                if self.X_std[i] < DIVISION_TOL:
+                    self.X_std[i] = 1.
 
         X[:] = (X - self.X_mean) / self.X_std
 
