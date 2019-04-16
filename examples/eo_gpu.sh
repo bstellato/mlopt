@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --partition=sched_mit_sloan_gpu
 #SBATCH --time=0-24:00
-#SBATCH -o /home/stellato/projects/mlopt/output/output_gpu_%j.txt
+#SBATCH -o /home/stellato/projects/mlopt/examples/output/output_gpu_%j.txt
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
@@ -26,12 +26,12 @@ fi
 echo $IAI_LICENSE_FILE
 
 # Include script
-# python examples/paper/benchmarks/transportation/transportation.py
-# python examples/paper/benchmarks/portfolio/portfolio.py
-# python examples/paper/benchmarks/facility/facility.py
-# python examples/paper/benchmarks/control/control.py
+# python paper/benchmarks/transportation/transportation.py
+# python paper/benchmarks/portfolio/portfolio.py
+# python paper/benchmarks/facility/facility.py
+# python paper/benchmarks/control/control.py
 
 
 
 # Online
-python examples/online_optimization/control/online_control_condense.py
+python online_optimization/control/online_control.py --horizon 20

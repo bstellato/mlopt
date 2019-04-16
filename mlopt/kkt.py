@@ -101,9 +101,8 @@ class KKTSolver(QpSolver):
             logging.error(err)
             raise SolverError(err)
 
-        #  if verbose:
         logging.debug("Solving %d x %d linear system A x = b " %
-                      (n_var + n_con, n_var + n_con) + "using pardiso")
+                      (n_var + n_con, n_var + n_con))
 
         if KKT_cache is None:
             logging.debug("Not using KKT solver cache")

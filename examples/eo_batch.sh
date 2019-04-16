@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=24
 #SBATCH --mem-per-cpu=4G
 #SBATCH --partition=sched_mit_sloan_interactive
-#SBATCH --time=4-00:00
+#SBATCH --time=2-00:00
 #SBATCH -o /home/stellato/projects/mlopt/output/output_batch_%j.txt
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
@@ -23,4 +23,5 @@ fi
 # Include script
 # python examples/paper/portfolio/portfolio.py
 # python examples/paper/benchmarks/transportation/transportation.py
-python examples/online_optimization/control/online_control_condense.py
+# python examples/online_optimization/control/online_control_condense.py
+python online_optimization/control/online_control.py --horizon 20
