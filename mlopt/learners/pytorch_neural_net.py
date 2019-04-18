@@ -25,12 +25,9 @@ class Net(nn.Module):
     PyTorch internal neural network class.
     """
 
-    def __init__(self, n_input, n_classes, n_layers):
+    def __init__(self, n_input, n_classes, n_layers, n_hidden):
         super(Net, self).__init__()
-
-        # Automatically set number of hidden layer components
-        n_hidden = int((n_classes + n_input) / 2)
-
+        
         self.layers = nn.ModuleList([nn.Linear(n_input, n_hidden)])
         self.layers.extend([nn.Linear(n_hidden, n_hidden)
                             for _ in range(n_layers - 2)])
@@ -71,9 +68,12 @@ class PyTorchNeuralNet(Learner):
         self.options['params'] = options.pop('params', default_params)
         not_specified_params = [x for x in default_params.keys()
                                 if x not in self.options['params'].keys()]
-        # Assing remaining keys
+        # Assign remaining keys
         for p in not_specified_params:
             self.options['params'][p] = default_params[p]
+        if 'n_hidden' not in self.options['params'].keys():
+            self.options['params']['n_hidden'] = \
+                [int((self.n_classes + self.n_input) / 2)]
 
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', N_BEST),
@@ -106,12 +106,14 @@ class PyTorchNeuralNet(Learner):
         - n_epochs
         - learning_rate
         - n_layers
+        - n_hidden
         """
 
         # Create PyTorch Neural Network and port to to device
         self.net = Net(self.n_input,
                        self.n_classes,
-                       params['n_layers']).to(self.device)
+                       params['n_layers'],
+                       params['n_hidden']).to(self.device)
 
         # Set network in training mode (not evaluation)
         self.net.train()
@@ -212,11 +214,13 @@ class PyTorchNeuralNet(Learner):
             'learning_rate': learning_rate,
             'batch_size': batch_size,
             'n_epochs': n_epochs,
-            'n_layers': n_layers}
+            'n_layers': n_layers,
+            'n_hidden': n_hidden}
             for learning_rate in self.options['params']['learning_rate']
             for batch_size in self.options['params']['batch_size']
             for n_epochs in self.options['params']['n_epochs']
-            for n_layers in self.options['params']['n_layers']]
+            for n_layers in self.options['params']['n_layers']
+            for n_hidden in self.options['params']['n_hidden']]
         n_models = len(params)
 
         logging.info("Train Neural Network with %d sets of parameters"
