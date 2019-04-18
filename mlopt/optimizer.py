@@ -190,7 +190,7 @@ class Optimizer(object):
 
         # Full strategies backup after condensing
         if ('y_train_full' in data_dict) and \
-                ('encoding_train_full' in data_dict):
+                ('encoding_full' in data_dict):
             self.y_train_full = data_dict['y_train_full']
             self.encoding_full = data_dict['encoding_full']
 
@@ -376,6 +376,10 @@ class Optimizer(object):
         c = self._c
         alpha_strategies = self._alpha_strategies
 
+        # DEBUG: Reuse data
+        self.encoding = self.encoding_full
+        self.y_train = self.y_train_full
+
         n_samples = len(self.X_train)
         n_strategies = len(self.encoding)
 
@@ -405,9 +409,9 @@ class Optimizer(object):
                         <= k_max_strategies)
 
         # Objective
-        model.setObjective(100 * grb.quicksum(c[i, j] * x[i, j]
-                                              for i in range(n_samples)
-                                              for j in alpha_strategies[i]) +
+        model.setObjective(grb.quicksum(np.exp(-c[i, j]) * x[i, j]
+                                        for i in range(n_samples)
+                                        for j in alpha_strategies[i]) +
                            ALPHA_CONDENSE * grb.quicksum(y[j]
                                                          for j in range(n_strategies)))
 
@@ -449,6 +453,8 @@ class Optimizer(object):
                     break
             if self.y_train[i] == -1:
                 raise ValueError("No strategy selected for sample %d" % i)
+
+        import ipdb; ipdb.set_trace()
 
     def train(self, X=None, sampling_fn=None,
               parallel=True,
