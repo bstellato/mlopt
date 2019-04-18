@@ -3,6 +3,7 @@ import cvxpy as cp
 import pandas as pd
 from tqdm import tqdm
 from mlopt.sampling import uniform_sphere_sample
+import copy
 
 
 def P_load_profile(horizon,
@@ -170,14 +171,19 @@ def basic_loop_solve(problem, params):
     #  problem.get_problem_data(cp.GUROBI)
     problem.solve(solver=cp.GUROBI)
     if problem.status != 'optimal':
-        import ipdb; ipdb.set_trace()
+        raise ValueError('Error in Gurobi solution')
     return get_solution(problem)
+
+
+def predict_loop_solve(optimizer, params):
+    optimizer.solve(pd.Series(params))
+    return get_solution(optimizer._problem)
 
 
 def is_sol_equal(sol1, sol2):
     comparison = True
     for k in sol1.keys():
-        if k is not 'sol':
+        if k != 'sol':
             if not np.allclose(sol1[k], sol2[k]):
                 print("Different %s" % k)
                 comparison = False
@@ -194,7 +200,7 @@ def simulate_loop(problem,
     T_horizon = [x for x in problem.parameters()
                  if x.name() == 'P_load'][0].shape[0]
 
-    sim_data = init_data
+    sim_data = copy.deepcopy(init_data)
 
     n_sim = T_total - 2 * T_horizon
     for t in tqdm(range(n_sim)):
@@ -205,15 +211,7 @@ def simulate_loop(problem,
                   's_init': sim_data['s'][-1],
                   'past_d': sim_data['past_d'][-1],
                   'P_load': sim_data['P_load'][-1]}
-        # DEBUG: First try
-        solve_fn(problem, params)
-        sol1 = get_solution(problem)
-        #  solve_fn(problem, params)
-        #  sol2 = get_solution(problem)
-        #  if not is_sol_equal(sol1, sol2):
-        #      import ipdb; ipdb.set_trace()
-        #      # populate_parameters(problem,params); problem.solve(solver=cp.GUROBI, verbose=True)
-        sol = sol1
+        sol = solve_fn(problem, params)
 
         sim_data['sol'].append(sol)
 
@@ -231,6 +229,20 @@ def simulate_loop(problem,
         sim_data['P'].append(sol['P'][0])
 
     return sim_data
+
+
+def performance(problem, sim_data):
+    P = sim_data['P']
+    z = sim_data['z']
+    n_sim = len(P)
+    alpha = problem.objective.args[0].args[-3].args[0].value
+    beta = problem.objective.args[0].args[-2].args[0].value
+    gamma = problem.objective.args[0].args[-1].args[0].value
+    cl_cost = 0
+    for i in range(n_sim):
+        cl_cost += alpha * (P[i] ** 2) + beta * P[i] + gamma * z[i]
+
+    return cl_cost
 
 
 def sample_around_points(df,

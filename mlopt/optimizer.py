@@ -75,6 +75,14 @@ class Optimizer(object):
 
         return len(self.encoding)
 
+    def variables(self):
+        """Problem variables."""
+        return self._problem.variables()
+
+    def parameters(self):
+        """Problem parameters."""
+        return self._problem.parameters()
+
     @property
     def n_parameters(self):
         """Number of parameters."""
@@ -394,13 +402,14 @@ class Optimizer(object):
             for j in alpha_strategies[i]:
                 model.addConstr(x[i, j] <= y[j])
         model.addConstr(grb.quicksum(y[j] for j in range(n_strategies))
-                        == k_max_strategies)
+                        <= k_max_strategies)
 
         # Objective
-        model.setObjective(1. / n_samples *
-                           grb.quicksum(c[i, j] * x[i, j]
-                                        for i in range(n_samples)
-                                        for j in alpha_strategies[i]))
+        model.setObjective(100 * grb.quicksum(c[i, j] * x[i, j]
+                                              for i in range(n_samples)
+                                              for j in alpha_strategies[i]) +
+                           ALPHA_CONDENSE * grb.quicksum(y[j]
+                                                         for j in range(n_strategies)))
 
         # Solve
         model.setParam("OutputFlag", 0)
@@ -411,14 +420,16 @@ class Optimizer(object):
         x_opt = {(i, j): x[i, j].X
                  for i in range(n_samples)
                  for j in alpha_strategies[i]}
-        y_opt = [y[j].X for j in range(n_strategies)]
-        opt_val = model.objVal
+        y_opt = np.array([y[j].X for j in range(n_strategies)])
+        degradation = 1. / n_samples * np.sum(c[i, j] * x_opt[i, j]
+                                              for i in range(n_samples)
+                                              for j in alpha_strategies[i])
 
         logging.info("Average cost degradation = %.2e %%" %
-                     (100 * opt_val))
+                     (100 * degradation))
 
         # Get chosen strategies
-        chosen_strategies = np.where(y_opt)[0]
+        chosen_strategies = np.where(y_opt == 1)[0]
 
         logging.info("Number of chosen strategies %d" % len(chosen_strategies))
 
@@ -428,7 +439,7 @@ class Optimizer(object):
 
         # Assign new labels and encodings
         self.encoding = [self.encoding[i] for i in chosen_strategies]
-        self.y_train = np.zeros(n_samples, dtype=int)
+        self.y_train = -1 * np.ones(n_samples, dtype=int)
 
         for i in range(n_samples):
             # Get best strategy per sample
@@ -436,6 +447,8 @@ class Optimizer(object):
                 if x_opt[i, j] == 1:
                     self.y_train[i] = np.where(chosen_strategies == j)[0][0]
                     break
+            if self.y_train[i] == -1:
+                raise ValueError("No strategy selected for sample %d" % i)
 
     def train(self, X=None, sampling_fn=None,
               parallel=True,
@@ -494,7 +507,7 @@ class Optimizer(object):
             # Get a parameter giving that strategy
             strategy = self.encoding[strategy_idx]
             idx_param = np.where(self.y_train == strategy_idx)[0]
-            theta = self.X_train.iloc[idx_param[0], :]
+            theta = self.X_train.iloc[idx_param[0]]
 
             self._problem.populate(theta)
 

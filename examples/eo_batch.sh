@@ -5,13 +5,15 @@
 #SBATCH --mem-per-cpu=4G
 #SBATCH --partition=sched_mit_sloan_interactive
 #SBATCH --time=2-00:00
-#SBATCH -o /home/stellato/projects/mlopt/output/output_batch_%j.txt
+#SBATCH -o /home/stellato/projects/mlopt/examples/output/output_batch_%j.txt
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
 # Activate environment
 # source activate python36
 source activate python37
+
+module load gurobi/8.0.1
 
 SLURM_PARTITION=`squeue -h -o "%P" -j$SLURM_JOB_ID`;
 if [[ $SLURM_PARTITION == *"interactive"* ]]; then

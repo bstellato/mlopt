@@ -219,8 +219,9 @@ class PyTorchNeuralNet(Learner):
             for n_layers in self.options['params']['n_layers']]
         n_models = len(params)
 
-        logging.info("Train Neural Network with %d sets of parameters"
-                     % n_models)
+        logging.info("Train Neural Network with %d " % n_models +
+                     "sets of parameters, " +
+                     "%d inputs, %d outputs" % (self.n_input, self.n_classes))
 
         # Create vector of results
         accuracy_vec = np.zeros(n_models)

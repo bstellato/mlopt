@@ -106,12 +106,12 @@ class Problem(object):
     @property
     def n_var(self):
         """Number of variables"""
-        return sum([x.size for x in self.cvxpy_problem.variables()])
+        return sum([x.size for x in self.variables()])
 
     @property
     def n_disc_var(self):
         """Number of discrete variables"""
-        return sum([x.size for x in self.cvxpy_problem.variables()
+        return sum([x.size for x in self.variables()
                     if (x.attributes['boolean'] or
                         x.attributes['integer'])
                     ])
@@ -121,16 +121,24 @@ class Problem(object):
         """Number of constraints"""
         return sum([x.size for x in self.constraints])
 
+    def parameters(self):
+        """Problem parameters."""
+        return self.cvxpy_problem.parameters()
+
+    def variables(self):
+        """Problem variables."""
+        return self.cvxpy_problem.variables()
+
     @property
     def n_parameters(self):
         """Number of parameters."""
-        return sum([x.size for x in self.cvxpy_problem.parameters()])
+        return sum([x.size for x in self.parameters()])
 
     def populate(self, theta):
         """
         Populate problem using parameter theta
         """
-        for p in self.cvxpy_problem.parameters():
+        for p in self.parameters():
             #  theta_val = theta[p.name()]
             #  if len(theta_val) == 1:
             #      theta_val = theta_val[0]  # Make it a scalar in case
