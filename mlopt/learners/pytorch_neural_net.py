@@ -27,7 +27,7 @@ class Net(nn.Module):
 
     def __init__(self, n_input, n_classes, n_layers, n_hidden):
         super(Net, self).__init__()
-        
+
         self.layers = nn.ModuleList([nn.Linear(n_input, n_hidden)])
         self.layers.extend([nn.Linear(n_hidden, n_hidden)
                             for _ in range(n_layers - 2)])
