@@ -286,17 +286,18 @@ class Optimizer(object):
         # Process results
         n_kept = 0
         for j in range(n_strategies):
-            if np.abs(obj_train) < DIVISION_TOL:
-                diff = np.abs(results[j]['cost'] - obj_train)
-            else:
-                diff = np.abs(results[j]['cost'] - obj_train) / \
-                    np.abs(obj_train)
-            if diff < ALPHA_CONDENSE:
+            diff = np.abs(results[j]['cost'] - obj_train)
+            if np.abs(obj_train) > DIVISION_TOL:  # Normalize in case
+                diff /= np.abs(obj_train)
+
+            if diff < ALPHA_CONDENSE and \
+                    results[j]['infeasibility'] < INFEAS_TOL:
                 alpha_strategies.append(j)
                 c[j] = diff
                 n_kept += 1
 
         if n_kept == 0:
+            import ipdb; ipdb.set_trace()
             raise ValueError("No feasible strategy for point %d" % i)
         logging.debug("Kept %d/%d points" % (n_kept, n_strategies))
 
@@ -377,8 +378,8 @@ class Optimizer(object):
         alpha_strategies = self._alpha_strategies
 
         # DEBUG: Reuse data
-        self.encoding = self.encoding_full
-        self.y_train = self.y_train_full
+        #  self.encoding = self.encoding_full
+        #  self.y_train = self.y_train_full
 
         n_samples = len(self.X_train)
         n_strategies = len(self.encoding)
@@ -409,11 +410,12 @@ class Optimizer(object):
                         <= k_max_strategies)
 
         # Objective
-        model.setObjective(grb.quicksum(np.exp(-c[i, j]) * x[i, j]
+        model.setObjective(grb.quicksum(c[i, j] * x[i, j]
                                         for i in range(n_samples)
                                         for j in alpha_strategies[i]) +
                            ALPHA_CONDENSE * grb.quicksum(y[j]
                                                          for j in range(n_strategies)))
+        #  model.setObjective(grb.quicksum(y[j] for j in range(n_strategies)))
 
         # Solve
         model.setParam("OutputFlag", 0)
@@ -453,8 +455,6 @@ class Optimizer(object):
                     break
             if self.y_train[i] == -1:
                 raise ValueError("No strategy selected for sample %d" % i)
-
-        import ipdb; ipdb.set_trace()
 
     def train(self, X=None, sampling_fn=None,
               parallel=True,

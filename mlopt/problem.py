@@ -239,6 +239,7 @@ class Problem(object):
             tight_constraints = {}
             for c in intermediate_problem.constraints:
                 tight_constraints[c.id] = tight_components(c)
+
             # Get integer variables
             x_int = {}
             if self.is_mip():
@@ -251,6 +252,7 @@ class Problem(object):
                 # NB. Some solvers do not return exactly integers
                 for x in int_vars:
                     x_int[x.id] = np.rint(x.value).astype(int)
+
             results['strategy'] = Strategy(tight_constraints, x_int)
         else:
             results['x'] = np.nan * np.ones(self.n_var)
@@ -317,6 +319,8 @@ class Problem(object):
         """
         problem = self.cvxpy_problem
         self._solve(problem, solver=self.solver,
+                    OptimalityTol=1e-09,
+                    FeasibilityTol=1e-09,
                     **self.solver_options)
 
         return self._parse_solution(problem)

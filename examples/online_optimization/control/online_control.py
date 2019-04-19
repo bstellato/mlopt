@@ -1,3 +1,8 @@
+# Needed for slurm
+import os
+import sys
+sys.path.append(os.getcwd())
+
 import online_optimization.control.utils as u
 import logging
 import numpy as np
@@ -75,12 +80,12 @@ def main():
 
     # Get samples
     #  m_mlopt._get_samples(df_train, parallel=True)
-    #  m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
-    #  m_mlopt._compute_sample_strategy_pairs()
-    #  m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
-    #                             delete_existing=True)
+    m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
+    m_mlopt._compute_sample_strategy_pairs(parallel=True)
+    m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
+                               delete_existing=True)
 
-    m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
+    #  m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
     m_mlopt.condense_strategies()
 
     # Learn optimizer

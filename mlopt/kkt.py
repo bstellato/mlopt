@@ -24,6 +24,7 @@ import numpy as np
 #  from pypardiso import spsolve
 #  from pypardiso.pardiso_wrapper import PyPardisoError
 from scipy.sparse.linalg import spsolve
+#  from scikits.umfpack import UmfpackWarning
 import time
 import logging
 
@@ -110,11 +111,11 @@ class KKTSolver(QpSolver):
             KKT, rhs = create_kkt_system(data)
 
             t_start = time.time()
-            try:
-                x = spsolve(KKT, rhs, use_umfpack=True)
-            #  except (ValueError, PyPardisoError):
-            except:
-                x = np.full(n_var + n_con, np.nan)
+            x = spsolve(KKT, rhs, use_umfpack=True)
+            #  try:
+            #      x = spsolve(KKT, rhs, use_umfpack=True)
+            #  except (UmfpackWarning, ValueError) as e:
+            #      x = np.full(n_var + n_con, np.nan)
             t_end = time.time()
 
         else:
@@ -123,10 +124,12 @@ class KKTSolver(QpSolver):
             rhs = create_kkt_rhs(data)
 
             t_start = time.time()
-            try:
-                x = KKT_cache['factors'](rhs)
-            except ValueError:
-                x = np.full(n_var + n_con, np.nan)
+            x = KKT_cache['factors'](rhs)
+            #  try:
+            #      x = KKT_cache['factors'](rhs)
+            #  except (RuntimeWarning, ValueError) as e:
+            #      print(e)
+            #      x = np.full(n_var + n_con, np.nan)
             t_end = time.time()
 
         # Get results
