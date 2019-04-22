@@ -377,10 +377,6 @@ class Optimizer(object):
         c = self._c
         alpha_strategies = self._alpha_strategies
 
-        # DEBUG: Reuse data
-        #  self.encoding = self.encoding_full
-        #  self.y_train = self.y_train_full
-
         n_samples = len(self.X_train)
         n_strategies = len(self.encoding)
 
@@ -413,8 +409,8 @@ class Optimizer(object):
         model.setObjective(grb.quicksum(c[i, j] * x[i, j]
                                         for i in range(n_samples)
                                         for j in alpha_strategies[i]) +
-                           ALPHA_CONDENSE * grb.quicksum(y[j]
-                                                         for j in range(n_strategies)))
+                           1e-04 * grb.quicksum(y[j]
+                                                for j in range(n_strategies)))
         #  model.setObjective(grb.quicksum(y[j] for j in range(n_strategies)))
 
         # Solve

@@ -80,12 +80,12 @@ def main():
 
     # Get samples
     #  m_mlopt._get_samples(df_train, parallel=True)
-    m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
-    m_mlopt._compute_sample_strategy_pairs(parallel=True)
-    m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
-                               delete_existing=True)
+    #  m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
+    #  m_mlopt._compute_sample_strategy_pairs(parallel=True)
+    #  m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
+    #                             delete_existing=True)
 
-    #  m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
+    m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
     m_mlopt.condense_strategies()
 
     # Learn optimizer
@@ -95,7 +95,10 @@ def main():
 
     # Generate test trajectory and collect points
     print("Simulate loop again to get trajectory points")
-    P_load_test = u.P_load_profile(n_sim_test, seed=1)
+    #  P_load_test = u.P_load_profile(n_sim_test, seed=1)
+
+    # DEBUG (use same strategies for train and test)
+    P_load_test = P_load
 
     # Loop with basic function
     sim_data_test = u.simulate_loop(problem, init_data,
