@@ -34,7 +34,7 @@ class TestCondensing(unittest.TestCase):
         Sample points
         '''
         theta_bar = 10 * np.random.rand(n)
-        radius = 1.0
+        radius = 0.8
 
         '''
         Train and solve
@@ -68,7 +68,7 @@ class TestCondensing(unittest.TestCase):
     def test_condensing_simple(self):
 
         # TODO: Fix this test with parallel vs serial
-        self.m._get_samples(self.df_train, parallel=True)
+        self.m._get_samples(self.df_train, parallel=True, condense_strategies=False)
         logging.info("Number of original strategies %d" %
                      len(self.m.encoding))
 
@@ -77,7 +77,7 @@ class TestCondensing(unittest.TestCase):
                      len(self.m.encoding))
         n_condensed_serial = len(self.m.encoding)
 
-        self.m._get_samples(self.df_train, parallel=True)
+        self.m._get_samples(self.df_train, parallel=True, condense_strategies=False)
         self.m.condense_strategies(k_max_strategies=5, parallel=True)
         logging.info("Number of condensed strategies (parallel): %d" %
                      len(self.m.encoding))

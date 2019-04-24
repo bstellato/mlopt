@@ -18,10 +18,10 @@ STORAGE_DIR = "/pool001/stellato/online/control"
 
 def main():
     # Problem data
-    T_total = 180
+    T_total = 500
     tau = 1.0
     n_train = 5000
-    n_sim_test = 100
+    n_sim_test = 500
     nn_params = {
         'learning_rate': [0.0001, 0.001, 0.01],
         'batch_size': [32, 64],
@@ -29,11 +29,15 @@ def main():
         'n_layers': [7, 10]
     }
 
-    parser = argparse.ArgumentParser(description='Online Control Example')
+    desc = 'Online Control Example'
+
+    parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('--horizon', type=int, default=10, metavar='N',
                         help='horizon length (default: 10)')
     arguments = parser.parse_args()
     T_horizon = arguments.horizon
+
+    print(desc)
 
     np.random.seed(0)
 
@@ -47,9 +51,6 @@ def main():
     # Get trajectory
     P_load = u.P_load_profile(T_total)
 
-    # Define problem
-    problem = u.control_problem(T_horizon, tau=tau)
-
     # Create simulation data
     init_data = {'E': [7.7],
                  'z': [0.],
@@ -58,6 +59,9 @@ def main():
                  'past_d': [np.zeros(T_horizon)],
                  'P_load': [P_load[:T_horizon]],
                  'sol': []}
+
+    # Define problem
+    problem = u.control_problem(T_horizon, tau=tau)
 
     sim_data = u.simulate_loop(problem, init_data,
                                u.basic_loop_solve,
@@ -71,7 +75,7 @@ def main():
     df_train = u.sample_around_points(df,
                                       radius={'z_init': .5,  # .2,
                                               's_init': .5,  # .2,
-                                              'P_load': 0.25,  # 0.01
+                                              'P_load': 0.1,  # 0.01
                                               },
                                       n_total=n_train)
 
@@ -80,12 +84,12 @@ def main():
 
     # Get samples
     #  m_mlopt._get_samples(df_train, parallel=True)
-    #  m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
-    #  m_mlopt._compute_sample_strategy_pairs(parallel=True)
-    #  m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
-    #                             delete_existing=True)
+    m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
+    m_mlopt._compute_sample_strategy_pairs(parallel=True)
+    m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
+                               delete_existing=True)
 
-    m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
+    #  m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
     m_mlopt.condense_strategies()
 
     # Learn optimizer
@@ -95,10 +99,8 @@ def main():
 
     # Generate test trajectory and collect points
     print("Simulate loop again to get trajectory points")
-    #  P_load_test = u.P_load_profile(n_sim_test, seed=1)
-
-    # DEBUG (use same strategies for train and test)
-    P_load_test = P_load
+    # TODO: Change seed!
+    P_load_test = u.P_load_profile(n_sim_test, seed=0)
 
     # Loop with basic function
     sim_data_test = u.simulate_loop(problem, init_data,
@@ -116,17 +118,20 @@ def main():
     res_general, res_detail = m_mlopt.performance(df_test,
                                                   parallel=True,
                                                   use_cache=True)
-    res_general.to_csv(EXAMPLE_NAME + "test_general.csv")
-    res_detail.to_csv(EXAMPLE_NAME + "test_detail.csv")
 
     # Evaluate loop performance
     perf_solver = u.performance(problem, sim_data_test)
     perf_mlopt = u.performance(problem, sim_data_mlopt)
-    df_performance = pd.Series({'solver': perf_solver,
-                                'mlopt': perf_mlopt})
-    df_performance.to_csv(EXAMPLE_NAME + "test_performance.csv")
+    res_general['perf_solver'] = perf_solver
+    res_general['perf_mlopt'] = perf_mlopt
+    res_general['perf_degradation_perc'] = 100 * (1. - perf_mlopt/perf_solver)
 
-    def plot_sim_data(sim_data, T_horizon, P_load, title='Subplots'):
+    res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
+                       header=True)
+    res_detail.to_csv(EXAMPLE_NAME + "test_detail.csv")
+
+    def plot_sim_data(sim_data, T_horizon,
+                      P_load, title='Subplots'):
         T_total = len(P_load)
         n_sim = T_total - 2 * T_horizon
         t_plot = range(n_sim)
@@ -136,16 +141,21 @@ def main():
         axarr[0].legend()
         axarr[1].plot(t_plot, P_load[:n_sim], label='P_load')
         axarr[1].legend()
-        axarr[2].step(t_plot, sim_data['P'][:n_sim], where='post', label='P_vec')
+        axarr[2].step(t_plot, sim_data['P'][:n_sim], where='post',
+                      label='P_vec')
         axarr[2].legend()
-        axarr[3].step(t_plot, sim_data['z'][:n_sim], where='post', label='z')
+        axarr[3].step(t_plot, sim_data['z'][:n_sim], where='post',
+                      label='z')
         axarr[3].legend()
-        axarr[4].step(t_plot, sim_data['s'][:n_sim], where='post', label='s')
+        axarr[4].step(t_plot, sim_data['s'][:n_sim], where='post',
+                      label='s')
         axarr[4].legend()
         plt.savefig(EXAMPLE_NAME + title + ".pdf")
 
-    plot_sim_data(sim_data_mlopt, T_horizon, P_load_test, title='sim_data_mlopt')
-    plot_sim_data(sim_data_test, T_horizon, P_load_test, title='sim_data_test')
+    plot_sim_data(sim_data_mlopt, T_horizon, P_load_test,
+                  title='sim_data_mlopt')
+    plot_sim_data(sim_data_test, T_horizon, P_load_test,
+                  title='sim_data_test')
 
 
 if __name__ == '__main__':

@@ -232,9 +232,13 @@ class Optimizer(object):
                                                      message="Compute " +
                                                      "tight constraints " +
                                                      "for training set")
-            #  test = {i: x for i, x in enumerate(results)
-            #          if 'strategy' not in x.keys()}
-            #  logging.debug("number of infeasible points %d" % len(test))
+
+            not_feasible_points = {i: x for i, x in enumerate(results)
+                                   if 'strategy' not in x.keys()}
+            if not_feasible_points:
+                e = "number of infeasible points %d" % len(not_feasible_points)
+                logging.error(e)
+                raise ValueError(e)
 
             self.obj_train = [r['cost'] for r in results]
             train_strategies = [r['strategy'] for r in results]
@@ -285,6 +289,7 @@ class Optimizer(object):
 
         # Process results
         n_kept = 0
+        n_sanity_check = 0
         for j in range(n_strategies):
             diff = np.abs(results[j]['cost'] - obj_train)
             if np.abs(obj_train) > DIVISION_TOL:  # Normalize in case
@@ -295,9 +300,19 @@ class Optimizer(object):
                 alpha_strategies.append(j)
                 c[j] = diff
                 n_kept += 1
+                if diff < DIVISION_TOL and \
+                        results[j]['infeasibility'] < DIVISION_TOL:
+                    n_sanity_check += 1
 
-        if n_kept == 0:
+        # There must be one with diff = 0 and infeas = 0!!!
+        if n_sanity_check == 0:
+            e = "No optimal strategy for %d. Need one optimal strategy per point." % i
+            logging.error(e)
             import ipdb; ipdb.set_trace()
+            raise ValueError(e)
+
+        # TODO: Add check!
+        if n_kept == 0:
             raise ValueError("No feasible strategy for point %d" % i)
         logging.debug("Kept %d/%d points" % (n_kept, n_strategies))
 
@@ -321,21 +336,39 @@ class Optimizer(object):
         if parallel:
             theta_arr = [self.X_train.iloc[i] for i in range(n_samples)]
             n_proc = get_n_processes(n_samples)
-            with Pool(processes=n_proc) as pool:
-                logging.info("Computing alpha strategies "
-                             "(parallel %i processors)..." %
-                             n_proc)
+            pool = Pool(processes=n_proc)
+            logging.info("Computing alpha strategies "
+                         "(parallel %i processors)..." %
+                         n_proc)
 
-                results = list(tqdm(pool.imap_unordered(
-                    self._compute_cost_differences,
-                    zip(range(n_samples), theta_arr, self.obj_train,
-                        repeat(self._problem), repeat(self.encoding))
-                    ), total=n_samples))
+            #  pbar = tqdm(total=n_samples)
+            #  results = []
+            #  for i in range(n_samples):
+            #      pool.apply_async(self._compute_cost_differences,
+            #                       (i, theta_arr[i], self.obj_train[i],
+            #                        self._problem, self.encoding),
+            #                       callback=append_async_results)
 
-            for r in results:
+            #  results = list(tqdm(pool.imap_unordered(
+            #      self._compute_cost_differences,
+            #      zip(range(n_samples), theta_arr, self.obj_train,
+            #          repeat(self._problem), repeat(self.encoding))
+            #      ), total=n_samples))
+
+            results = pool.imap(
+                self._compute_cost_differences,
+                zip(range(n_samples), theta_arr, self.obj_train,
+                    repeat(self._problem), repeat(self.encoding))
+                )
+
+            for r in tqdm(results, total=n_samples):
                 i, c_i = r[-1], r[1]
                 alpha_strategies[i] = r[0]
                 c.update({(i, j): val for j, val in c_i.items()})
+
+            pool.close()
+            pool.join()
+            #  pbar.close()
 
         else:
 
@@ -373,7 +406,7 @@ class Optimizer(object):
         """
         if not hasattr(self, '_c') or \
                 not hasattr(self, '_alpha_strategies'):
-            self._compute_sample_strategy_pairs()
+            self._compute_sample_strategy_pairs(parallel=parallel)
         c = self._c
         alpha_strategies = self._alpha_strategies
 
@@ -828,7 +861,6 @@ class Optimizer(object):
                                                       "tight constraints " +
                                                       "for test set")
         time_test = [r['time'] for r in results_test]
-        #  strategy_test = [r['strategy'] for r in results_test]
         cost_test = [r['cost'] for r in results_test]
 
         # Get predicted strategy for each point
@@ -837,7 +869,6 @@ class Optimizer(object):
                                   "test set",
                                   use_cache=use_cache)
         time_pred = [r['time'] for r in results_pred]
-        #  strategy_pred = [r['strategy'] for r in results_pred]
         cost_pred = [r['cost'] for r in results_pred]
         infeas = np.array([r['infeasibility'] for r in results_pred])
 
@@ -847,7 +878,7 @@ class Optimizer(object):
         n_strategies = len(self.encoding)  # Number of strategies
 
         # Compute comparative statistics
-        time_comp = np.array([(1 - time_pred[i] / time_test[i])
+        time_comp = np.array([time_test[i] / time_pred[i]
                               for i in range(n_test)])
         subopt = np.array([suboptimality(cost_pred[i], cost_test[i])
                            for i in range(n_test)])
@@ -856,41 +887,40 @@ class Optimizer(object):
         test_accuracy, idx_correct = accuracy(results_pred, results_test)
 
         # Time statistics
-        avg_time_improv = 1. - np.mean(time_pred)/np.mean(time_test)
-        max_time_improv = 1. - np.max(time_pred)/np.max(time_test)
+        avg_time_improv = np.mean(time_test) / np.mean(time_pred)
+        max_time_improv = np.max(time_test) / np.max(time_pred)
 
         # Create dataframes to return
-        df = pd.DataFrame(
+        df = pd.Series(
             {
-                "problem": [self.name],
-                "learner": [self._learner.name],
-                "n_best": [self._learner.options['n_best']],
-                "n_var": [self._problem.n_var],
-                "n_constr": [self._problem.n_constraints],
-                "n_test": [n_test],
-                "n_train": [n_train],
-                "n_theta": [n_theta],
-                "good_turing": [self._sampler.good_turing],
-                "good_turing_smooth": [self._sampler.good_turing_smooth],
-                "n_correct": [np.sum(idx_correct)],
-                "n_strategies": [n_strategies],
-                "accuracy": [100 * test_accuracy],
-                "n_infeas": [np.sum(infeas >= INFEAS_TOL)],
-                "avg_infeas": [np.mean(infeas)],
-                "std_infeas": [np.std(infeas)],
-                "avg_subopt": [np.mean(subopt[np.where(infeas <=
-                                                       INFEAS_TOL)[0]])],
-                "std_subopt": [np.std(subopt[np.where(infeas <=
-                                                      INFEAS_TOL)[0]])],
-                "max_infeas": [np.max(infeas)],
-                "max_subopt": [np.max(subopt)],
-                "avg_time_improv": [100 * avg_time_improv],
-                "max_time_improv": [100 * max_time_improv],
-                #  "std_time_improv": [100 * np.std(time_comp)],
-                "mean_time_pred": [np.mean(time_pred)],
-                "std_time_pred": [np.std(time_pred)],
-                "mean_time_full": [np.mean(time_test)],
-                "std_time_full": [np.std(time_test)],
+                "problem": self.name,
+                "learner": self._learner.name,
+                "n_best": self._learner.options['n_best'],
+                "n_var": self._problem.n_var,
+                "n_constr": self._problem.n_constraints,
+                "n_test": n_test,
+                "n_train": n_train,
+                "n_theta": n_theta,
+                "good_turing": self._sampler.good_turing,
+                "good_turing_smooth": self._sampler.good_turing_smooth,
+                "n_correct": np.sum(idx_correct),
+                "n_strategies": n_strategies,
+                "accuracy": 100 * test_accuracy,
+                "n_infeas": np.sum(infeas >= INFEAS_TOL),
+                "avg_infeas": np.mean(infeas),
+                "std_infeas": np.std(infeas),
+                "avg_subopt": np.mean(subopt[np.where(infeas <=
+                                      INFEAS_TOL)[0]]),
+                "std_subopt": np.std(subopt[np.where(infeas <=
+                                     INFEAS_TOL)[0]]),
+                "max_infeas": np.max(infeas),
+                "max_subopt": np.max(subopt),
+                "avg_time_improv": 100 * avg_time_improv,
+                "max_time_improv": 100 * max_time_improv,
+                "mean_time_pred": np.mean(time_pred),
+                "std_time_pred": np.std(time_pred),
+                "mean_time_full": np.mean(time_test),
+                "std_time_full": np.std(time_test),
             }
         )
         # Add radius info if problem has it.

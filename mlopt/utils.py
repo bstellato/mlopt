@@ -25,7 +25,7 @@ def args_norms(expr):
 def tight_components(con):
     """Return which components are tight in the constraints."""
     #  rel_norm = np.amax([np.linalg.norm(np.atleast_1d(a.value), np.inf)
-    #                      for a in con.expr.args])
+                        #  for a in con.expr.args])
     rel_norm = 1.0
     return np.abs(con.expr.value) <= TIGHT_CONSTRAINTS_TOL * (1 + rel_norm)
 

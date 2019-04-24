@@ -321,6 +321,8 @@ class Problem(object):
         self._solve(problem, solver=self.solver,
                     OptimalityTol=1e-09,
                     FeasibilityTol=1e-09,
+                    BarConvTol=1e-10,
+                    #  verbose=True,
                     **self.solver_options)
 
         return self._parse_solution(problem)

@@ -4,39 +4,77 @@ import pandas as pd
 from tqdm import tqdm
 from mlopt.sampling import uniform_sphere_sample
 import copy
+import random
+from bisect import bisect
 
 
-def P_load_profile(horizon,
-                   seed=5):
+#  def P_load_profile(horizon,
+#                     seed=5):
+#      """
+#      Generate desired power P_des trend
+#      """
+#
+#      # The desired power is supposed to be piecewise linear. Each element has
+#      # length l[i] and angle a[i]
+#
+#      np.random.seed(seed)
+#      a = np.random.choice([-1, 1], 80) * .05 * np.random.rand(80)/10
+#      l = 20 * np.ones(80)
+#
+#      # Get required power
+#      P_des = np.arange(a[0], (a[0]*l[0]) + a[0], a[0])
+#
+#      for i in range(1, len(l)):
+#          P_des = np.append(P_des, np.arange(
+#              P_des[-1]+a[i], P_des[-1] + a[i]*l[i] + a[i], a[i]))
+#
+#      # Slice P_des to match the step length (tau = 4, 5 steps each 20.)
+#      P_des = P_des[0:len(P_des) + 1:5]
+#
+#      # Slice up to get the desired horizon
+#      P_des = P_des[:horizon]
+#
+#      # Get only positive values
+#      P_des = np.maximum(P_des, 0)
+#
+#
+#      return P_des
+
+def P_load_profile(T, seed=0):
     """
     Generate desired power P_des trend
     """
+    random.seed(seed)
 
-    # The desired power is supposed to be piecewise linear. Each element has
-    # length l[i] and angle a[i]
+    t_bp = 2. * np.array([0., 2., 4., 6., 8., 10.,
+                          15., 18., 27., 42., 56.,
+                          53., 76., 92., 104., 107,
+                          113., 125., 129., 134., 148.,
+                          192., 176., 192., 200.])
+    t_period = t_bp[-1]
 
-    np.random.seed(seed)
-    a = np.random.choice([-1, 1], 80) * .05 * np.random.rand(80)/10
-    l = 20 * np.ones(80)
+    # Get number of periods
+    n_periods = T // int(t_period)
 
-    # Get required power
-    P_des = np.arange(a[0], (a[0]*l[0]) + a[0], a[0])
+    P_p = np.zeros(int(t_period))
 
-    for i in range(1, len(l)):
-        P_des = np.append(P_des, np.arange(
-            P_des[-1]+a[i], P_des[-1] + a[i]*l[i] + a[i], a[i]))
+    # Assign period values
+    P_bp = .5 * np.array([0., 0.1, 0.2, 0.3, 0.4, 0.5,
+                          0.5, 0.2, 0.4, 0.25, 0.3,
+                          0.0, 0.1, 0.0, 0.3, 0.4,
+                          0.5, 0.35, 0.45, 0.25, 0.15,
+                          0.3, 0.35, 0.25, 0.0, 0.0])
+    random.shuffle(P_bp)   # Shuffle values
 
-    # Slice P_des to match the step length (tau = 4, 5 steps each 20.)
-    P_des = P_des[0:len(P_des) + 1:5]
+    t = np.arange(t_period)
 
-    # Slice up to get the desired horizon
-    P_des = P_des[:horizon]
+    # Assign breakpoints to actual values
+    for t_idx in range(int(t_period)):
+        P_p[t_idx] = P_bp[bisect(t_bp, t[t_idx]) - 1]
 
-    # Get only positive values
-    P_des = np.maximum(P_des, 0)
+    P = np.tile(P_p, n_periods + 1)[:T]
 
-
-    return P_des
+    return P
 
 
 def control_problem(T=10,
@@ -284,7 +322,7 @@ def sample_around_points(df,
                 samples = np.maximum(samples, 0)
 
             elif col in ['E_init']:
-                samples = np.maximum(samples, 5.4)
+                samples = np.minimum(np.maximum(samples, 5.3), 10.1)
 
             if len(samples[0]) == 1:
                 # Flatten list

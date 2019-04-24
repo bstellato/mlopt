@@ -110,8 +110,13 @@ class KKTSolver(QpSolver):
 
             KKT, rhs = create_kkt_system(data)
 
+            # DEBUG least squares
+            #  rhs = KKT.T.dot(rhs)
+            #  KKT = KKT.T.dot(KKT)
+
             t_start = time.time()
             x = spsolve(KKT, rhs, use_umfpack=True)
+            #  x = spa.linalg.lsqr(KKT, rhs)[0]
             #  try:
             #      x = spsolve(KKT, rhs, use_umfpack=True)
             #  except (UmfpackWarning, ValueError) as e:
