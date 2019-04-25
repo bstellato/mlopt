@@ -8,7 +8,6 @@ import logging
 import numpy as np
 import mlopt
 import pickle
-import matplotlib.pylab as plt
 import argparse
 import os
 import pandas as pd
@@ -27,6 +26,11 @@ def main():
         'batch_size': [32, 64],
         'n_epochs': [200, 300],
         'n_layers': [7, 10]
+        #  {'learning_rate': 0.0001, 'batch_size': 64, 'n_epochs': 300, 'n_layers': 10}
+        #  'learning_rate': [0.0001],
+        #  'batch_size': [64],
+        #  'n_epochs': [300],
+        #  'n_layers': [10]
     }
 
     desc = 'Online Control Example'
@@ -45,8 +49,7 @@ def main():
     if not os.path.exists(STORAGE_DIR):
         os.makedirs(STORAGE_DIR)
 
-    EXAMPLE_NAME = STORAGE_DIR + '/online_control_%d' % T_horizon
-    DATA_FILE = EXAMPLE_NAME + '.pkl'
+    EXAMPLE_NAME = STORAGE_DIR + '/online_control_%d_' % T_horizon
 
     # Get trajectory
     P_load = u.P_load_profile(T_total)
@@ -83,7 +86,6 @@ def main():
                               log_level=logging.INFO)
 
     # Get samples
-    #  m_mlopt._get_samples(df_train, parallel=True)
     m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
     m_mlopt._compute_sample_strategy_pairs(parallel=True)
     m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
@@ -126,36 +128,21 @@ def main():
     res_general['perf_mlopt'] = perf_mlopt
     res_general['perf_degradation_perc'] = 100 * (1. - perf_mlopt/perf_solver)
 
+    # Export files
+    with pd.HDFStore(EXAMPLE_NAME + "sim_data.h5") as h:
+        h['sim_data_mlopt'] = sim_data_mlopt
+        h['sim_data_test'] = sim_data_mlopt
+
     res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
                        header=True)
     res_detail.to_csv(EXAMPLE_NAME + "test_detail.csv")
 
-    def plot_sim_data(sim_data, T_horizon,
-                      P_load, title='Subplots'):
-        T_total = len(P_load)
-        n_sim = T_total - 2 * T_horizon
-        t_plot = range(n_sim)
-        f, axarr = plt.subplots(5, sharex=True)
-        f.suptitle(title)  # or plt.suptitle('Main title')
-        axarr[0].plot(t_plot, sim_data['E'][:n_sim], label="E")
-        axarr[0].legend()
-        axarr[1].plot(t_plot, P_load[:n_sim], label='P_load')
-        axarr[1].legend()
-        axarr[2].step(t_plot, sim_data['P'][:n_sim], where='post',
-                      label='P_vec')
-        axarr[2].legend()
-        axarr[3].step(t_plot, sim_data['z'][:n_sim], where='post',
-                      label='z')
-        axarr[3].legend()
-        axarr[4].step(t_plot, sim_data['s'][:n_sim], where='post',
-                      label='s')
-        axarr[4].legend()
-        plt.savefig(EXAMPLE_NAME + title + ".pdf")
-
-    plot_sim_data(sim_data_mlopt, T_horizon, P_load_test,
-                  title='sim_data_mlopt')
-    plot_sim_data(sim_data_test, T_horizon, P_load_test,
-                  title='sim_data_test')
+    u.plot_sim_data(sim_data_mlopt, T_horizon, P_load_test,
+                    title='sim_data_mlopt',
+                    name=EXAMPLE_NAME)
+    u.plot_sim_data(sim_data_test, T_horizon, P_load_test,
+                    title='sim_data_test',
+                    name=EXAMPLE_NAME)
 
 
 if __name__ == '__main__':

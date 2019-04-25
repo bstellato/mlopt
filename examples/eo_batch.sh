@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=24
-#SBATCH --mem-per-cpu=4G
+#SBATCH --cpus-per-task=20
+#SBATCH --mem-per-cpu=6G
 #SBATCH --partition=sched_mit_sloan_interactive
 #SBATCH --time=2-00:00
 #SBATCH -o /home/stellato/projects/mlopt/examples/output/output_batch_%j.txt
@@ -13,7 +13,9 @@
 # source activate python36
 source activate python37
 
-module load gurobi/8.0.1
+# module load gurobi/8.0.1
+export GRB_LICENSE_FILE="/home/software/gurobi/gurobi.lic"
+# export GRB_LICENSE_FILE="/home/stellato/gurobi_interactive.lic"
 
 SLURM_PARTITION=`squeue -h -o "%P" -j$SLURM_JOB_ID`;
 if [[ $SLURM_PARTITION == *"interactive"* ]]; then

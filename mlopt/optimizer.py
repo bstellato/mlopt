@@ -415,6 +415,15 @@ class Optimizer(object):
 
         logging.info("Formulating and solving MIO condensing problem.")
 
+        # Get alpha_samples
+        alpha_samples = [[] for _ in range(n_strategies)]
+        M = np.zeros(n_strategies)
+        # Search over all alpha_strategies
+        for i in range(n_samples):
+            for j in alpha_strategies[i]:
+                alpha_samples[j].append(i)
+                M[j] += 1
+
         # Formulate with Gurobi directly
         import gurobipy as grb
         model = grb.Model()
@@ -438,13 +447,15 @@ class Optimizer(object):
         model.addConstr(grb.quicksum(y[j] for j in range(n_strategies))
                         <= k_max_strategies)
 
+        for j in range(n_strategies):
+            model.addConstr(y[j] <=
+                            M[j] * grb.quicksum(x[i, j]
+                                                for i in alpha_samples[j]))
+
         # Objective
         model.setObjective(grb.quicksum(c[i, j] * x[i, j]
                                         for i in range(n_samples)
-                                        for j in alpha_strategies[i]) +
-                           1e-04 * grb.quicksum(y[j]
-                                                for j in range(n_strategies)))
-        #  model.setObjective(grb.quicksum(y[j] for j in range(n_strategies)))
+                                        for j in alpha_strategies[i]))
 
         # Solve
         model.setParam("OutputFlag", 0)

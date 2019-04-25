@@ -3,6 +3,7 @@ import cvxpy as cp
 import pandas as pd
 from tqdm import tqdm
 from mlopt.sampling import uniform_sphere_sample
+import matplotlib.pylab as plt
 import copy
 import random
 from bisect import bisect
@@ -40,6 +41,31 @@ from bisect import bisect
 #
 #      return P_des
 
+
+def plot_sim_data(sim_data, T_horizon,
+                  P_load, title='Subplots', name='name'):
+    T_total = len(P_load)
+    n_sim = T_total - 2 * T_horizon
+    t_plot = range(n_sim)
+    f, axarr = plt.subplots(5, sharex=True)
+    f.suptitle(title)  # or plt.suptitle('Main title')
+    axarr[0].plot(t_plot, sim_data['E'][:n_sim], label="E")
+    axarr[0].legend()
+    axarr[1].plot(t_plot, P_load[:n_sim], label='P_load')
+    axarr[1].legend()
+    axarr[2].step(t_plot, sim_data['P'][:n_sim], where='post',
+                  label='P_vec')
+    axarr[2].legend()
+    axarr[3].step(t_plot, sim_data['z'][:n_sim], where='post',
+                  label='z')
+    axarr[3].legend()
+    axarr[4].step(t_plot, sim_data['s'][:n_sim], where='post',
+                  label='s')
+    axarr[4].legend()
+    plt.tight_layout()
+    plt.savefig(name + title + ".pdf")
+
+
 def P_load_profile(T, seed=0):
     """
     Generate desired power P_des trend
@@ -59,7 +85,7 @@ def P_load_profile(T, seed=0):
     P_p = np.zeros(int(t_period))
 
     # Assign period values
-    P_bp = .5 * np.array([0., 0.1, 0.2, 0.3, 0.4, 0.5,
+    P_bp = .25 * np.array([0., 0.1, 0.2, 0.3, 0.4, 0.5,
                           0.5, 0.2, 0.4, 0.25, 0.3,
                           0.0, 0.1, 0.0, 0.3, 0.4,
                           0.5, 0.35, 0.45, 0.25, 0.15,
@@ -82,6 +108,7 @@ def control_problem(T=10,
                     alpha=6.7 * 1e-04,
                     beta=0.2,
                     gamma=0.08,
+                    delta=0.1,
                     E_min=5.2,
                     E_max=10.2,
                     P_max=1.2,
@@ -117,7 +144,7 @@ def control_problem(T=10,
 
     # Constraints
     bounds = []
-    bounds += [E_min <= E, E <= E_max]
+    #  bounds += [E_min <= E, E <= E_max]
     bounds += [0 <= P, P <= z * P_max]
     bounds += [-1 <= w, w <= 1]
     bounds += [0. <= z, z <= 1]
@@ -163,6 +190,7 @@ def control_problem(T=10,
     cost = 0
     for t in range(T-1):
         cost += alpha * (P[t]) ** 2 + beta * P[t] + gamma * z[t]
+        cost += delta * (cp.pos(E_min - E[t+1]) + cp.pos(E[t+1] - E_max))
 
     # DEBUG: Regularize for consistency
     #  cost += 0.2 * cp.sum_squares(z)
@@ -214,7 +242,17 @@ def basic_loop_solve(problem, params):
 
 
 def predict_loop_solve(optimizer, params):
-    optimizer.solve(pd.Series(params))
+    optimizer._problem.populate(pd.Series(params))
+    x_test = optimizer._problem.solve()
+    x_pred = optimizer.solve(pd.Series(params))
+    if np.linalg.norm(x_pred['x'] - x_test['x']) > 1e-04:
+        print("\nmismatch:\n")
+        print("distance x = ", np.linalg.norm(x_pred['x'] - x_test['x']))
+        print("infeasibility test: ", x_test['infeasibility'])
+        print("infeasibility pred: ", x_pred['infeasibility'])
+        print("cost test: ", x_test['cost'])
+        print("cost pred: ", x_pred['cost'])
+        print("\n\n")
     return get_solution(optimizer._problem)
 
 
@@ -321,8 +359,8 @@ def sample_around_points(df,
             elif col in ['P_load']:
                 samples = np.maximum(samples, 0)
 
-            elif col in ['E_init']:
-                samples = np.minimum(np.maximum(samples, 5.3), 10.1)
+            #  elif col in ['E_init']:
+            #      samples = np.minimum(np.maximum(samples, 5.3), 10.1)
 
             if len(samples[0]) == 1:
                 # Flatten list

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=20
+#SBATCH --cpus-per-task=12
 #SBATCH --mem-per-cpu=8G
 #SBATCH --gres=gpu:1
 #SBATCH --partition=sched_mit_sloan_gpu
@@ -21,6 +21,7 @@ if [[ $SLURM_PARTITION == *"interactive"* ]]; then
     export IAI_LICENSE_FILE="/home/stellato/iai-licenses/${SLURMD_NODENAME}.lic"
 elif [[ $SLURM_PARTITION == *"gpu"* ]]; then
     export IAI_LICENSE_FILE="/home/stellato/iai_gpu.lic"
+    export GRB_LICENSE_FILE="/home/stellato/gurobi_gpu.lic"
 fi
 
 echo $IAI_LICENSE_FILE
@@ -34,4 +35,5 @@ echo $IAI_LICENSE_FILE
 
 
 # Online
-python online_optimization/control/online_control.py --horizon 5
+# python online_optimization/control/online_control.py --horizon 20
+python online_optimization/control/online_control.py --horizon 10
