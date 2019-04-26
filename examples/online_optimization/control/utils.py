@@ -138,7 +138,7 @@ def control_problem(T=10,
     E = cp.Variable(T, name='E')  # Capacitor
     P = cp.Variable(T, name='P')      # Cell power
     s = cp.Variable(T+1, name='s')
-    z = cp.Variable(T, name='z')
+    z = cp.Variable(T, name='z', boolean=True)
     w = cp.Variable(T, name='w')
     d = cp.Variable(T, name='d', boolean=True)
 
@@ -147,7 +147,7 @@ def control_problem(T=10,
     #  bounds += [E_min <= E, E <= E_max]
     bounds += [0 <= P, P <= z * P_max]
     bounds += [-1 <= w, w <= 1]
-    bounds += [0. <= z, z <= 1]
+    #  bounds += [0. <= z, z <= 1]
 
     # Capacitor dynamics
     capacitor_dynamics = []
@@ -242,17 +242,17 @@ def basic_loop_solve(problem, params):
 
 
 def predict_loop_solve(optimizer, params):
-    optimizer._problem.populate(pd.Series(params))
-    x_test = optimizer._problem.solve()
+    #  optimizer._problem.populate(pd.Series(params))
+    #  x_test = optimizer._problem.solve()
     x_pred = optimizer.solve(pd.Series(params))
-    if np.linalg.norm(x_pred['x'] - x_test['x']) > 1e-04:
-        print("\nmismatch:\n")
-        print("distance x = ", np.linalg.norm(x_pred['x'] - x_test['x']))
-        print("infeasibility test: ", x_test['infeasibility'])
-        print("infeasibility pred: ", x_pred['infeasibility'])
-        print("cost test: ", x_test['cost'])
-        print("cost pred: ", x_pred['cost'])
-        print("\n\n")
+    #  if np.linalg.norm(x_pred['x'] - x_test['x']) > 1e-04:
+    #      print("\nmismatch:\n")
+    #      print("distance x = ", np.linalg.norm(x_pred['x'] - x_test['x']))
+    #      print("infeasibility test: ", x_test['infeasibility'])
+    #      print("infeasibility pred: ", x_pred['infeasibility'])
+    #      print("cost test: ", x_test['cost'])
+    #      print("cost pred: ", x_pred['cost'])
+    #      print("\n\n")
     return get_solution(optimizer._problem)
 
 

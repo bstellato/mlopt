@@ -102,7 +102,7 @@ def main():
     # Generate test trajectory and collect points
     print("Simulate loop again to get trajectory points")
     # TODO: Change seed!
-    P_load_test = u.P_load_profile(n_sim_test, seed=0)
+    P_load_test = u.P_load_profile(n_sim_test, seed=1)
 
     # Loop with basic function
     sim_data_test = u.simulate_loop(problem, init_data,
@@ -129,9 +129,11 @@ def main():
     res_general['perf_degradation_perc'] = 100 * (1. - perf_mlopt/perf_solver)
 
     # Export files
-    with pd.HDFStore(EXAMPLE_NAME + "sim_data.h5") as h:
-        h['sim_data_mlopt'] = sim_data_mlopt
-        h['sim_data_test'] = sim_data_mlopt
+    with open(EXAMPLE_NAME + 'sim_data_mlopt.pkl', 'wb') as handle:
+        pickle.dump(sim_data_mlopt, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    with open(EXAMPLE_NAME + 'sim_data_test.pkl', 'wb') as handle:
+        pickle.dump(sim_data_test, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
                        header=True)
