@@ -25,7 +25,7 @@ elif [[ $SLURM_PARTITION == *"gpu"* ]]; then
 fi
 
 # Include script
-# python examples/paper/portfolio/portfolio.py
-# python examples/paper/benchmarks/transportation/transportation.py
-# python examples/online_optimization/control/online_control_condense.py
-python online_optimization/control/online_control.py --horizon 20
+python online_optimization/control/online_control.py --horizon 40
+# python online_optimization/control/online_control.py --horizon 30
+# python online_optimization/control/online_control.py --horizon 20
+# python online_optimization/control/online_control.py --horizon 10

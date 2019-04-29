@@ -339,11 +339,12 @@ class Optimizer(object):
         c = {}
 
         if parallel:
+            theta_arr = [self.X_train.iloc[i] for i in range(n_samples)]
+            n_proc = get_n_processes(n_samples)
+
             logging.info("Computing alpha strategies "
                          "(parallel %i processors)..." %
                          n_proc)
-            theta_arr = [self.X_train.iloc[i] for i in range(n_samples)]
-            n_proc = get_n_processes(n_samples)
 
             ray.init(num_cpus=n_proc)
 
