@@ -23,6 +23,62 @@ import tarfile
 import pickle as pkl
 from tqdm import tqdm
 import logging
+import ray
+
+
+@ray.remote
+def _compute_cost_differences_ray(i, theta, obj_train, problem, encoding):
+    """Ray wrapper."""
+    return _compute_cost_differences(i, theta, obj_train, problem, encoding)
+
+
+def _compute_cost_differences(i, theta, obj_train, problem, encoding):
+    """
+    Compute cost differences for sample theta.
+
+    To be used in parallel multiprocessing.
+
+    """
+
+    n_strategies = len(encoding)
+
+    problem.populate(theta)  # Populate parameters
+
+    c = {}
+    alpha_strategies = []
+
+    # Serialized solution over the strategies
+    results = [problem.solve_with_strategy(s) for s in encoding]
+
+    # Process results
+    n_kept = 0
+    n_sanity_check = 0
+    for j in range(n_strategies):
+        diff = np.abs(results[j]['cost'] - obj_train)
+        if np.abs(obj_train) > DIVISION_TOL:  # Normalize in case
+            diff /= np.abs(obj_train)
+
+        if diff < ALPHA_CONDENSE and \
+                results[j]['infeasibility'] < INFEAS_TOL:
+            alpha_strategies.append(j)
+            c[j] = diff
+            n_kept += 1
+            if diff < CONDENSE_CHECK and \
+                    results[j]['infeasibility'] < CONDENSE_CHECK:
+                n_sanity_check += 1
+
+    # There must be one with diff = 0 and infeas = 0!!!
+    if n_sanity_check == 0:
+        e = "No optimal strategy for %d. Need one optimal strategy per point." % i
+        logging.error(e)
+        raise ValueError(e)
+
+    # TODO: Add check!
+    if n_kept == 0:
+        raise ValueError("No feasible strategy for point %d" % i)
+    logging.debug("Kept %d/%d points" % (n_kept, n_strategies))
+
+    return alpha_strategies, c, i
 
 
 class Optimizer(object):
@@ -267,57 +323,6 @@ class Optimizer(object):
                 condense_strategies:
             self.condense_strategies(parallel=parallel)
 
-    @staticmethod
-    def _compute_cost_differences(args):
-        """
-        Compute cost differences for sample theta.
-
-        To be used in parallel multiprocessing.
-
-        """
-        i, theta, obj_train, problem, encoding = args
-
-        n_strategies = len(encoding)
-
-        problem.populate(theta)  # Populate parameters
-
-        c = {}
-        alpha_strategies = []
-
-        # Serialized solution over the strategies
-        results = [problem.solve_with_strategy(s) for s in encoding]
-
-        # Process results
-        n_kept = 0
-        n_sanity_check = 0
-        for j in range(n_strategies):
-            diff = np.abs(results[j]['cost'] - obj_train)
-            if np.abs(obj_train) > DIVISION_TOL:  # Normalize in case
-                diff /= np.abs(obj_train)
-
-            if diff < ALPHA_CONDENSE and \
-                    results[j]['infeasibility'] < INFEAS_TOL:
-                alpha_strategies.append(j)
-                c[j] = diff
-                n_kept += 1
-                if diff < CONDENSE_CHECK and \
-                        results[j]['infeasibility'] < CONDENSE_CHECK:
-                    n_sanity_check += 1
-
-        # There must be one with diff = 0 and infeas = 0!!!
-        if n_sanity_check == 0:
-            e = "No optimal strategy for %d. Need one optimal strategy per point." % i
-            logging.error(e)
-            import ipdb; ipdb.set_trace()
-            raise ValueError(e)
-
-        # TODO: Add check!
-        if n_kept == 0:
-            raise ValueError("No feasible strategy for point %d" % i)
-        logging.debug("Kept %d/%d points" % (n_kept, n_strategies))
-
-        return alpha_strategies, c, i
-
     def _compute_sample_strategy_pairs(self, solver=DEFAULT_SOLVER,
                                        k_max_strategies=K_MAX_STRATEGIES,
                                        parallel=True):
@@ -336,38 +341,62 @@ class Optimizer(object):
         if parallel:
             theta_arr = [self.X_train.iloc[i] for i in range(n_samples)]
             n_proc = get_n_processes(n_samples)
-            pool = Pool(processes=n_proc)
-            logging.info("Computing alpha strategies "
-                         "(parallel %i processors)..." %
-                         n_proc)
 
-            #  pbar = tqdm(total=n_samples)
-            #  results = []
-            #  for i in range(n_samples):
-            #      pool.apply_async(self._compute_cost_differences,
-            #                       (i, theta_arr[i], self.obj_train[i],
-            #                        self._problem, self.encoding),
-            #                       callback=append_async_results)
+            ray.init(num_cpus=n_proc)
 
-            #  results = list(tqdm(pool.imap_unordered(
-            #      self._compute_cost_differences,
-            #      zip(range(n_samples), theta_arr, self.obj_train,
-            #          repeat(self._problem), repeat(self.encoding))
-            #      ), total=n_samples))
+            # Share encoding between all processors
+            encoding_id = ray.put(self.encoding)
+            problem_id = ray.put(self._problem)
 
-            results = pool.imap(
-                self._compute_cost_differences,
-                zip(range(n_samples), theta_arr, self.obj_train,
-                    repeat(self._problem), repeat(self.encoding))
+            result_ids = []
+            for i in range(n_samples):
+                result_ids.append(
+                    _compute_cost_differences_ray.remote(i, theta_arr[i],
+                                                         self.obj_train[i],
+                                                         problem_id,
+                                                         encoding_id)
                 )
-
-            for r in tqdm(results, total=n_samples):
+            for result_id in tqdm(result_ids, total=n_samples):
+                r = ray.get(result_id)
                 i, c_i = r[-1], r[1]
                 alpha_strategies[i] = r[0]
                 c.update({(i, j): val for j, val in c_i.items()})
 
-            pool.close()
-            pool.join()
+            ray.shutdown()
+
+            # Old solution with multiprocessing
+            #  pool = Pool(processes=n_proc)
+            #  logging.info("Computing alpha strategies "
+            #               "(parallel %i processors)..." %
+            #               n_proc)
+            #
+            #  #  pbar = tqdm(total=n_samples)
+            #  #  results = []
+            #  #  for i in range(n_samples):
+            #  #      pool.apply_async(_compute_cost_differences,
+            #  #                       (i, theta_arr[i], self.obj_train[i],
+            #  #                        self._problem, self.encoding),
+            #  #                       callback=append_async_results)
+            #
+            #  #  results = list(tqdm(pool.imap_unordered(
+            #  #      _compute_cost_differences,
+            #  #      zip(range(n_samples), theta_arr, self.obj_train,
+            #  #          repeat(self._problem), repeat(self.encoding))
+            #  #      ), total=n_samples))
+            #
+            #  results = pool.imap(
+            #      self._compute_cost_differences,
+            #      zip(range(n_samples), theta_arr, self.obj_train,
+            #          repeat(self._problem), repeat(self.encoding))
+            #      )
+            #
+            #  for r in tqdm(results, total=n_samples):
+            #      i, c_i = r[-1], r[1]
+            #      alpha_strategies[i] = r[0]
+            #      c.update({(i, j): val for j, val in c_i.items()})
+            #
+            #  pool.close()
+            #  pool.join()
             #  pbar.close()
 
         else:
@@ -375,10 +404,10 @@ class Optimizer(object):
             for i in tqdm(range(n_samples),
                           desc='Computing alpha strategies (serial)'):
                 alpha_strategies[i], c_i, _ = \
-                    self._compute_cost_differences((i, self.X_train.iloc[i],
-                                                    self.obj_train[i],
-                                                    self._problem,
-                                                    self.encoding))
+                    _compute_cost_differences(i, self.X_train.iloc[i],
+                                              self.obj_train[i],
+                                              self._problem,
+                                              self.encoding)
                 c.update({(i, j): val for j, val in c_i.items()})
 
         n_pairs = sum(len(x) for x in alpha_strategies)
