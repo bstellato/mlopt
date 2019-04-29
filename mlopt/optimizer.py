@@ -339,21 +339,26 @@ class Optimizer(object):
         c = {}
 
         if parallel:
+            logging.info("Computing alpha strategies "
+                         "(parallel %i processors)..." %
+                         n_proc)
             theta_arr = [self.X_train.iloc[i] for i in range(n_samples)]
             n_proc = get_n_processes(n_samples)
 
             ray.init(num_cpus=n_proc)
 
+            # Problem is not serialized correctly
+            ray.register_custom_serializer(Problem, use_pickle=True)
+
             # Share encoding between all processors
             encoding_id = ray.put(self.encoding)
-            problem_id = ray.put(self._problem)
 
             result_ids = []
             for i in range(n_samples):
                 result_ids.append(
                     _compute_cost_differences_ray.remote(i, theta_arr[i],
                                                          self.obj_train[i],
-                                                         problem_id,
+                                                         self._problem,
                                                          encoding_id)
                 )
             for result_id in tqdm(result_ids, total=n_samples):
@@ -401,8 +406,8 @@ class Optimizer(object):
 
         else:
 
-            for i in tqdm(range(n_samples),
-                          desc='Computing alpha strategies (serial)'):
+            logging.info("Computing alpha strategies (serial)")
+            for i in tqdm(range(n_samples)):
                 alpha_strategies[i], c_i, _ = \
                     _compute_cost_differences(i, self.X_train.iloc[i],
                                               self.obj_train[i],
