@@ -1,8 +1,10 @@
 import numpy as np
 from multiprocessing import cpu_count
 #  from pathos.multiprocessing import cpu_count
-from mlopt.settings import INFEAS_TOL, SUBOPT_TOL, TIGHT_CONSTRAINTS_TOL, DIVISION_TOL
+from mlopt.settings import INFEAS_TOL, SUBOPT_TOL, TIGHT_CONSTRAINTS_TOL, \
+        DIVISION_TOL
 import cvxpy as cp
+from cvxpy.constraints.zero import Zero, Equality
 import os
 import pandas as pd
 import mlopt
@@ -25,7 +27,12 @@ def args_norms(expr):
 def tight_components(con):
     """Return which components are tight in the constraints."""
     #  rel_norm = np.amax([np.linalg.norm(np.atleast_1d(a.value), np.inf)
-                        #  for a in con.expr.args])
+    #                      for a in con.expr.args])
+    # If Equality Constraint => all tight
+    if type(con) in [Equality, Zero]:
+        return np.full(con.shape, True)
+
+    # Otherwise return violation
     rel_norm = 1.0
     return np.abs(con.expr.value) <= TIGHT_CONSTRAINTS_TOL * (1 + rel_norm)
 

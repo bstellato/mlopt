@@ -4,7 +4,7 @@ from multiprocessing import Pool
 from itertools import repeat
 import cvxpy as cp
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
-    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL
+    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL, CONDENSE_CHECK
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
@@ -300,8 +300,8 @@ class Optimizer(object):
                 alpha_strategies.append(j)
                 c[j] = diff
                 n_kept += 1
-                if diff < DIVISION_TOL and \
-                        results[j]['infeasibility'] < DIVISION_TOL:
+                if diff < CONDENSE_CHECK and \
+                        results[j]['infeasibility'] < CONDENSE_CHECK:
                     n_sanity_check += 1
 
         # There must be one with diff = 0 and infeas = 0!!!

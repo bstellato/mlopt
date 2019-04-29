@@ -41,7 +41,7 @@ def main():
     arguments = parser.parse_args()
     T_horizon = arguments.horizon
 
-    print(desc)
+    print(desc, " N = %d\n" % T_horizon)
 
     np.random.seed(0)
 
@@ -87,12 +87,12 @@ def main():
 
     # Get samples
     m_mlopt._get_samples(df_train, parallel=True, condense_strategies=False)
-    m_mlopt._compute_sample_strategy_pairs(parallel=True)
+    #  m_mlopt._compute_sample_strategy_pairs(parallel=True)
     m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
                                delete_existing=True)
 
     #  m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
-    m_mlopt.condense_strategies()
+    #  m_mlopt.condense_strategies()
 
     # Learn optimizer
     m_mlopt.train(learner=mlopt.PYTORCH,

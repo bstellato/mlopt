@@ -7,7 +7,7 @@
 #SBATCH --partition=sched_mit_sloan_gpu
 #SBATCH --time=0-24:00
 #SBATCH -o /home/stellato/projects/mlopt/examples/output/output_gpu_%j.txt
-#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
 # Load cuda
@@ -35,5 +35,7 @@ echo $IAI_LICENSE_FILE
 
 
 # Online
-python online_optimization/control/online_control.py --horizon 20
+python online_optimization/control/online_control.py --horizon 40
+# python online_optimization/control/online_control.py --horizon 30
+# python online_optimization/control/online_control.py --horizon 20
 # python online_optimization/control/online_control.py --horizon 10
