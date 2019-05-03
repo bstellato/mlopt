@@ -9,6 +9,7 @@ import mlopt
 import numpy as np
 import scipy.sparse as spa
 import cvxpy as cp
+from cvxpy.atoms.affine.wraps import psd_wrap
 import pandas as pd
 import datetime as dt
 import logging
@@ -21,20 +22,65 @@ with pd.HDFStore("./data/learn_data.h5") as sim_data:
     df_real = sim_data['data']
 
 
+# Reduce number of assets
+n_assets = 30
+k_factors = 5
+
+# F
+F_red = []
+for F in df_real['F']:
+    F_red.append(F[:n_assets, :k_factors])
+
+# hat_r_red
+hat_r_red = {}
+for hat_r_col in [col for col in df_real.columns if 'hat_r' in col]:
+    hat_r = df_real[hat_r_col]
+    hat_r_temp = []
+    for r in hat_r:
+        hat_r_temp.append(r[:n_assets])
+    hat_r_red[hat_r_col] = hat_r_temp
+
+#  w_init
+w_init_red = []
+for w in df_real['w_init']:
+    w_init_red.append(w[:n_assets])
+
+#  Sigma_F
+Sigma_F_red = []
+for S in df_real['Sigma_F']:
+    Sigma_F_red.append(S[:k_factors, :k_factors])
+
+#  sqrt_D
+sqrt_D_red = []
+for sqrt_D in df_real['sqrt_D']:
+    sqrt_D_red.append(sqrt_D[:n_assets])
+
+
+df_red = pd.DataFrame()
+df_red['F'] = F_red
+df_red['w_init'] = w_init_red
+df_red['Sigma_F'] = Sigma_F_red
+df_red['sqrt_D'] = sqrt_D_red
+for k, v in hat_r_red.items():
+    df_red[k] = v
+
+
 def create_mlopt_problem(df):
 
     # Get number of periods from data
-    n_periods = len([col for col in df_real.columns if 'hat_r' in col])
+    n_periods = len([col for col in df.columns if 'hat_r' in col])
 
     lam = {'risk': 50,
            'borrow': 0.0001,
-           'norm1_trade': 0.02,
+           #  'norm1_trade': 0.02,
+           'norm2_trade': 0.02,
            'norm0_trade': 1.}
 
     borrow_cost = 0.0001
+    p = 3
 
     # Initialize problem
-    n, k = df_real.iloc[0]['F'].shape
+    n, k = df.iloc[0]['F'].shape
 
     # Parameters
     hat_r = [cp.Parameter(n, name="hat_r_%s" % (t + 1))
@@ -44,34 +90,46 @@ def create_mlopt_problem(df):
     Sigma_F = cp.Parameter((k, k), PSD=True, name="Sigma_F")
     sqrt_D = cp.Parameter(n, name="sqrt_D")
 
+    Sigma = psd_wrap(F * (Sigma_F * F.T) + cp.diag(cp.power(sqrt_D, 2)))
+
     # Formulate problem
     w = [cp.Variable(n) for t in range(n_periods + 1)]
+
+    # Sparsity constraints
+    s = [cp.Variable(n, boolean=True) for t in range(n_periods)]
 
     # Define cost components
     cost = 0
     constraints = [w[0] == w_init]
     for t in range(1, n_periods + 1):
 
-        risk_cost = lam['risk'] * (
-            cp.quad_form(F.T * w[t], Sigma_F) +
-            cp.sum_squares(cp.multiply(sqrt_D, w[t])))
+        #  risk_cost = lam['risk'] * (
+        #      cp.quad_form(F.T * w[t], Sigma_F) +
+        #      cp.sum_squares(cp.multiply(sqrt_D, w[t])))
+        risk_cost = lam['risk'] * cp.quad_form(w[t], Sigma)
 
         holding_cost = lam['borrow'] * \
             cp.sum(borrow_cost * cp.neg(w[t]))
 
-        transaction_cost = lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
+        #  transaction_cost = lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
+        transaction_cost = lam['norm2_trade'] * cp.sum_squares(w[t] - w[t-1])
 
-        cost += hat_r[t-1] * w[t] + \
-            - risk_cost - holding_cost - transaction_cost
+        cost += \
+            hat_r[t-1] * w[t] \
+            - risk_cost \
+            - holding_cost \
+            - transaction_cost
 
         constraints += [cp.sum(w[t]) == 1.]
 
-    return mlopt.Optimizer(cp.Maximize(cost),
-                           constraints,
-                           log_level=logging.INFO)
+        # Cardinality constraint (big-M)
+        constraints += [-s[t-1] <= w[t] - w[t-1], w[t] - w[t-1] <= s[t-1],
+                        cp.sum(s[t-1]) <= p]
+
+    return mlopt.Optimizer(cp.Maximize(cost), constraints)
 
 
-m = create_mlopt_problem(df_real)
+m = create_mlopt_problem(df_red)
 
 params = {
     'learning_rate': [0.01],
@@ -79,9 +137,9 @@ params = {
     'n_epochs': [200]
 }
 
-m._get_samples(df_real, parallel=True)
-m.save_training_data("./data/train_data.pkl",
-                     delete_existing=True)
+m._get_samples(df_red, parallel=True)
+#  m.save_training_data("./data/train_data.pkl",
+#                       delete_existing=True)
 #  m.load_training_data("./data/train_data.pkl")
 
 
