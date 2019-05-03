@@ -35,7 +35,7 @@ echo $IAI_LICENSE_FILE
 
 
 # Online
-python online_optimization/control/online_control.py --horizon 40
-# python online_optimization/control/online_control.py --horizon 30
+# python online_optimization/control/online_control.py --horizon 40
+python online_optimization/control/online_control.py --horizon 30
 # python online_optimization/control/online_control.py --horizon 20
 # python online_optimization/control/online_control.py --horizon 10

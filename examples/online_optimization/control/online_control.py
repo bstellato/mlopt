@@ -78,7 +78,7 @@ def main():
     df_train = u.sample_around_points(df,
                                       radius={'z_init': .5,  # .2,
                                               's_init': .5,  # .2,
-                                              'P_load': 0.1,  # 0.01
+                                              'P_load': 0.05,  # 0.01
                                               },
                                       n_total=n_train)
 
@@ -97,6 +97,7 @@ def main():
     # Learn optimizer
     m_mlopt.train(learner=mlopt.PYTORCH,
                   n_best=10,
+                  condense_strategies=True,
                   params=nn_params)
 
     # Generate test trajectory and collect points

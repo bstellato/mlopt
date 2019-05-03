@@ -1,10 +1,11 @@
 from mlopt.problem import Problem  # , _solve_with_strategy_multiprocess
 from multiprocessing import Pool
+from datetime import datetime
 #  from pathos.multiprocessing import ProcessPool as Pool
 from itertools import repeat
 import cvxpy as cp
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
-    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL, CONDENSE_CHECK
+    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL  # , CONDENSE_CHECK
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
@@ -52,7 +53,7 @@ def _compute_cost_differences(i, theta, obj_train, problem, encoding):
 
     # Process results
     n_kept = 0
-    n_sanity_check = 0
+    #  n_sanity_check = 0
     for j in range(n_strategies):
         diff = np.abs(results[j]['cost'] - obj_train)
         if np.abs(obj_train) > DIVISION_TOL:  # Normalize in case
@@ -63,19 +64,59 @@ def _compute_cost_differences(i, theta, obj_train, problem, encoding):
             alpha_strategies.append(j)
             c[j] = diff
             n_kept += 1
-            if diff < CONDENSE_CHECK and \
-                    results[j]['infeasibility'] < CONDENSE_CHECK:
-                n_sanity_check += 1
+            #  if diff < CONDENSE_CHECK and \
+            #          results[j]['infeasibility'] < CONDENSE_CHECK:
+            #      n_sanity_check += 1
 
     # There must be one with diff = 0 and infeas = 0!!!
-    if n_sanity_check == 0:
-        e = "No optimal strategy for %d. Need one optimal strategy per point." % i
-        logging.error(e)
-        raise ValueError(e)
+    #  if n_sanity_check == 0:
+    #      e = "No optimal strategy for sample %d. " % i + \
+    #          "Need one optimal strategy per point."
+    #
+    #      # DEBUG: Dump file
+    #      import pickle
+    #      temp_file = 'log_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".pkl"
+    #      temp_dict = {'problem': problem,
+    #                   'encoding': encoding,
+    #                   'theta': theta,
+    #                   'obj_train': obj_train,
+    #                   'alpha_strategies': alpha_strategies,
+    #                   'c': c,
+    #                   'results': results,
+    #                   'i': i,
+    #                   'ALPHA_CONDENSE': ALPHA_CONDENSE,
+    #                   'INFEAS_TOL': INFEAS_TOL,
+    #                   'CONDENSE_CHECK': CONDENSE_CHECK,
+    #                   'DIVISION_TOL': DIVISION_TOL}
+    #      with open(temp_file, 'wb') as handle:
+    #          pickle.dump(temp_dict, handle)
+    #
+    #      logging.error(e)
+    #      raise ValueError(e)
 
-    # TODO: Add check!
+    # Check for consistency. At least one strategy working per point.
     if n_kept == 0:
-        raise ValueError("No feasible strategy for point %d" % i)
+        # DEBUG: Dump file to check
+        import pickle
+        temp_file = 'log_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".pkl"
+        temp_dict = {'problem': problem,
+                     'encoding': encoding,
+                     'theta': theta,
+                     'obj_train': obj_train,
+                     'alpha_strategies': alpha_strategies,
+                     'c': c,
+                     'results': results,
+                     'i': i,
+                     'ALPHA_CONDENSE': ALPHA_CONDENSE,
+                     'INFEAS_TOL': INFEAS_TOL,
+                     'CONDENSE_CHECK': CONDENSE_CHECK,
+                     'DIVISION_TOL': DIVISION_TOL}
+        with open(temp_file, 'wb') as handle:
+            pickle.dump(temp_dict, handle)
+
+        e = "No good strategy for point %d" % i
+        logging.error(e)
+        raise ValueError()
     logging.debug("Kept %d/%d points" % (n_kept, n_strategies))
 
     return alpha_strategies, c, i
@@ -346,7 +387,14 @@ class Optimizer(object):
                          "(parallel %i processors)..." %
                          n_proc)
 
-            ray.init(num_cpus=n_proc)
+            tmp_dir = './ray_tmp/' + \
+                datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
+            if not os.path.exists(tmp_dir):
+                os.makedirs(tmp_dir)
+            ray.init(num_cpus=n_proc,
+                     #  redis_max_memory=1024*1024*1000  # 1GB  # CAP
+                     temp_dir=tmp_dir
+                     )
 
             # Problem is not serialized correctly
             ray.register_custom_serializer(Problem, use_pickle=True)
@@ -534,6 +582,7 @@ class Optimizer(object):
     def train(self, X=None, sampling_fn=None,
               parallel=True,
               learner=DEFAULT_LEARNER,
+              condense_strategies=True,
               **learner_options):
         """
         Train optimizer using parameter X.
@@ -559,7 +608,8 @@ class Optimizer(object):
         """
 
         # Get training samples
-        self._get_samples(X, sampling_fn, parallel)
+        self._get_samples(X, sampling_fn, parallel,
+                          condense_strategies=condense_strategies)
 
         # Define learner
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
