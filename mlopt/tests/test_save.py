@@ -109,17 +109,17 @@ class TestSave(unittest.TestCase):
                                                           parallel=True)
 
                 # test same things
-                npt.assert_almost_equal(store_general['max_infeas'][0],
-                                        load_general['max_infeas'][0],
+                npt.assert_almost_equal(store_general['max_infeas'],
+                                        load_general['max_infeas'],
                                         decimal=1e-8)
-                npt.assert_almost_equal(store_general['avg_infeas'][0],
-                                        load_general['avg_infeas'][0],
+                npt.assert_almost_equal(store_general['avg_infeas'],
+                                        load_general['avg_infeas'],
                                         decimal=1e-8)
-                npt.assert_almost_equal(store_general['max_subopt'][0],
-                                        load_general['max_subopt'][0],
+                npt.assert_almost_equal(store_general['max_subopt'],
+                                        load_general['max_subopt'],
                                         decimal=1e-8)
-                npt.assert_almost_equal(store_general['avg_subopt'][0],
-                                        load_general['avg_subopt'][0],
+                npt.assert_almost_equal(store_general['avg_subopt'],
+                                        load_general['avg_subopt'],
                                         decimal=1e-8)
 #
     #  def test_save_load(self):
