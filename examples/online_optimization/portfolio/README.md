@@ -12,7 +12,13 @@ python download_data.py
 Note that you need `pytables` and `quandl` packages for it to work.
 
 
+## Compute learning data
 
+To solve learning problem we need to compute the learning data by simulating the stocks over a certain time period
+
+```
+python compute_learning_data.py
+```
 
 
 

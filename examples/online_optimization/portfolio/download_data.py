@@ -8,7 +8,7 @@ np.random.seed(0)
 
 # Asset data download as in
 # https://github.com/cvxgrp/cvxportfolio/blob/master/examples/DataEstimatesRiskModel.ipynb
-DATA_DIR = './data/'
+DATA_DIR = './online_optimization/portfolio/data/'
 
 # Assert names and data
 SP500_names = path.join(DATA_DIR, 'SP500.csv')

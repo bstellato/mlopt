@@ -7,14 +7,17 @@ import matplotlib.pylab as plt
 import numpy as np
 from os import path, remove
 
+
+DATA_FOLDER = './online_optimization/portfolio/data'
+
 # Load data
-with pd.HDFStore("./data/simulation_data.h5") as sim_data:
+with pd.HDFStore(path.join(DATA_FOLDER, "simulation_data.h5")) as sim_data:
     prices = sim_data['prices']
     volumes = sim_data['volumes']
     returns = sim_data['returns']
     returns_estimates = sim_data['returns_estimates']
 
-with pd.HDFStore("./data/risk_data.h5") as risk_data:
+with pd.HDFStore(path.join(DATA_FOLDER, "risk_data.h5")) as risk_data:
     exposures = risk_data['exposures']
     sigma_factors = risk_data['sigma_factors']
     idyos = risk_data['idyos']
@@ -93,8 +96,7 @@ def get_learning_data(data, t_start, t_end, T=1):
 
 learning_data = get_learning_data(data, t_start, t_end, T_periods)
 
-DATA_DIR = "./data/"
-LEARN_DATA = path.join(DATA_DIR, 'learn_data.h5')
+LEARN_DATA = path.join(DATA_FOLDER, 'learn_data.h5')
 if path.isfile(LEARN_DATA):
     remove(LEARN_DATA)
 with pd.HDFStore(LEARN_DATA) as learn:

@@ -392,7 +392,7 @@ class Optimizer(object):
             if not os.path.exists(tmp_dir):
                 os.makedirs(tmp_dir)
             ray.init(num_cpus=n_proc,
-                     #  redis_max_memory=1024*1024*1000  # 1GB  # CAP
+                     redis_max_memory=1024*1024*100,  # .1GB  # CAP
                      temp_dir=tmp_dir
                      )
 

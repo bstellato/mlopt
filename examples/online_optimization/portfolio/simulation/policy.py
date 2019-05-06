@@ -4,6 +4,7 @@ import scipy.sparse as spa
 import numpy as np
 import datetime as dt
 import cvxpy as cp
+import online_optimization.portfolio.simulation.settings as stg
 
 
 class BasePolicy(object):
@@ -44,16 +45,17 @@ class Optimal(BasePolicy):
 
     def __init__(self, returns, risk_model,
                  periods=1,  # Default one period
-                 k=10,  # Sparsity
+                 k=None,  # Sparsity
                  lambda_cost=None,
-                 borrow_cost=0.0001):
+                 borrow_cost=stg.BORROW_COST):
         self.returns = returns
         self.risk_model = risk_model
         if lambda_cost is None:
-            self.lambda_cost = {'risk': 50,
-                                'borrow': 0.0001,
-                                'norm1_trade': 0.02,
-                                'norm0_trade': 0.01}
+            self.lambda_cost = {'risk': stg.RISK_COST,
+                                'borrow': stg.BORROW_COST,
+                                #  'norm0_trade': stg.NORM0_TRADE_COST,
+                                #  'norm1_trade': stg.NORM1_TRADE_COST,
+                                'norm2_trade': stg.NORM2_TRADE_COST}
         else:
             self.lambda_cost = lambda_cost
         lam = self.lambda_cost  # More readable code
@@ -79,7 +81,7 @@ class Optimal(BasePolicy):
         w = [cp.Variable(n) for t in range(self.periods + 1)]
 
         # Sparsity constraints
-        #  s = [cp.Variable(n, boolean=True) for t in range(self.periods)]
+        s = [cp.Variable(n, boolean=True) for t in range(self.periods)]
 
         # Define cost components
         cost = 0
@@ -94,7 +96,8 @@ class Optimal(BasePolicy):
                 cp.sum(self.borrow_cost * cp.neg(w[t]))
 
             transaction_cost = \
-                lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
+                lam['norm2_trade'] * cp.sum_squares(w[t] - w[t-1])  # + \
+            #  lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
 
             cost += hat_r[t-1] * w[t] + \
                 - risk_cost - holding_cost - transaction_cost
@@ -102,8 +105,8 @@ class Optimal(BasePolicy):
             constraints += [cp.sum(w[t]) == 1.]
 
             # Cardinality constraint (big-M)
-            #  constraints += [-s[t-1] <= w[t] - w[t-1], w[t] - w[t-1] <= s[t-1],
-            #                  cp.sum(s[t-1]) <= k]
+            constraints += [-s[t-1] <= w[t] - w[t-1], w[t] - w[t-1] <= s[t-1],
+                            cp.sum(s[t-1]) <= k]
 
         self.problem = cp.Problem(cp.Maximize(cost), constraints)
 
@@ -152,7 +155,7 @@ class Optimal(BasePolicy):
         self.evaluate_params(portfolio, t)
 
         # Solve
-        self.problem.solve(solver=cp.GUROBI)
+        self.problem.solve(solver=cp.GUROBI, verbose=True)
 
         if self.problem.status not in cp.settings.SOLUTION_PRESENT:
             print("Problem in computing the solution")
