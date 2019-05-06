@@ -109,7 +109,7 @@ def _compute_cost_differences(i, theta, obj_train, problem, encoding):
                      'i': i,
                      'ALPHA_CONDENSE': ALPHA_CONDENSE,
                      'INFEAS_TOL': INFEAS_TOL,
-                     'CONDENSE_CHECK': CONDENSE_CHECK,
+                     #  'CONDENSE_CHECK': CONDENSE_CHECK,
                      'DIVISION_TOL': DIVISION_TOL}
         with open(temp_file, 'wb') as handle:
             pickle.dump(temp_dict, handle)
@@ -393,6 +393,7 @@ class Optimizer(object):
                 os.makedirs(tmp_dir)
             ray.init(num_cpus=n_proc,
                      redis_max_memory=1024*1024*100,  # .1GB  # CAP
+                     object_store_memory=1024*1024*100,  # .1GB
                      temp_dir=tmp_dir
                      )
 
