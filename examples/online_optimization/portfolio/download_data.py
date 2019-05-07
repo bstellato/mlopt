@@ -11,11 +11,11 @@ np.random.seed(0)
 DATA_DIR = './online_optimization/portfolio/data/'
 
 # Assert names and data
-SP500_names = path.join(DATA_DIR, 'SP500.csv')
-SP500_data = path.join(DATA_DIR, 'SP500.pickle')
+SP_names = path.join(DATA_DIR, 'SP100.csv')
+SP_data = path.join(DATA_DIR, 'SP100.pickle')
 
 # Asset names
-assets = pd.read_csv(SP500_names, comment='#').set_index('Symbol')
+assets = pd.read_csv(SP_names, comment='#').set_index('Symbol')
 
 # Last 10 years
 start_date = dt.date(2005, 1, 1)
@@ -35,7 +35,7 @@ Download data from QUANDL
 '''
 try:
     # Data already exists
-    with open(SP500_data, 'rb') as handle:
+    with open(SP_data, 'rb') as handle:
         data = pickle.load(handle)
 except FileNotFoundError:
     for ticker in asset_names:
@@ -53,7 +53,7 @@ except FileNotFoundError:
                                             QUANDL['end_date']))
     data[RISK_FREE_SYMBOL] = quandl.get("FRED/DTB3", **QUANDL)
 
-    with open(SP500_data, 'wb') as handle:
+    with open(SP_data, 'wb') as handle:
         pickle.dump(data, handle)
 
 print("Cleaning up data...", end="")

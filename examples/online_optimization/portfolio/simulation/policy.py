@@ -68,20 +68,21 @@ class Optimal(BasePolicy):
 
         # Initialize problem
         n = len(returns.columns)
-        k = len(risk_model['exposures'].columns)
+        m = len(risk_model['exposures'].columns)
 
         # Parameters
         hat_r = [cp.Parameter(n) for t in range(self.periods)]
         w_init = cp.Parameter(n)
-        F = cp.Parameter((n, k))
-        Sigma_F = cp.Parameter((k, k), PSD=True)
+        F = cp.Parameter((n, m))
+        Sigma_F = cp.Parameter((m, m), PSD=True)
         sqrt_D = cp.Parameter(n)
 
         # Formulate problem
         w = [cp.Variable(n) for t in range(self.periods + 1)]
 
-        # Sparsity constraints
-        s = [cp.Variable(n, boolean=True) for t in range(self.periods)]
+        if k is not None:
+            # Sparsity constraints
+            s = [cp.Variable(n, boolean=True) for t in range(self.periods)]
 
         # Define cost components
         cost = 0
@@ -104,9 +105,10 @@ class Optimal(BasePolicy):
 
             constraints += [cp.sum(w[t]) == 1.]
 
-            # Cardinality constraint (big-M)
-            constraints += [-s[t-1] <= w[t] - w[t-1], w[t] - w[t-1] <= s[t-1],
-                            cp.sum(s[t-1]) <= k]
+            if k is not None:
+                # Cardinality constraint (big-M)
+                constraints += [-s[t-1] <= w[t] - w[t-1], w[t] - w[t-1] <= s[t-1],
+                                cp.sum(s[t-1]) <= k]
 
         self.problem = cp.Problem(cp.Maximize(cost), constraints)
 
@@ -146,7 +148,7 @@ class Optimal(BasePolicy):
         self.params['risk']['sqrt_D'].value = sqrt_D
         self.params['w_init'].value = w_init
 
-    def trades(self, portfolio, t=pd.datetime.today()):
+    def trades(self, portfolio, t=pd.datetime.today(), verbose=False):
         """
         Solve Markowiz portfolio problem with cvxpy
         """
@@ -155,7 +157,7 @@ class Optimal(BasePolicy):
         self.evaluate_params(portfolio, t)
 
         # Solve
-        self.problem.solve(solver=cp.GUROBI, verbose=True)
+        self.problem.solve(solver=cp.GUROBI, verbose=verbose)
 
         if self.problem.status not in cp.settings.SOLUTION_PRESENT:
             print("Problem in computing the solution")

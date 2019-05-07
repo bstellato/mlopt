@@ -50,7 +50,7 @@ simulator = MarketSimulator(returns=returns,
                             cash_key='USDOLLAR')
 
 # Optimal polict
-op_policy = Optimal(returns_estimates, risk, periods=T_periods)
+op_policy = Optimal(returns_estimates, risk, k=None, periods=T_periods)
 op_results = simulator.backtest(h_init, t_start=t_start,
                                 t_end=t_end,
                                 policy=op_policy, log_level=logging.WARNING)

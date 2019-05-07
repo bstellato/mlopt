@@ -23,47 +23,47 @@ with pd.HDFStore("./data/learn_data.h5") as sim_data:
 
 
 # Reduce number of assets
-n_assets = 30
-k_factors = 5
-
-# F
-F_red = []
-for F in df_real['F']:
-    F_red.append(F[:n_assets, :k_factors])
-
-# hat_r_red
-hat_r_red = {}
-for hat_r_col in [col for col in df_real.columns if 'hat_r' in col]:
-    hat_r = df_real[hat_r_col]
-    hat_r_temp = []
-    for r in hat_r:
-        hat_r_temp.append(r[:n_assets])
-    hat_r_red[hat_r_col] = hat_r_temp
-
-#  w_init
-w_init_red = []
-for w in df_real['w_init']:
-    w_init_red.append(w[:n_assets])
-
-#  Sigma_F
-Sigma_F_red = []
-for S in df_real['Sigma_F']:
-    Sigma_F_red.append(S[:k_factors, :k_factors])
-
-#  sqrt_D
-sqrt_D_red = []
-for sqrt_D in df_real['sqrt_D']:
-    sqrt_D_red.append(sqrt_D[:n_assets])
-
-
-df_red = pd.DataFrame()
-df_red['F'] = F_red
-df_red['w_init'] = w_init_red
-df_red['Sigma_F'] = Sigma_F_red
-df_red['sqrt_D'] = sqrt_D_red
-for k, v in hat_r_red.items():
-    df_red[k] = v
-
+#  n_assets = 30
+#  m_factors = 5
+#
+#  # F
+#  F_red = []
+#  for F in df_real['F']:
+#      F_red.append(F[:n_assets, :m_factors])
+#
+#  # hat_r_red
+#  hat_r_red = {}
+#  for hat_r_col in [col for col in df_real.columns if 'hat_r' in col]:
+#      hat_r = df_real[hat_r_col]
+#      hat_r_temp = []
+#      for r in hat_r:
+#          hat_r_temp.append(r[:n_assets])
+#      hat_r_red[hat_r_col] = hat_r_temp
+#
+#  #  w_init
+#  w_init_red = []
+#  for w in df_real['w_init']:
+#      w_init_red.append(w[:n_assets])
+#
+#  #  Sigma_F
+#  Sigma_F_red = []
+#  for S in df_real['Sigma_F']:
+#      Sigma_F_red.append(S[:m_factors, :m_factors])
+#
+#  #  sqrt_D
+#  sqrt_D_red = []
+#  for sqrt_D in df_real['sqrt_D']:
+#      sqrt_D_red.append(sqrt_D[:n_assets])
+#
+#
+#  df_red = pd.DataFrame()
+#  df_red['F'] = F_red
+#  df_red['w_init'] = w_init_red
+#  df_red['Sigma_F'] = Sigma_F_red
+#  df_red['sqrt_D'] = sqrt_D_red
+#  for k, v in hat_r_red.items():
+#      df_red[k] = v
+#
 
 def create_mlopt_problem(df):
 
@@ -137,7 +137,8 @@ params = {
     'n_epochs': [200]
 }
 
-m._get_samples(df_red, parallel=True)
+m._get_samples(df, parallel=True)
+#  m._get_samples(df_red, parallel=True)
 #  m.save_training_data("./data/train_data.pkl",
 #                       delete_existing=True)
 #  m.load_training_data("./data/train_data.pkl")
