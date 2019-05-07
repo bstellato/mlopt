@@ -19,7 +19,7 @@ def main():
     # Problem data
     T_total = 500
     tau = 1.0
-    n_train = 10000
+    n_train = 5000
     n_sim_test = 500
     nn_params = {
         'learning_rate': [0.0001, 0.001, 0.01],

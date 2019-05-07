@@ -42,7 +42,7 @@ h_init = w_init * funds
 # Times
 t_start = dt.date(2008, 1, 1)
 t_end = dt.date(2013, 1, 1)
-T_periods = 2
+T_periods = 1
 
 # For loop propagating the market as in simulator.run_backtest
 simulator = MarketSimulator(returns=returns,

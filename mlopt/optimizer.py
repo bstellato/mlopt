@@ -13,6 +13,7 @@ from mlopt.utils import n_features, accuracy, suboptimality
 from mlopt.utils import get_n_processes
 from mlopt.kkt import KKT, create_kkt_matrix
 #  from pypardiso import factorized
+from time import time
 from scipy.sparse.linalg import factorized
 import cvxpy.settings as cps
 import pandas as pd
@@ -392,8 +393,8 @@ class Optimizer(object):
             if not os.path.exists(tmp_dir):
                 os.makedirs(tmp_dir)
             ray.init(num_cpus=n_proc,
-                     redis_max_memory=1024*1024*100,  # .1GB  # CAP
-                     object_store_memory=1024*1024*100,  # .1GB
+                     redis_max_memory=(1024**2)*50,  # .1GB  # CAP
+                     #  object_store_memory=(1024**2)*1000,  # .1GB
                      temp_dir=tmp_dir
                      )
 
@@ -784,7 +785,9 @@ class Optimizer(object):
         results = []
 
         # Predict best n_best classes for all the points
+        t_start = time()
         classes = self._learner.predict(X)
+        t_predict = (time() - t_start) / n_points  # Compute average predict time
 
         if parallel:
             n_proc = get_n_processes(max_n=n_best)
@@ -806,6 +809,12 @@ class Optimizer(object):
             results.append(self.choose_best(classes[i, :],
                                             parallel=parallel,
                                             use_cache=use_cache))
+
+        # Append predict time
+        for r in results:
+            r['pred_time'] = t_predict
+            r['solve_time'] = r['time']
+            r['time'] = r['pred_time'] + r['solve_time']
 
         if len(results) == 1:
             results = results[0]
@@ -966,6 +975,8 @@ class Optimizer(object):
                                   "test set",
                                   use_cache=use_cache)
         time_pred = [r['time'] for r in results_pred]
+        solve_time_pred = [r['solve_time'] for r in results_pred]
+        pred_time_pred = [r['pred_time'] for r in results_pred]
         cost_pred = [r['cost'] for r in results_pred]
         infeas = np.array([r['infeasibility'] for r in results_pred])
 
@@ -1012,12 +1023,16 @@ class Optimizer(object):
                                      INFEAS_TOL)[0]]),
                 "max_infeas": np.max(infeas),
                 "max_subopt": np.max(subopt),
-                "avg_time_improv": 100 * avg_time_improv,
-                "max_time_improv": 100 * max_time_improv,
+                "mean_solve_time_pred": np.mean(solve_time_pred),
+                "std_solve_time_pred": np.std(solve_time_pred),
+                "mean_pred_time_pred": np.mean(pred_time_pred),
+                "std_pred_time_pred": np.std(pred_time_pred),
                 "mean_time_pred": np.mean(time_pred),
                 "std_time_pred": np.std(time_pred),
                 "mean_time_full": np.mean(time_test),
                 "std_time_full": np.std(time_test),
+                "avg_time_improv": avg_time_improv,
+                "max_time_improv": max_time_improv,
             }
         )
         # Add radius info if problem has it.
@@ -1034,6 +1049,8 @@ class Optimizer(object):
                 "correct": idx_correct,
                 "infeas": infeas,
                 "subopt": subopt,
+                "solve_time_pred": solve_time_pred,
+                "pred_time_pred": pred_time_pred,
                 "time_pred": time_pred,
                 "time_full": time_test,
                 "time_improvement": time_comp,
