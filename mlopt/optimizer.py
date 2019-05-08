@@ -5,10 +5,10 @@ from datetime import datetime
 from itertools import repeat
 import cvxpy as cp
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
-    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL  # , CONDENSE_CHECK
+    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL, PREFILTER_STRATEGY_DIST  # , CONDENSE_CHECK
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
-from mlopt.strategy import encode_strategies
+from mlopt.strategy import encode_strategies, strategy_distance
 from mlopt.utils import n_features, accuracy, suboptimality
 from mlopt.utils import get_n_processes
 from mlopt.kkt import KKT, create_kkt_matrix
@@ -29,12 +29,16 @@ import ray
 
 
 @ray.remote
-def _compute_cost_differences_ray(i, theta, obj_train, problem, encoding):
+def _compute_cost_differences_ray(i, theta, obj_train, alpha_strategies_filtered,
+                                  problem, encoding):
     """Ray wrapper."""
-    return _compute_cost_differences(i, theta, obj_train, problem, encoding)
+    return _compute_cost_differences(i, theta, obj_train, alpha_strategies_filtered,
+                                     problem, encoding)
 
 
-def _compute_cost_differences(i, theta, obj_train, problem, encoding):
+def _compute_cost_differences(i, theta, obj_train,
+                              alpha_strategies_filtered,
+                              problem, encoding):
     """
     Compute cost differences for sample theta.
 
@@ -50,12 +54,15 @@ def _compute_cost_differences(i, theta, obj_train, problem, encoding):
     alpha_strategies = []
 
     # Serialized solution over the strategies
-    results = [problem.solve_with_strategy(s) for s in encoding]
+    #  results = [problem.solve_with_strategy(s) for s in encoding]
+    results = {j: problem.solve_with_strategy(encoding[j])
+               for j in alpha_strategies_filtered}
 
     # Process results
     n_kept = 0
     #  n_sanity_check = 0
-    for j in range(n_strategies):
+    #  for j in range(n_strategies):
+    for j in alpha_strategies_filtered:
         diff = np.abs(results[j]['cost'] - obj_train)
         if np.abs(obj_train) > DIVISION_TOL:  # Normalize in case
             diff /= np.abs(obj_train)
@@ -105,6 +112,7 @@ def _compute_cost_differences(i, theta, obj_train, problem, encoding):
                      'theta': theta,
                      'obj_train': obj_train,
                      'alpha_strategies': alpha_strategies,
+                     'alpha_strategies_filtered': alpha_strategies_filtered,
                      'c': c,
                      'results': results,
                      'i': i,
@@ -365,6 +373,34 @@ class Optimizer(object):
                 condense_strategies:
             self.condense_strategies(parallel=parallel)
 
+    def _prefilter_strategies(self):
+        """Prefilter strategies"""
+        n_samples = len(self.X_train)
+        n_strategies = len(self.encoding)
+        alpha_strategies = [[] for _ in range(n_samples)]
+
+        logging.info("Prefiltering strategies up to distance %.2f" %
+                     PREFILTER_STRATEGY_DIST)
+        n_filter = 0
+        for i in range(n_samples):
+            s_i = self.encoding[self.y_train[i]]
+            dist_i = [strategy_distance(s_i, s) for s in self.encoding]
+            n_check = 0
+            for j in range(n_strategies):
+                if dist_i[j] < PREFILTER_STRATEGY_DIST:
+                    alpha_strategies[i].append(j)
+                    n_filter += 1
+                    n_check += 1
+
+            if n_check == 0:
+                e = "No strategy kept for point %i" % i
+                logging.error(e)
+                raise ValueError(e)
+
+        logging.info("Filtered %d/%d points" % (n_filter, n_samples * n_strategies))
+
+        return alpha_strategies
+
     def _compute_sample_strategy_pairs(self, solver=DEFAULT_SOLVER,
                                        k_max_strategies=K_MAX_STRATEGIES,
                                        parallel=True):
@@ -377,8 +413,11 @@ class Optimizer(object):
                      (n_samples, n_strategies))
 
         # Compute costs
-        alpha_strategies = [[] for _ in range(n_samples)]
         c = {}
+
+        # Pre-filter strategies
+        # Max strategy distance
+        alpha_strategies = self._prefilter_strategies()
 
         if parallel:
             theta_arr = [self.X_train.iloc[i] for i in range(n_samples)]
@@ -409,6 +448,7 @@ class Optimizer(object):
                 result_ids.append(
                     _compute_cost_differences_ray.remote(i, theta_arr[i],
                                                          self.obj_train[i],
+                                                         alpha_strategies[i],
                                                          self._problem,
                                                          encoding_id)
                 )
@@ -462,6 +502,7 @@ class Optimizer(object):
                 alpha_strategies[i], c_i, _ = \
                     _compute_cost_differences(i, self.X_train.iloc[i],
                                               self.obj_train[i],
+                                              alpha_strategies[i],
                                               self._problem,
                                               self.encoding)
                 c.update({(i, j): val for j, val in c_i.items()})

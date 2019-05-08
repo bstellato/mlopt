@@ -159,13 +159,13 @@ def strategy2array(s):
     """Convert strategy to array"""
     if s.tight_constraints:
         s_tight = np.concatenate(
-            [v for k, v in sorted(s.tight_constraints.items())]
+            [np.atleast_1d(v) for k, v in sorted(s.tight_constraints.items())]
         )
     else:
         s_tight = np.array([])
     if s.int_vars:
         s_int = np.concatenate(
-            [v for k, v in sorted(s.int_vars.items())]
+            [np.atleast_1d(v) for k, v in sorted(s.int_vars.items())]
         )
     else:
         s_int = np.array([])
@@ -179,4 +179,4 @@ def strategy_distance(a, b):
     a_array = strategy2array(a)
     b_array = strategy2array(b)
 
-    return np.linalg.norm(a_array - b_array, 1)
+    return np.linalg.norm(a_array - b_array, 1) / len(a_array)
