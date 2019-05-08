@@ -153,3 +153,30 @@ def encode_strategies(strategies):
         assert y[i] != -1, "Strategy not found"
 
     return y, unique
+
+
+def strategy2array(s):
+    """Convert strategy to array"""
+    if s.tight_constraints:
+        s_tight = np.concatenate(
+            [v for k, v in sorted(s.tight_constraints.items())]
+        )
+    else:
+        s_tight = np.array([])
+    if s.int_vars:
+        s_int = np.concatenate(
+            [v for k, v in sorted(s.int_vars.items())]
+        )
+    else:
+        s_int = np.array([])
+
+    return np.concatenate((s_tight, s_int))
+
+
+def strategy_distance(a, b):
+    """Compute manhattan distance between strategy a and b."""
+    # Convert strategies to array
+    a_array = strategy2array(a)
+    b_array = strategy2array(b)
+
+    return np.linalg.norm(a_array - b_array, 1)

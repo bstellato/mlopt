@@ -51,7 +51,7 @@ class MarketSimulator(object):
         return h_next
 
     def backtest(self, h_init, t_start, t_end, policy,
-                 log_level=logging.WARNING, verbose=False):
+                 log_level=logging.INFO, verbose=False):
         """Run portfolio backtest"""
 
         logging.basicConfig(level=log_level)
@@ -68,7 +68,7 @@ class MarketSimulator(object):
         logging.info("Backtest from %s to %s" % (times[0], times[-1]))
 
         for t in tqdm(times, desc="Backtest simulation"):
-            logging.info("Getting trades at time %s" % t)
+            logging.debug("Getting trades at time %s" % t)
 
             u = policy.trades(h, t, verbose=verbose)
             h = self.propagate(h, u, t)

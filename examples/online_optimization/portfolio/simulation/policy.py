@@ -46,13 +46,12 @@ class Optimal(BasePolicy):
     def __init__(self, returns, risk_model,
                  periods=1,  # Default one period
                  k=None,  # Sparsity
-                 lambda_cost=None,
-                 borrow_cost=stg.BORROW_COST):
+                 lambda_cost=None):
         self.returns = returns
         self.risk_model = risk_model
         if lambda_cost is None:
             self.lambda_cost = {'risk': stg.RISK_COST,
-                                'borrow': stg.BORROW_COST,
+                                'borrow': stg.BORROW_WEIGHT_COST,
                                 #  'norm0_trade': stg.NORM0_TRADE_COST,
                                 #  'norm1_trade': stg.NORM1_TRADE_COST,
                                 'norm2_trade': stg.NORM2_TRADE_COST}
@@ -60,7 +59,7 @@ class Optimal(BasePolicy):
             self.lambda_cost = lambda_cost
         lam = self.lambda_cost  # More readable code
 
-        self.borrow_cost = borrow_cost
+        self.borrow_cost = stg.BORROW_COST
 
         # Store times
         self.times = returns.index
@@ -94,11 +93,11 @@ class Optimal(BasePolicy):
                 cp.sum_squares(cp.multiply(sqrt_D, w[t])))
 
             holding_cost = lam['borrow'] * \
-                cp.sum(self.borrow_cost * cp.neg(w[t]))
+                cp.sum(stg.BORROW_COST * cp.neg(w[t]))
 
             transaction_cost = \
-                lam['norm2_trade'] * cp.sum_squares(w[t] - w[t-1])  # + \
-            #  lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
+                lam['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
+            #  lam['norm2_trade'] * cp.sum_squares(w[t] - w[t-1])  # + \
 
             cost += hat_r[t-1] * w[t] + \
                 - risk_cost - holding_cost - transaction_cost
