@@ -5,7 +5,7 @@ from datetime import datetime
 from itertools import repeat
 import cvxpy as cp
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
-    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL, PREFILTER_STRATEGY_DIST  # , CONDENSE_CHECK
+    ALPHA_CONDENSE, K_MAX_STRATEGIES, DIVISION_TOL, PREFILTER_STRATEGY_NUM  # , CONDENSE_CHECK
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies, strategy_distance
@@ -379,18 +379,29 @@ class Optimizer(object):
         n_strategies = len(self.encoding)
         alpha_strategies = [[] for _ in range(n_samples)]
 
-        logging.info("Prefiltering strategies up to distance %.2f" %
-                     PREFILTER_STRATEGY_DIST)
+        logging.info("Prefiltering strategies up %d per sample" %
+                     PREFILTER_STRATEGY_NUM)
         n_filter = 0
-        for i in range(n_samples):
+        for i in tqdm(range(n_samples)):
             s_i = self.encoding[self.y_train[i]]
-            dist_i = [strategy_distance(s_i, s) for s in self.encoding]
+            dist_i = np.array([strategy_distance(s_i, s)
+                               for s in self.encoding])
             n_check = 0
-            for j in range(n_strategies):
-                if dist_i[j] < PREFILTER_STRATEGY_DIST:
-                    alpha_strategies[i].append(j)
-                    n_filter += 1
-                    n_check += 1
+
+            # Sort distances and pick PREFILTER_STRATEGY_NUM ones
+            idx_dist_i = np.argsort(dist_i)[:PREFILTER_STRATEGY_NUM]
+
+            # Pick distances
+            for j in idx_dist_i:
+                alpha_strategies[i].append(j)
+                n_filter += 1
+                n_check += 1
+
+            #  for j in range(n_strategies):
+            #      if dist_i[j] < PREFILTER_STRATEGY_DIST:
+            #          alpha_strategies[i].append(j)
+            #          n_filter += 1
+            #          n_check += 1
 
             if n_check == 0:
                 e = "No strategy kept for point %i" % i
