@@ -253,6 +253,8 @@ def predict_loop_solve(optimizer, params):
     #      print("cost test: ", x_test['cost'])
     #      print("cost pred: ", x_pred['cost'])
     #      print("\n\n")
+    # Round parameters
+
     return get_solution(optimizer._problem)
 
 

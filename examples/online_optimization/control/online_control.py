@@ -120,7 +120,7 @@ def main():
     # Evaluate open-loop performance on those parameters
     df_test = u.sim_data_to_params(sim_data_test)
     res_general, res_detail = m_mlopt.performance(df_test,
-                                                  parallel=True,
+                                                  parallel=False,
                                                   use_cache=True)
 
     # Evaluate loop performance
