@@ -29,14 +29,32 @@ import ray
 
 
 @ray.remote
-def _compute_cost_differences_ray(i, theta, obj_train, alpha_strategies_filtered,
+def _prefilter_strategies_ray(y_i, encoding):
+    """Ray wrapper."""
+    return _prefilter_strategies(y_i, encoding)
+
+
+def _prefilter_strategies(y_i, encoding):
+    s_i = encoding[y_i]
+    dist_i = np.array([strategy_distance(s_i, s) for s in encoding])
+
+    # Sort distances and pick PREFILTER_STRATEGY_NUM ones
+    idx_dist_i = np.argsort(dist_i)[:PREFILTER_STRATEGY_NUM]
+
+    return idx_dist_i.tolist()
+
+
+@ray.remote
+def _compute_cost_differences_ray(theta, obj_train,
+                                  alpha_strategies_filtered,
                                   problem, encoding):
     """Ray wrapper."""
-    return _compute_cost_differences(i, theta, obj_train, alpha_strategies_filtered,
+    return _compute_cost_differences(theta, obj_train,
+                                     alpha_strategies_filtered,
                                      problem, encoding)
 
 
-def _compute_cost_differences(i, theta, obj_train,
+def _compute_cost_differences(theta, obj_train,
                               alpha_strategies_filtered,
                               problem, encoding):
     """
@@ -54,14 +72,10 @@ def _compute_cost_differences(i, theta, obj_train,
     alpha_strategies = []
 
     # Serialized solution over the strategies
-    #  results = [problem.solve_with_strategy(s) for s in encoding]
     results = {j: problem.solve_with_strategy(encoding[j])
                for j in alpha_strategies_filtered}
 
     # Process results
-    n_kept = 0
-    #  n_sanity_check = 0
-    #  for j in range(n_strategies):
     for j in alpha_strategies_filtered:
         diff = np.abs(results[j]['cost'] - obj_train)
         if np.abs(obj_train) > DIVISION_TOL:  # Normalize in case
@@ -71,42 +85,13 @@ def _compute_cost_differences(i, theta, obj_train,
                 results[j]['infeasibility'] < INFEAS_TOL:
             alpha_strategies.append(j)
             c[j] = diff
-            n_kept += 1
-            #  if diff < CONDENSE_CHECK and \
-            #          results[j]['infeasibility'] < CONDENSE_CHECK:
-            #      n_sanity_check += 1
-
-    # There must be one with diff = 0 and infeas = 0!!!
-    #  if n_sanity_check == 0:
-    #      e = "No optimal strategy for sample %d. " % i + \
-    #          "Need one optimal strategy per point."
-    #
-    #      # DEBUG: Dump file
-    #      import pickle
-    #      temp_file = 'log_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".pkl"
-    #      temp_dict = {'problem': problem,
-    #                   'encoding': encoding,
-    #                   'theta': theta,
-    #                   'obj_train': obj_train,
-    #                   'alpha_strategies': alpha_strategies,
-    #                   'c': c,
-    #                   'results': results,
-    #                   'i': i,
-    #                   'ALPHA_CONDENSE': ALPHA_CONDENSE,
-    #                   'INFEAS_TOL': INFEAS_TOL,
-    #                   'CONDENSE_CHECK': CONDENSE_CHECK,
-    #                   'DIVISION_TOL': DIVISION_TOL}
-    #      with open(temp_file, 'wb') as handle:
-    #          pickle.dump(temp_dict, handle)
-    #
-    #      logging.error(e)
-    #      raise ValueError(e)
 
     # Check for consistency. At least one strategy working per point.
-    if n_kept == 0:
+    if len(alpha_strategies) == 0:
         # DEBUG: Dump file to check
         import pickle
-        temp_file = 'log_' + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".pkl"
+        temp_file = 'log_' + \
+            datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".pkl"
         temp_dict = {'problem': problem,
                      'encoding': encoding,
                      'theta': theta,
@@ -115,20 +100,15 @@ def _compute_cost_differences(i, theta, obj_train,
                      'alpha_strategies_filtered': alpha_strategies_filtered,
                      'c': c,
                      'results': results,
-                     'i': i,
                      'ALPHA_CONDENSE': ALPHA_CONDENSE,
                      'INFEAS_TOL': INFEAS_TOL,
-                     #  'CONDENSE_CHECK': CONDENSE_CHECK,
                      'DIVISION_TOL': DIVISION_TOL}
         with open(temp_file, 'wb') as handle:
             pickle.dump(temp_dict, handle)
 
-        e = "No good strategy for point %d" % i
-        logging.error(e)
-        raise ValueError()
-    logging.debug("Kept %d/%d points" % (n_kept, n_strategies))
+    logging.debug("Kept %d/%d points" % (len(alpha_strategies), n_strategies))
 
-    return alpha_strategies, c, i
+    return alpha_strategies, c
 
 
 class Optimizer(object):
@@ -373,44 +353,44 @@ class Optimizer(object):
                 condense_strategies:
             self.condense_strategies(parallel=parallel)
 
-    def _prefilter_strategies(self):
-        """Prefilter strategies"""
-        n_samples = len(self.X_train)
-        n_strategies = len(self.encoding)
-        alpha_strategies = [[] for _ in range(n_samples)]
-
-        logging.info("Prefiltering strategies up %d per sample" %
-                     PREFILTER_STRATEGY_NUM)
-        n_filter = 0
-        for i in tqdm(range(n_samples)):
-            s_i = self.encoding[self.y_train[i]]
-            dist_i = np.array([strategy_distance(s_i, s)
-                               for s in self.encoding])
-            n_check = 0
-
-            # Sort distances and pick PREFILTER_STRATEGY_NUM ones
-            idx_dist_i = np.argsort(dist_i)[:PREFILTER_STRATEGY_NUM]
-
-            # Pick distances
-            for j in idx_dist_i:
-                alpha_strategies[i].append(j)
-                n_filter += 1
-                n_check += 1
-
-            #  for j in range(n_strategies):
-            #      if dist_i[j] < PREFILTER_STRATEGY_DIST:
-            #          alpha_strategies[i].append(j)
-            #          n_filter += 1
-            #          n_check += 1
-
-            if n_check == 0:
-                e = "No strategy kept for point %i" % i
-                logging.error(e)
-                raise ValueError(e)
-
-        logging.info("Filtered %d/%d points" % (n_filter, n_samples * n_strategies))
-
-        return alpha_strategies
+    #  def _prefilter_strategies(self):
+    #      """Prefilter strategies for single sample i"""
+    #      n_samples = len(self.X_train)
+    #      n_strategies = len(self.encoding)
+    #      alpha_strategies = [[] for _ in range(n_samples)]
+    #
+    #      logging.info("Prefiltering strategies up %d per sample" %
+    #                   PREFILTER_STRATEGY_NUM)
+    #      n_filter = 0
+    #      for i in tqdm(range(n_samples)):
+    #          s_i = self.encoding[self.y_train[i]]
+    #          dist_i = np.array([strategy_distance(s_i, s)
+    #                             for s in self.encoding])
+    #          n_check = 0
+    #
+    #          # Sort distances and pick PREFILTER_STRATEGY_NUM ones
+    #          idx_dist_i = np.argsort(dist_i)[:PREFILTER_STRATEGY_NUM]
+    #
+    #          # Pick distances
+    #          for j in idx_dist_i:
+    #              alpha_strategies[i].append(j)
+    #              n_filter += 1
+    #              n_check += 1
+    #
+    #          #  for j in range(n_strategies):
+    #          #      if dist_i[j] < PREFILTER_STRATEGY_DIST:
+    #          #          alpha_strategies[i].append(j)
+    #          #          n_filter += 1
+    #          #          n_check += 1
+    #
+    #          if n_check == 0:
+    #              e = "No strategy kept for point %i" % i
+    #              logging.error(e)
+    #              raise ValueError(e)
+    #
+    #      logging.info("Filtered %d/%d points" % (n_filter, n_samples * n_strategies))
+    #
+    #      return alpha_strategies
 
     def _compute_sample_strategy_pairs(self, solver=DEFAULT_SOLVER,
                                        k_max_strategies=K_MAX_STRATEGIES,
@@ -426,24 +406,16 @@ class Optimizer(object):
         # Compute costs
         c = {}
 
-        # Pre-filter strategies
-        # Max strategy distance
-        alpha_strategies = self._prefilter_strategies()
-
         if parallel:
             theta_arr = [self.X_train.iloc[i] for i in range(n_samples)]
             n_proc = get_n_processes(n_samples)
-
-            logging.info("Computing alpha strategies "
-                         "(parallel %i processors)..." %
-                         n_proc)
 
             tmp_dir = './ray_tmp/' + \
                 datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
             if not os.path.exists(tmp_dir):
                 os.makedirs(tmp_dir)
             ray.init(num_cpus=n_proc,
-                     redis_max_memory=(1024**2)*50,  # .1GB  # CAP
+                     redis_max_memory=(1024**2)*100,  # .1GB  # CAP
                      #  object_store_memory=(1024**2)*1000,  # .1GB
                      temp_dir=tmp_dir
                      )
@@ -454,19 +426,52 @@ class Optimizer(object):
             # Share encoding between all processors
             encoding_id = ray.put(self.encoding)
 
-            result_ids = []
-            for i in range(n_samples):
-                result_ids.append(
-                    _compute_cost_differences_ray.remote(i, theta_arr[i],
+            # Pre-filter strategies with max strategies per point
+            alpha_strategies = [[] for _ in range(n_samples)]
+
+            logging.info("Prefiltering strategies up to %d per sample " %
+                         PREFILTER_STRATEGY_NUM +
+                         "(parallel %i processors)" %
+                         n_proc)
+            n_filter = 0
+            result_ids = [
+                _prefilter_strategies_ray.remote(self.y_train[i],
+                                                 self.encoding)
+                for i in range(n_samples)]
+
+            for i in tqdm(range(n_samples)):
+                alpha_strategies[i] = ray.get(result_ids[i])
+
+                if len(alpha_strategies[i]) == 0:
+                    e = "No strategy kept for point %i" % i
+                    logging.error(e)
+                    raise ValueError(e)
+
+                n_filter += len(alpha_strategies[i])
+
+            logging.info("Filtered %d/%d points" % (n_filter,
+                                                    n_samples * n_strategies))
+
+            # Condense strategies
+            logging.info("Computing sample_strategy pairs "
+                         "(parallel %i processors)..." %
+                         n_proc)
+            result_ids = [
+                    _compute_cost_differences_ray.remote(theta_arr[i],
                                                          self.obj_train[i],
                                                          alpha_strategies[i],
                                                          self._problem,
                                                          encoding_id)
-                )
-            for result_id in tqdm(result_ids, total=n_samples):
-                r = ray.get(result_id)
-                i, c_i = r[-1], r[1]
-                alpha_strategies[i] = r[0]
+                    for i in range(n_samples)]
+
+            for i in tqdm(range(n_samples)):
+                alpha_strategies[i], c_i = ray.get(result_ids[i])
+
+                if len(alpha_strategies[i]) == 0:
+                    e = "No good strategy for point %d" % i
+                    logging.error(e)
+                    raise ValueError(e)
+
                 c.update({(i, j): val for j, val in c_i.items()})
 
             ray.shutdown()
@@ -508,10 +513,29 @@ class Optimizer(object):
 
         else:
 
+            # Pre-filter strategies with max strategies per point
+            alpha_strategies = [[] for _ in range(n_samples)]
+
+            logging.info("Prefiltering strategies up to %d per sample (serial)" %
+                         PREFILTER_STRATEGY_NUM)
+            n_filter = 0
+            for i in tqdm(range(n_samples)):
+                alpha_strategies[i] = _prefilter_strategies(self.y_train[i],
+                                                            self.encoding)
+                if len(alpha_strategies[i]) == 0:
+                    e = "No strategy kept for point %i" % i
+                    logging.error(e)
+                    raise ValueError(e)
+
+                n_filter += len(alpha_strategies[i])
+
+            logging.info("Filtered %d/%d points" % (n_filter,
+                                                    n_samples * n_strategies))
+
             logging.info("Computing alpha strategies (serial)")
             for i in tqdm(range(n_samples)):
-                alpha_strategies[i], c_i, _ = \
-                    _compute_cost_differences(i, self.X_train.iloc[i],
+                alpha_strategies[i], c_i = \
+                    _compute_cost_differences(self.X_train.iloc[i],
                                               self.obj_train[i],
                                               alpha_strategies[i],
                                               self._problem,

@@ -69,7 +69,6 @@ class TestCondensing(unittest.TestCase):
 
         k_max_strategies = 20
 
-        # TODO: Fix this test with parallel vs serial
         self.m._get_samples(self.df_train, parallel=True,
                             condense_strategies=False)
         logging.info("Number of original strategies %d" %
