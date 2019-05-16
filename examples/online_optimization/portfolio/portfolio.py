@@ -46,10 +46,10 @@ def create_mlopt_problem(df, k=None, lambda_cost=None):
              for t in range(n_periods)]
     w_init = cp.Parameter(n, name="w_init")
     F = cp.Parameter((n, m), name="F")
-    Sigma_F = cp.Parameter((m, m), PSD=True, name="Sigma_F")
+    sqrt_Sigma_F = cp.Parameter(m, name="sqrt_Sigma_F")
     sqrt_D = cp.Parameter(n, name="sqrt_D")
 
-    Sigma = psd_wrap(F * (Sigma_F * F.T) + cp.diag(cp.power(sqrt_D, 2)))
+    #  Sigma = psd_wrap(F * (Sigma_F * F.T) + cp.diag(cp.power(sqrt_D, 2)))
 
     # Formulate problem
     w = [cp.Variable(n) for t in range(n_periods + 1)]
@@ -63,10 +63,11 @@ def create_mlopt_problem(df, k=None, lambda_cost=None):
     constraints = [w[0] == w_init]
     for t in range(1, n_periods + 1):
 
-        #  risk_cost = lam['risk'] * (
-        #      cp.quad_form(F.T * w[t], Sigma_F) +
-        #      cp.sum_squares(cp.multiply(sqrt_D, w[t])))
-        risk_cost = lambda_cost['risk'] * cp.quad_form(w[t], Sigma)
+        risk_cost = lambda_cost['risk'] * (
+            #  cp.quad_form(F.T * w[t], Sigma_F) +
+            cp.sum_squares(cp.multiply(sqrt_Sigma_F, F.T * w[t])) +
+            cp.sum_squares(cp.multiply(sqrt_D, w[t])))
+        #  risk_cost = lambda_cost['risk'] * cp.quad_form(w[t], Sigma)
 
         holding_cost = lambda_cost['borrow'] * \
             cp.sum(stg.BORROW_COST * cp.neg(w[t]))
@@ -88,7 +89,9 @@ def create_mlopt_problem(df, k=None, lambda_cost=None):
                             cp.sum(s[t-1]) <= k]
 
     return mlopt.Optimizer(cp.Maximize(cost), constraints,
-                           log_level=logging.INFO)
+                           log_level=logging.INFO,
+                           #  verbose=True
+                           )
 
 
 '''
@@ -151,11 +154,9 @@ def main():
     m_mlopt = create_mlopt_problem(df, k=k,
                                    lambda_cost=lambda_cost)
 
-    import ipdb; ipdb.set_trace()
-
     # Get samples
     print("Get samples in parallel")
-    m_mlopt._get_samples(df, parallel=False, condense_strategies=False)
+    m_mlopt._get_samples(df, parallel=True, condense_strategies=False)
     m_mlopt.save_training_data(EXAMPLE_NAME + 'not_condensed.pkl',
                                delete_existing=True)
     #

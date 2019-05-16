@@ -261,6 +261,7 @@ class Problem(object):
             results['x'] = np.nan * np.ones(self.n_var)
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
+            results['strategy'] = Strategy({}, {})
 
         return results
 

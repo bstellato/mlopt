@@ -90,8 +90,8 @@ def extract_learning_data(data, t_start, t_end, T=1):
         # Risk estimate
         month = dt.date(sample_times[t].year, sample_times[t].month, 1)
         t_series['F'] = data['risk']['exposures'].loc[month].values
-        t_series['Sigma_F'] = \
-            np.diag(data['risk']['sigma_factors'].loc[month].values)
+        t_series['sqrt_Sigma_F'] = \
+            np.sqrt(data['risk']['sigma_factors'].loc[month].values)
         t_series['sqrt_D'] = np.sqrt(data['risk']['idyos'].loc[month].values)
 
         df = df.append(pd.Series(t_series), ignore_index=True)
@@ -155,25 +155,20 @@ def sample_around_points(df, n_total, radius={}):
             else:
                 rad = 0.05 * norm_val
 
-            if col == 'Sigma_F':
-                # sample only over diagonal
+            # Sample from uniform shpere (vectorize first)
+            samples = uniform_sphere_sample(row[col].flatten(), rad,
+                                            n=n_samples_per_point)
 
+            if len(samples[0]) == 1:
+                # Flatten list
+                samples = [item for sublist in samples for item in sublist]
+            elif row[col].ndim > 1:    # Matrix
+                # Reshape vectorized form to matrix
+                samples = [np.reshape(s, row[col].shape) for s in samples]
 
-            else:
-                # Sample from uniform shpere (vectorize first)
-                samples = uniform_sphere_sample(row[col].flatten(), rad,
-                                                n=n_samples_per_point)
-
-                if len(samples[0]) == 1:
-                    # Flatten list
-                    samples = [item for sublist in samples for item in sublist]
-                elif row[col].ndim > 1:    # Matrix
-                    # Reshape vectorized form to matrix
-                    samples = [np.reshape(s, row[col].shape) for s in samples]
-
-                # Round stuff
-                if col in ['Sigma_F', 'sqrt_D']:
-                    samples = [np.maximum(s, 1e-03) for s in samples]
+            # Round stuff
+            if col in ['sqrt_Sigma_F', 'sqrt_D']:
+                samples = [np.maximum(s, 1e-05) for s in samples]
 
             #  if col in ['s_init', 'past_d']:
             #      samples = np.maximum(np.around(samples, decimals=0),

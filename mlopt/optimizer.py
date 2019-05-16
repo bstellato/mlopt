@@ -434,10 +434,11 @@ class Optimizer(object):
                          "(parallel %i processors)" %
                          n_proc)
             n_filter = 0
-            result_ids = [
-                _prefilter_strategies_ray.remote(self.y_train[i],
-                                                 self.encoding)
-                for i in range(n_samples)]
+            result_ids = []
+            for i in range(n_samples):
+                result_ids.append(
+                    _prefilter_strategies_ray.remote(self.y_train[i],
+                                                     encoding_id))
 
             for i in tqdm(range(n_samples)):
                 alpha_strategies[i] = ray.get(result_ids[i])
@@ -456,13 +457,14 @@ class Optimizer(object):
             logging.info("Computing sample_strategy pairs "
                          "(parallel %i processors)..." %
                          n_proc)
-            result_ids = [
+            result_ids = []
+            for i in range(n_samples):
+                result_ids.append(
                     _compute_cost_differences_ray.remote(theta_arr[i],
                                                          self.obj_train[i],
                                                          alpha_strategies[i],
                                                          self._problem,
-                                                         encoding_id)
-                    for i in range(n_samples)]
+                                                         encoding_id))
 
             for i in tqdm(range(n_samples)):
                 alpha_strategies[i], c_i = ray.get(result_ids[i])

@@ -73,7 +73,7 @@ class Optimal(BasePolicy):
         hat_r = [cp.Parameter(n) for t in range(self.periods)]
         w_init = cp.Parameter(n)
         F = cp.Parameter((n, m))
-        Sigma_F = cp.Parameter((m, m), PSD=True)
+        sqrt_Sigma_F = cp.Parameter(m)
         sqrt_D = cp.Parameter(n)
 
         # Formulate problem
@@ -89,7 +89,7 @@ class Optimal(BasePolicy):
         for t in range(1, self.periods + 1):
 
             risk_cost = lam['risk'] * (
-                cp.quad_form(F.T * w[t], Sigma_F) +
+                cp.sum_squares(cp.multiply(sqrt_Sigma_F, F.T * w[t])) +
                 cp.sum_squares(cp.multiply(sqrt_D, w[t])))
 
             holding_cost = lam['borrow'] * \
@@ -115,7 +115,7 @@ class Optimal(BasePolicy):
         self.vars = {'w': w}
         self.params = {}
         self.params['risk'] = {'F': F,
-                               'Sigma_F': Sigma_F,
+                               'sqrt_Sigma_F': sqrt_Sigma_F,
                                'sqrt_D': sqrt_D}
         self.params['w_init'] = w_init
         self.params['hat_r'] = hat_r
@@ -137,13 +137,13 @@ class Optimal(BasePolicy):
         # Risk estimate
         month = dt.date(t.year, t.month, 1)  # Get first day of month
         F = self.risk_model['exposures'].loc[month].values
-        Sigma_F = \
-            np.diag(self.risk_model['sigma_factors'].loc[month].values)
+        sqrt_Sigma_F = \
+            np.sqrt(self.risk_model['sigma_factors'].loc[month].values)
         sqrt_D = np.sqrt(self.risk_model['idyos'].loc[month].values)
 
         # Evaluate parameters
         self.params['risk']['F'].value = F
-        self.params['risk']['Sigma_F'].value = Sigma_F
+        self.params['risk']['sqrt_Sigma_F'].value = sqrt_Sigma_F
         self.params['risk']['sqrt_D'].value = sqrt_D
         self.params['w_init'].value = w_init
 
