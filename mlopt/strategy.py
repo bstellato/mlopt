@@ -81,6 +81,9 @@ class Strategy(object):
                 self._compare_arrays_dict(self.tight_constraints,
                                           other.tight_constraints)
 
+            if not same_tight_constraints:
+                return False
+
             # Compare integer variables
             same_int_vars = self._compare_arrays_dict(self.int_vars,
                                                       other.int_vars)

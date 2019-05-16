@@ -1,6 +1,8 @@
 import pandas as pd
 from simulation.simulation import MarketSimulator
 from simulation.policy import Hold, Optimal
+from mlopt.sampling import uniform_sphere_sample
+from mlopt.settings import DIVISION_TOL
 import datetime as dt
 import logging
 import matplotlib.pylab as plt
@@ -123,5 +125,78 @@ def learning_data(data_folder=DATA_FOLDER,
                                           T_periods)
 
     return learning_data
+
+
+def sample_around_points(df, n_total, radius={}):
+    """
+    Sample around points provided in the dataframe for a total of
+    n_total points. We sample each parameter using a uniform
+    distribution over a ball centered at the point in df row.
+    """
+
+    np.random.seed(0)
+    n_samples_per_point = np.round(n_total / len(df), decimals=0).astype(int)
+
+    df_samples = pd.DataFrame()
+
+    for idx, row in df.iterrows():
+        df_row = pd.DataFrame()
+
+        # For each column sample points and create series
+        for col in df.columns:
+
+            norm_val = np.linalg.norm(row[col])
+
+            if norm_val < DIVISION_TOL:
+                norm_val = 1.
+
+            if col in radius:
+                rad = radius[col] * norm_val
+            else:
+                rad = 0.05 * norm_val
+
+            if col == 'Sigma_F':
+                # sample only over diagonal
+
+
+            else:
+                # Sample from uniform shpere (vectorize first)
+                samples = uniform_sphere_sample(row[col].flatten(), rad,
+                                                n=n_samples_per_point)
+
+                if len(samples[0]) == 1:
+                    # Flatten list
+                    samples = [item for sublist in samples for item in sublist]
+                elif row[col].ndim > 1:    # Matrix
+                    # Reshape vectorized form to matrix
+                    samples = [np.reshape(s, row[col].shape) for s in samples]
+
+                # Round stuff
+                if col in ['Sigma_F', 'sqrt_D']:
+                    samples = [np.maximum(s, 1e-03) for s in samples]
+
+            #  if col in ['s_init', 'past_d']:
+            #      samples = np.maximum(np.around(samples, decimals=0),
+            #                           0).astype(int)
+            #  elif col == 'z_init':
+            #      samples = np.minimum(np.maximum(
+            #          np.around(samples, decimals=0), 0), 1).astype(int)
+            #
+            #  elif col in ['P_load']:
+            #      samples = np.maximum(samples, 0)
+
+            #  elif col in ['E_init']:
+            #      samples = np.minimum(np.maximum(samples, 5.3), 10.1)
+
+            df_row[col] = list(samples)
+
+        df_samples = df_samples.append(df_row)
+
+    return df_samples
+
+
+
+
+
 
 

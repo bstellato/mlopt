@@ -143,7 +143,10 @@ class Problem(object):
             #  if len(theta_val) == 1:
             #      theta_val = theta_val[0]  # Make it a scalar in case
             #  p.value = theta_val
-            p.value = theta[p.name()]
+            try:
+                p.value = theta[p.name()]
+            except:
+                import ipdb; ipdb.set_trace()
 
     @property
     def objective(self):

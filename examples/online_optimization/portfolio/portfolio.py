@@ -6,7 +6,7 @@ sys.path.append(os.getcwd())
 from mlopt.sampling import uniform_sphere_sample
 from mlopt.utils import benchmark
 import online_optimization.portfolio.simulation.settings as stg
-from online_optimization.portfolio.learning_data import learning_data
+from online_optimization.portfolio.learning_data import learning_data, sample_around_points
 import mlopt
 import numpy as np
 import scipy.sparse as spa
@@ -71,7 +71,8 @@ def create_mlopt_problem(df, k=None, lambda_cost=None):
         holding_cost = lambda_cost['borrow'] * \
             cp.sum(stg.BORROW_COST * cp.neg(w[t]))
 
-        transaction_cost = lambda_cost['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
+        transaction_cost = \
+            lambda_cost['norm1_trade'] * cp.norm(w[t] - w[t-1], 1)
 
         cost += \
             hat_r[t-1] * w[t] \
@@ -107,12 +108,26 @@ def main():
 
     EXAMPLE_NAME = STORAGE_DIR + '/portfolio_%d_' % k
 
+    n_train = 10000
+
     # Define cost weights
     lambda_cost = {'risk': stg.RISK_COST,
                    'borrow': stg.BORROW_WEIGHT_COST,
                    #  'norm0_trade': stg.NORM0_TRADE_COST,
                    #  'norm1_trade': stg.NORM1_TRADE_COST,
                    'norm1_trade': stg.NORM1_TRADE_COST}
+
+    nn_params = {
+        'learning_rate': [0.0001, 0.001, 0.01],
+        'batch_size': [32, 64],
+        'n_epochs': [200, 300],
+        'n_layers': [7, 10]
+        #  {'learning_rate': 0.0001, 'batch_size': 64, 'n_epochs': 300, 'n_layers': 10}
+        #  'learning_rate': [0.0001],
+        #  'batch_size': [64],
+        #  'n_epochs': [300],
+        #  'n_layers': [10]
+    }
 
     # Define initial value
     t_start = dt.date(2008, 1, 1)
@@ -123,30 +138,36 @@ def main():
 
     # Get data for learning
     print("Get learning data by simulating with no integer variables (faster)")
-    df = learning_data(t_start=t_start,
-                       t_end=t_end,
-                       T_periods=T_periods,
-                       lambda_cost=lambda_cost)
+    df_history = learning_data(t_start=t_start,
+                               t_end=t_end,
+                               T_periods=T_periods,
+                               lambda_cost=lambda_cost)
 
-    # TODO: Sample around balls!
+    # Sample around points
+    df = sample_around_points(df_history,
+                              n_total=n_train)
 
     # Define mlopt problem
     m_mlopt = create_mlopt_problem(df, k=k,
                                    lambda_cost=lambda_cost)
 
+    import ipdb; ipdb.set_trace()
+
     # Get samples
     print("Get samples in parallel")
-    #  m_mlopt._get_samples(df, parallel=True, condense_strategies=False)
-    #  m_mlopt.save_training_data(EXAMPLE_NAME + 'not_condensed.pkl',
-                               #  delete_existing=True)
-
-    m_mlopt.load_training_data(EXAMPLE_NAME + 'not_condensed.pkl')
-    import ipdb; ipdb.set_trace()
+    m_mlopt._get_samples(df, parallel=False, condense_strategies=False)
+    m_mlopt.save_training_data(EXAMPLE_NAME + 'not_condensed.pkl',
+                               delete_existing=True)
+    #
+    #  m_mlopt.load_training_data(EXAMPLE_NAME + 'not_condensed.pkl')
     m_mlopt.condense_strategies()
 
-    # Condense strategies
-
     # Learn
+    m_mlopt.train(learner=mlopt.PYTORCH,
+                  n_best=10,
+                  condense_strategies=True,
+                  parallel=False,
+                  params=nn_params)
 
 
     # OLD: Load data

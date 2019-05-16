@@ -3,6 +3,7 @@ import cvxpy as cp
 import pandas as pd
 from tqdm import tqdm
 from mlopt.sampling import uniform_sphere_sample
+from mlopt.settings import DIVISION_TOL
 import matplotlib.pylab as plt
 import copy
 import random
@@ -342,18 +343,27 @@ def sample_around_points(df,
         # For each column sample points and create series
         for col in df.columns:
 
+            norm_val = np.linalg.norm(row[col])
+            if norm_val < DIVISION_TOL:
+                norm_val = 1.
+
             if col in radius:
-                rad = radius[col]
+                rad = radius[col] * norm_val
             else:
-                rad = 0.05
+                rad = 0.01 * norm_val
 
             samples = uniform_sphere_sample(row[col], rad,
                                             n=n_samples_per_point)
 
             # Round stuff
-            if col in ['s_init', 'past_d']:
+            if col in ['past_d']:
                 samples = np.maximum(np.around(samples, decimals=0),
                                      0).astype(int)
+
+            elif col == 's_init':
+                samples = np.minimum(np.maximum(np.around(samples, decimals=0),
+                                     0), 5).astype(int)
+
             elif col == 'z_init':
                 samples = np.minimum(np.maximum(
                     np.around(samples, decimals=0), 0), 1).astype(int)
@@ -361,8 +371,8 @@ def sample_around_points(df,
             elif col in ['P_load']:
                 samples = np.maximum(samples, 0)
 
-            #  elif col in ['E_init']:
-            #      samples = np.minimum(np.maximum(samples, 5.3), 10.1)
+            elif col in ['E_init']:
+                samples = np.minimum(np.maximum(samples, 5.2), 10.2)
 
             if len(samples[0]) == 1:
                 # Flatten list
