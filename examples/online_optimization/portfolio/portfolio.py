@@ -156,17 +156,17 @@ def main():
 
     # Get samples
     print("Get samples in parallel")
-    m_mlopt._get_samples(df, parallel=True, condense_strategies=False)
+    m_mlopt.get_samples(df, parallel=True, filter_strategies=False)
     m_mlopt.save_training_data(EXAMPLE_NAME + 'not_condensed.pkl',
                                delete_existing=True)
     #
     #  m_mlopt.load_training_data(EXAMPLE_NAME + 'not_condensed.pkl')
-    m_mlopt.condense_strategies()
+    m_mlopt.filter_strategies()
 
     # Learn
     m_mlopt.train(learner=mlopt.PYTORCH,
                   n_best=10,
-                  condense_strategies=True,
+                  filter_strategies=True,
                   parallel=False,
                   params=nn_params)
 
@@ -231,8 +231,8 @@ def main():
 #      'n_epochs': [200]
 #  }
 #
-#  m._get_samples(df, parallel=True)
-#  m._get_samples(df_red, parallel=True)
+#  m.get_samples(df, parallel=True)
+#  m.get_samples(df_red, parallel=True)
 #  m.save_training_data("./data/train_data.pkl",
 #                       delete_existing=True)
 #  m.load_training_data("./data/train_data.pkl")
