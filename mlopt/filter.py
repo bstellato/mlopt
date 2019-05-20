@@ -1,11 +1,10 @@
 import ray
 import numpy as np
 import logging
+from mlopt.problem import solve_with_strategy
 from mlopt.strategy import strategy_distance
 import mlopt.settings as stg
 from mlopt.problem import Problem
-import mlopt.utils as u
-from datetime import datetime as dt
 from tqdm import tqdm
 import os
 
@@ -54,7 +53,7 @@ def compute_cost_differences(theta, obj_train,
     filtered_strategies = []
 
     # Serialized solution over the strategies
-    results = {j: problem.solve_with_strategy(encoding[j])
+    results = {j: solve_with_strategy(problem, encoding[j])
                for j in prefiltered_strategies}
 
     # Process results
@@ -72,6 +71,7 @@ def compute_cost_differences(theta, obj_train,
     if len(filtered_strategies) == 0:
         # DEBUG: Dump file to check
         import pickle
+        from datetime import datetime as dt
         temp_file = 'log_' + \
             dt.now().strftime("%Y-%m-%d_%H-%M-%S") + ".pkl"
         temp_dict = {'problem': problem,
@@ -88,7 +88,8 @@ def compute_cost_differences(theta, obj_train,
         with open(temp_file, 'wb') as handle:
             pickle.dump(temp_dict, handle)
 
-    logging.debug("Kept %d/%d points" % (len(filtered_strategies), n_strategies))
+    logging.debug("Kept %d/%d points" %
+                  (len(filtered_strategies), n_strategies))
 
     return filtered_strategies, c
 
@@ -123,20 +124,6 @@ class Filter(object):
         c = {}
 
         if parallel:
-            n_proc = u.get_n_processes(n_samples)
-
-            tmp_dir = './ray_tmp/' + \
-                dt.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
-            if not os.path.exists(tmp_dir):
-                os.makedirs(tmp_dir)
-            ray.init(num_cpus=n_proc,
-                     redis_max_memory=(1024**2)*500,  # .1GB  # CAP
-                     #  object_store_memory=(1024**2)*1000,  # .1GB
-                     temp_dir=tmp_dir
-                     )
-
-            # Problem is not serialized correctly
-            ray.register_custom_serializer(Problem, use_pickle=True)
 
             # Share encoding between all processors
             encoding_id = ray.put(self.encoding)
@@ -144,10 +131,9 @@ class Filter(object):
             # Pre-filter strategies with max strategies per point
             filtered_strategies = [[] for _ in range(n_samples)]
 
-            logging.info("Prefiltering strategies up to %d per sample " %
-                         stg.PREFILTER_STRATEGY_NUM +
-                         "(parallel %i processors)" %
-                         n_proc)
+            logging.info("Prefiltering strategies up to %d per sample "
+                         % stg.PREFILTER_STRATEGY_NUM +
+                         "(parallel)")
             n_filter = 0
             result_ids = []
             for i in range(n_samples):
@@ -169,9 +155,7 @@ class Filter(object):
                                                     n_samples * n_strategies))
 
             # Condense strategies
-            logging.info("Computing sample_strategy pairs "
-                         "(parallel %i processors)..." %
-                         n_proc)
+            logging.info("Computing sample_strategy pairs (parallel)")
             result_ids = []
             for i in range(n_samples):
                 result_ids.append(

@@ -1,17 +1,10 @@
-from multiprocessing import Pool
-#  from pathos.multiprocessing import ProcessingPool as Pool
-#  import multiprocessing, logging
-#  logger = multiprocessing.log_to_stderr()
-#  logger.setLevel(multiprocessing.SUBDEBUG)
-#  from itertools import repeat
-#  from warnings import warn
+import ray
 import numpy as np
-#  import scipy as sp
-#  import scipy.sparse as spa
-#  import scipy.sparse.linalg as sla
+# Mlopt stuff
 from mlopt.strategy import Strategy
 from mlopt.settings import DEFAULT_SOLVER, DIVISION_TOL
 from mlopt.kkt import KKT, KKTSolver
+from mlopt.utils import get_n_processes, args_norms, tight_components
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos, Inequality
@@ -20,25 +13,7 @@ from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 from cvxpy.reductions.solvers.solving_chain import SolvingChain
 # Progress bars
 from tqdm import tqdm
-from mlopt.utils import get_n_processes, args_norms, tight_components
 import logging
-
-#  def populate_and_solve(args):
-#      """Single function to populate the problem with
-#         theta and solve it with the solver. Useful for
-#         multiprocessing."""
-#      problem, theta = args
-#      problem.populate(theta)
-#      results = problem.solve()
-#
-#      return results
-#
-#  from mlopt.kkt import KKT
-
-
-#  def _solve_with_strategy_multiprocess(problem, strategy, cache):
-#      """Wrapper function to be called with multiprocessing"""
-#      return problem.solve_with_strategy(strategy, cache)
 
 
 class Problem(object):
@@ -139,14 +114,7 @@ class Problem(object):
         Populate problem using parameter theta
         """
         for p in self.parameters():
-            #  theta_val = theta[p.name()]
-            #  if len(theta_val) == 1:
-            #      theta_val = theta_val[0]  # Make it a scalar in case
-            #  p.value = theta_val
-            try:
-                p.value = theta[p.name()]
-            except:
-                import ipdb; ipdb.set_trace()
+            p.value = theta[p.name()]
 
     @property
     def objective(self):
@@ -205,17 +173,6 @@ class Problem(object):
         violations = np.concatenate(violations)
 
         return np.linalg.norm(violations, np.inf)
-
-    # Constraint error
-    #  def get_constr_error(constr):
-    #      if isinstance(constr, cvx.constraints.EqConstraint):
-    #          error = cvx.abs(constr.args[0] - constr.args[1])
-    #      elif isinstance(constr, cvx.constraints.LeqConstraint):
-    #          error = cvx.pos(constr.args[0] - constr.args[1])
-    #      elif isinstance(constr, cvx.constraints.PSDConstraint):
-    #          mat = constr.args[0] - constr.args[1]
-    #          error = cvx.neg(cvx.lambda_min(mat + mat.T)/2)
-    #      return cvx.sum_entries(error)
 
     def _parse_solution(self, problem):
         """
@@ -409,37 +366,6 @@ class Problem(object):
 
         return cp.Problem(objective, reduced_constraints + discrete_fix)
 
-    #  def _solve_lower_chain(self, problem,
-    #                         KKT_solver=False,
-    #                         KKT_cache=None,
-    #                         verbose=False, warm_start=True, **kwargs):
-    #      """Solve using cvxpy and lower part of the chain"""
-    #
-    #      orig_problem = self.cvxpy_problem
-    #      intermediate_chain = orig_problem._intermediate_chain
-    #      intermediate_inverse_data = orig_problem._intermediate_inverse_data
-    #      solving_chain = orig_problem._solving_chain
-    #
-    #      if KKT_solver:
-    #          # Change solving chain to use KKT solver
-    #          solving_chain = SolvingChain(
-    #              reductions=solving_chain.reductions[:-1] + [KKTSolver()]
-    #          )
-    #
-    #      # Apply directly to problem, not to intermediate problem
-    #      data, solving_inverse_data = solving_chain.apply(problem)
-    #      solution = solving_chain.solve_via_data(orig_problem,
-    #                                              data,
-    #                                              warm_start,
-    #                                              verbose, kwargs)
-    #
-    #      # Reconstruct solution
-    #      full_chain = solving_chain.prepend(intermediate_chain)
-    #      inverse_data = intermediate_inverse_data + solving_inverse_data
-    #
-    #      # Unpack solution into problem
-    #      problem.unpack_results(solution, full_chain, inverse_data)
-
     def _solve(self, problem,
                solver=None,
                verbose=False, warm_start=True, **kwargs):
@@ -472,59 +398,6 @@ class Problem(object):
 
         return problem.value
 
-    def solve_with_strategy(self,
-                            strategy,
-                            cache=None):
-        """
-        Solve problem using strategy
-
-        By default the we solve a linear system if
-        the problem is an (MI)LP/(MI)QP.
-
-        Parameters
-        ----------
-        strategy : Strategy
-            Strategy to be used.
-        cache : dict, optional
-            KKT Solver cache.
-
-        Returns
-        -------
-        dict
-            Results.
-        """
-        self._verify_strategy(strategy)
-
-        # Relax discrete variables
-        self._relax_disc_var()
-
-        prob_red = self._construct_reduced_problem(strategy)
-
-        # Solve lower part of the chain
-        if prob_red.is_qp():
-            self._solve(prob_red,
-                        solver=KKT,
-                        KKT_cache=cache,
-                        **self.solver_options)
-        else:
-            self._solve(solver=self.solver,
-                        **self.solver_options)
-
-        results = self._parse_solution(prob_red)
-
-        self._restore_disc_var()
-
-        return results
-
-    def populate_and_solve(self, theta):
-        """Single function to populate the problem with
-           theta and solve it with the solver. Useful for
-           multiprocessing."""
-        self.populate(theta)
-        results = self.solve()
-
-        return results
-
     def solve_parametric(self, theta,
                          parallel=True,  # Solve problems in parallel
                          message="Solving for all theta",
@@ -547,37 +420,94 @@ class Problem(object):
             Results dictionary.
         """
         n = len(theta)  # Number of points
-        n_proc = get_n_processes(n)
 
         if parallel:
-            logging.info("Solving for all theta (parallel %i processors)..." %
-                         n_proc)
-            #  self.pbar = tqdm(total=n, desc=message + " (parallel)")
-            #  with tqdm(total=n, desc=message + " (parallel)") as self.pbar:
-            pool = Pool(processes=n_proc)
-            # Solve in parallel
-            #  results = \
-            #      pool.map(populate_and_solve,
-            #               zip(repeat(self), [theta.iloc[i, :]
-            #                                  for i in range(n)]))
-            # SEPARATE FUNCTION
-            # Solve in parallel and print tqdm progress bar
-            #  results = list(tqdm(pool.imap(populate_and_solve,
-            #                                zip(repeat(self), [theta.iloc[i, :]
-            #                                                   for i in range(n)])),
-            #                      total=n))
-            results = list(tqdm(pool.imap(self.populate_and_solve,
-                                          [theta.iloc[i]
-                                           for i in range(n)]),
-                                total=n))
-            pool.close()
-            pool.join()
+
+            logging.info(message + " (parallel)")
+            # Solve with ray
+            result_ids = []
+            for i in range(n):
+                result_ids.append(
+                    populate_and_solve_ray.remote(self, theta.iloc[i]))
+
+            results = []
+            for r in tqdm(result_ids):
+                results.append(ray.get(r))
 
         else:
+            logging.info(message + " (serial)")
             # Preallocate solutions
             results = []
-            for i in tqdm(range(n), desc=message + " (serial)"):
-                #  results.append(populate_and_solve((self, theta.iloc[i, :])))
-                results.append(self.populate_and_solve(theta.iloc[i]))
+            for i in tqdm(range(n)):
+                results.append(populate_and_solve(self, theta.iloc[i, :]))
 
         return results
+
+
+@ray.remote
+def populate_and_solve_ray(problem, theta):
+    """Ray wrapper."""
+    return populate_and_solve(problem, theta)
+
+
+def populate_and_solve(problem, theta):
+    """Single function to populate the problem with
+       theta and solve it with the solver. Useful for
+       multiprocessing."""
+    problem.populate(theta)
+    results = problem.solve()
+
+    return results
+
+
+def solve_with_strategy_ray(problem, strategy, cache=None):
+    return solve_with_strategy(problem, strategy, cache=None)
+
+
+def solve_with_strategy(problem,
+                        strategy,
+                        cache=None):
+    """
+    Solve problem using strategy
+
+    By default the we solve a linear system if
+    the problem is an (MI)LP/(MI)QP.
+
+    Parameters
+    ----------
+    problem : Problem
+        Problem to solve.
+    strategy : Strategy
+        Strategy to be used.
+    cache : dict, optional
+        KKT Solver cache.
+
+    Returns
+    -------
+    dict
+        Results.
+    """
+    problem._verify_strategy(strategy)
+
+    # Relax discrete variables
+    problem._relax_disc_var()
+
+    reduced_problem = problem._construct_reduced_problem(strategy)
+
+    # Solve lower part of the chain
+    if reduced_problem.is_qp():
+        problem._solve(reduced_problem,
+                       solver=KKT,
+                       KKT_cache=cache,
+                       **problem.solver_options)
+    else:
+        problem._solve(reduced_problem,
+                       solver=problem.solver,
+                       **problem.solver_options)
+
+    results = problem._parse_solution(reduced_problem)
+
+    problem._restore_disc_var()
+
+    return results
+

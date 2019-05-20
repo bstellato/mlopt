@@ -1,5 +1,4 @@
-from mlopt.problem import Problem  # , _solve_with_strategy_multiprocess
-from multiprocessing import Pool
+from mlopt.problem import Problem, solve_with_strategy_ray, solve_with_strategy
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
     K_MAX_STRATEGIES
 from mlopt.learners import LEARNER_MAP
@@ -7,7 +6,8 @@ from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.filter import Filter
 from mlopt.utils import n_features, accuracy, suboptimality
-from mlopt.utils import get_n_processes
+import mlopt.utils as u
+from datetime import datetime as dt
 from mlopt.kkt import KKT, create_kkt_matrix
 from time import time
 from scipy.sparse.linalg import factorized
@@ -19,6 +19,7 @@ from glob import glob
 import tempfile
 import tarfile
 import pickle as pkl
+import ray
 from tqdm import tqdm
 import logging
 
@@ -32,6 +33,7 @@ class Optimizer(object):
                  objective, constraints,
                  name="problem",
                  log_level=logging.WARNING,
+                 parallel=True,
                  **solver_options):
         """
         Inizialize optimizer.
@@ -54,13 +56,39 @@ class Optimizer(object):
                                 solver=DEFAULT_SOLVER,
                                 **solver_options)
         self._solver_cache = None
-
         self.name = name
 
         self._learner = None
         self.encoding = None
         self.X_train = None
         self.y_train = None
+
+        # Parallelization
+        self.parallel = parallel
+
+    def __enter__(self):
+        """Initialize ray"""
+        if self.parallel:
+            n_proc = u.get_n_processes()
+            logging.info("Initializing ray over %i processors" %
+                         n_proc)
+            tmp_dir = '.ray_tmp/' + \
+                dt.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
+            if not os.path.exists(tmp_dir):
+                os.makedirs(tmp_dir)
+            ray.init(num_cpus=n_proc,
+                     redis_max_memory=(1024**2)*500,  # .1GB  # CAP
+                     object_store_memory=(1024**2)*20000,  # 20 GB
+                     temp_dir=tmp_dir,
+                     logging_level=logging.WARNING
+                     )
+
+            # Problem is not serialized correctly
+            ray.register_custom_serializer(Problem, use_pickle=True)
+        return self
+
+    def __exit__(self, *a):
+        ray.shutdown()
 
     @property
     def n_strategies(self):
@@ -385,18 +413,25 @@ class Optimizer(object):
             cache = [self._solver_cache[l] for l in labels]
 
         if parallel:
-            n_proc = get_n_processes(max_n=n_best)
-            pool = Pool(processes=n_proc)
-            results = pool.starmap(self._problem.solve_with_strategy,
-                                   zip(strategies, cache))
+
+            result_ids = []
+            for s in strategies:
+                result_ids.append(
+                    solve_with_strategy_ray.remote(self._problem,
+                                                   s, cache))
+
+            results = []
+            for r in result_ids:
+                results.append(ray.get(r))
+
             x = [r["x"] for r in results]
             time = [r["time"] for r in results]
             infeas = [r["infeasibility"] for r in results]
             cost = [r["cost"] for r in results]
         else:
             for j in range(n_best):
-                res = self._problem.solve_with_strategy(strategies[j],
-                                                        cache[j])
+                res = solve_with_strategy(self._problem,
+                                          strategies[j], cache[j])
                 x.append(res['x'])
                 time.append(res['time'])
                 infeas.append(res['infeasibility'])
@@ -428,7 +463,6 @@ class Optimizer(object):
 
     def solve(self, X,
               message="Predict optimal solution",
-              parallel=False,
               use_cache=True,
               verbose=False,
               ):
@@ -439,9 +473,6 @@ class Optimizer(object):
         ----------
         X : pandas DataFrame or Series
             Data points.
-        parallel : bool, optional
-            Perform `n_best` strategies evaluation in parallel.
-            Defaults to True.
         use_cache : bool, optional
             Use solver cache?  Defaults to True.
 
@@ -455,7 +486,6 @@ class Optimizer(object):
             X = pd.DataFrame(X).transpose()
 
         n_points = len(X)
-        n_best = self._learner.options['n_best']
 
         if use_cache and not self._solver_cache:
             err = "Solver cache requested but the cache has not been" + \
@@ -473,27 +503,16 @@ class Optimizer(object):
         # Predict best n_best classes for all the points
         t_start = time()
         classes = self._learner.predict(X)
-        t_predict = (time() - t_start) / n_points  # Compute average predict time
+        t_predict = (time() - t_start) / n_points  # Average predict time
 
-        if parallel:
-            n_proc = get_n_processes(max_n=n_best)
-            message = message + "in parallel (%d processors)" % n_proc
-        else:
-            message = message + " in serial"
+        logging.info(message)
 
-        for i in tqdm(range(n_points), desc=message):
+        for i in tqdm(range(n_points)):
 
             # Populate problem with i-th data point
             self._problem.populate(X.iloc[i])
 
-            # Pick strategies from encoding
-            #  strategies = [self.encoding[classes[i, j]]
-            #                for j in range(n_best)]
-            #  results.append(self.choose_best(strategies,
-            #                                  parallel=parallel))
-
             results.append(self.choose_best(classes[i, :],
-                                            parallel=parallel,
                                             use_cache=use_cache))
 
         # Append predict time

@@ -7,7 +7,7 @@ import cvxpy as cp
 import logging
 
 
-class TestCondensing(unittest.TestCase):
+class TestFilter(unittest.TestCase):
 
     def setUp(self):
         """Setup simple problem"""
@@ -65,7 +65,7 @@ class TestCondensing(unittest.TestCase):
         self.m = m
         self.df_test = df_test
 
-    def test_condensing_simple(self):
+    def test_filter_simple(self):
 
         k_max_strategies = 20
 
