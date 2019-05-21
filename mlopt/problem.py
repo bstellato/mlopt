@@ -20,6 +20,7 @@ class Problem(object):
     def __init__(self,
                  objective, constraints,
                  solver=DEFAULT_SOLVER,
+                 tight_constraints=True,
                  **solver_options):
         """
         Initialize optimization problem.
@@ -55,6 +56,7 @@ class Problem(object):
                           if v.attributes['boolean']]
 
         # Set options
+        self.tight_constraints = tight_constraints
         self.solver_options = solver_options
 
         # Set solver cache
@@ -196,8 +198,10 @@ class Problem(object):
             results['cost'] = self.cost()
             results['infeasibility'] = self.infeasibility()
             tight_constraints = {}
-            for c in intermediate_problem.constraints:
-                tight_constraints[c.id] = u.tight_components(c)
+
+            if self.tight_constraints:
+                for c in intermediate_problem.constraints:
+                    tight_constraints[c.id] = u.tight_components(c)
 
             # Get integer variables
             x_int = {}
@@ -330,32 +334,36 @@ class Problem(object):
         constraints = self.cvxpy_problem._intermediate_problem.constraints
 
         # Get only tight constraints in strategy
-        reduced_constraints = []
-        for con in constraints:
-            idx_tight = np.where(tight_constraints[con.id])[0]
-            if len(idx_tight) > 0:
+        if not self.tight_constraints:
+            # Pass all problem constraints
+            reduced_constraints = constraints
+        else:
+            reduced_constraints = []
+            for con in constraints:
+                idx_tight = np.where(tight_constraints[con.id])[0]
+                if len(idx_tight) > 0:
 
-                # Get tight constraints in expression
-                if con.expr.shape == ():
-                    # Scalar case no slicing
-                    tight_expr = con.expr
-                else:
-                    # Get tight constraints
-                    tight_expr = con.expr[idx_tight]
+                    # Get tight constraints in expression
+                    if con.expr.shape == ():
+                        # Scalar case no slicing
+                        tight_expr = con.expr
+                    else:
+                        # Get tight constraints
+                        tight_expr = con.expr[idx_tight]
 
-                # Set affine inequalities as equalities
-                new_type = type(con)
+                    # Set affine inequalities as equalities
+                    new_type = type(con)
 
-                # Remove inequality and equality constraints
-                if type(con) == Inequality:
-                    new_type = NonPos
-                elif type(con) == Equality:
-                    new_type = Zero
+                    # Remove inequality and equality constraints
+                    if type(con) == Inequality:
+                        new_type = NonPos
+                    elif type(con) == Equality:
+                        new_type = Zero
 
-                if new_type == NonPos and tight_expr.is_affine():
-                    new_type = Zero
+                    if new_type == NonPos and tight_expr.is_affine():
+                        new_type = Zero
 
-                reduced_constraints += [new_type(tight_expr)]
+                    reduced_constraints += [new_type(tight_expr)]
 
         # Fix discrete variables and
         # set them to continuous.
@@ -501,8 +509,8 @@ def solve_with_strategy(problem,
 
     reduced_problem = problem._construct_reduced_problem(strategy)
 
-    # Solve lower part of the chain
-    if reduced_problem.is_qp():
+    if problem.tight_constraints and reduced_problem.is_qp():
+        # If tight constraints enabled and QP representable problem
         problem._solve(reduced_problem,
                        solver=KKT,
                        KKT_cache=cache,
@@ -512,9 +520,9 @@ def solve_with_strategy(problem,
                        solver=problem.solver,
                        **problem.solver_options)
 
-    results = problem._parse_solution(reduced_problem)
-
     problem._restore_disc_var()
+
+    results = problem._parse_solution(reduced_problem)
 
     return results
 

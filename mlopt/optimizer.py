@@ -33,6 +33,7 @@ class Optimizer(object):
                  name="problem",
                  log_level=logging.WARNING,
                  parallel=True,
+                 tight_constraints=True,
                  **solver_options):
         """
         Inizialize optimizer.
@@ -53,6 +54,7 @@ class Optimizer(object):
 
         self._problem = Problem(objective, constraints,
                                 solver=DEFAULT_SOLVER,
+                                tight_constraints=True,
                                 **solver_options)
         self._solver_cache = None
         self.name = name

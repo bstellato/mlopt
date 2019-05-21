@@ -342,6 +342,61 @@ class TestSolveStrategy(unittest.TestCase):
             results["cost"], results_new["cost"], decimal=TOL
         )
 
+    def test_ignore_tight_constraints(self):
+        """
+        Mixed-integer random LP test ignoring active constraints.
+        Strategy consists only on the integer variables.
+        """
+
+        # Seed for reproducibility
+        np.random.seed(1)
+
+        # Define problem
+        n = 20
+        m = 70
+
+        # Define constraints
+        v = np.random.rand(n)  # Solution
+        A = spa.random(
+            m, n, density=0.8, data_rvs=np.random.randn, format="csc"
+        )
+        b = A.dot(v) + 10 * np.random.rand(m)
+
+        # Split in 2 parts
+        A1 = A[: int(m / 2), :]
+        b1 = b[: int(m / 2)]
+        A2 = A[int(m / 2):, :]
+        b2 = b[int(m / 2):]
+
+        # Cost
+        c = np.random.rand(n)
+        x = cp.Variable(n)  # Variable
+        y = cp.Variable(integer=True)  # Variable
+        cost = c * x - cp.sum(y) + y
+
+        # Define constraints
+        constraints = [A1 * x - y <= b1, A2 * x + y <= b2, y >= 2]
+
+        # Problem
+        problem = Problem(cp.Minimize(cost), constraints,
+                          tight_constraints=False)
+
+        # Solve and compute strategy
+        results = problem.solve()
+
+        # Solve just with strategy
+        results_new = solve_with_strategy(problem, results["strategy"])
+
+        # Verify both solutions are equal
+        npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
+        npt.assert_almost_equal(
+            results["cost"], results_new["cost"], decimal=TOL
+        )
+
+        # Assert empty tight constraints dictionaries
+        assert not results['strategy'].tight_constraints
+        assert not results_new['strategy'].tight_constraints
+
 
 if __name__ == "__main__":
     unittest.main()
