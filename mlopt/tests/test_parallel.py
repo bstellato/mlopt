@@ -90,46 +90,45 @@ class TestParallel(unittest.TestCase):
         constraints = [cp.sum(x) == 1, x >= 0]
 
         # Define optimizer
-        # Force mosek to be single threaded
-        m = Optimizer(cp.Minimize(cost), constraints, name="portfolio")
+        with Optimizer(cp.Minimize(cost), constraints, name="portfolio") as m:
 
-        '''
-        Sample points
-        '''
-        theta_bar = np.random.randn(n)
-        radius = 0.2
+            '''
+            Sample points
+            '''
+            theta_bar = np.random.randn(n)
+            radius = 0.2
 
-        '''
-        Train and solve
-        '''
+            '''
+            Train and solve
+            '''
 
-        # Training and testing data
-        n_train = 100
-        n_test = 10
-        # Sample points from multivariate ball
-        X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
-        X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
-        df = pd.DataFrame({'mu': list(X_d)})
-        df_test = pd.DataFrame({'mu': list(X_d_test)})
+            # Training and testing data
+            n_train = 100
+            n_test = 10
+            # Sample points from multivariate ball
+            X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
+            X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
+            df = pd.DataFrame({'mu': list(X_d)})
+            df_test = pd.DataFrame({'mu': list(X_d_test)})
 
-        # Train and test using pytorch
-        params = {
-            'learning_rate': [0.01],
-            'batch_size': [32],
-            'n_epochs': [200],
-            'n_layers': [5]
-        }
-        m.train(df,
-                parallel=True,
-                learner=PYTORCH,
-                params=params)
-        m.performance(df_test, parallel=True)
+            # Train and test using pytorch
+            params = {
+                'learning_rate': [0.01],
+                'batch_size': [32],
+                'n_epochs': [200],
+                'n_layers': [5]
+            }
+            m.train(df,
+                    parallel=True,
+                    learner=PYTORCH,
+                    params=params)
+            m.performance(df_test, parallel=True)
 
-        # Run parallel loop again to enforce instability
-        # in multiprocessing
-        m.performance(df_test, parallel=True)
+            # Run parallel loop again to enforce instability
+            # in multiprocessing
+            m.performance(df_test, parallel=True)
 
-        return
+            return
 
     # DOES NOT WORK YET BECAUSE IT CANNOT PICKLE pardiso objects
     #  def test_parallel_strategy_selection(self):

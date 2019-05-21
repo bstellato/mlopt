@@ -60,8 +60,14 @@ class TestSampling(unittest.TestCase):
         # Define problem
         self.optimizer = Optimizer(cp.Minimize(self.cost),
                                    self.constraints)
+
+        self.optimizer.init_parallel()
+
         # Test set
         self.df_test = sampling_function(n_test)
+
+    def tearDown(self):
+        self.optimizer.shutdown_parallel()
 
     def test_sample(self):
         """Test sampling scheme"""

@@ -1,9 +1,10 @@
 import unittest
+import mlopt
 import numpy as np
 import scipy.sparse as spa
 import numpy.testing as npt
 from mlopt.tests.settings import TEST_TOL as TOL
-from mlopt.problem import Problem
+from mlopt.problem import Problem, solve_with_strategy
 import cvxpy as cp
 
 
@@ -28,7 +29,7 @@ class TestSolveStrategy(unittest.TestCase):
         violation1 = problem.infeasibility()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results["strategy"])
+        results_new = solve_with_strategy(problem, results["strategy"])
         violation2 = problem.infeasibility()
 
         # Verify both solutions are equal
@@ -58,8 +59,8 @@ class TestSolveStrategy(unittest.TestCase):
         # Split in 2 parts
         A1 = A[: int(m / 2), :]
         b1 = b[: int(m / 2)]
-        A2 = A[int(m / 2) :, :]
-        b2 = b[int(m / 2) :]
+        A2 = A[int(m / 2):, :]
+        b2 = b[int(m / 2):]
 
         # Cost
         c = np.random.rand(n)
@@ -76,7 +77,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results["strategy"])
+        results_new = solve_with_strategy(problem, results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -104,8 +105,8 @@ class TestSolveStrategy(unittest.TestCase):
         # Split in 2 parts
         A1 = A[: int(m / 2), :]
         b1 = b[: int(m / 2)]
-        A2 = A[int(m / 2) :, :]
-        b2 = b[int(m / 2) :]
+        A2 = A[int(m / 2):, :]
+        b2 = b[int(m / 2):]
 
         # Cost
         c = np.random.rand(n)
@@ -116,7 +117,7 @@ class TestSolveStrategy(unittest.TestCase):
         # Define constraints
         constraints = [
             A1 * x + y[: int(m / 2)] <= b1,
-            A2 * x + y[int(m / 2) :] <= b2,
+            A2 * x + y[int(m / 2):] <= b2,
         ]
 
         # Problem
@@ -126,7 +127,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results["strategy"])
+        results_new = solve_with_strategy(problem, results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -185,7 +186,7 @@ class TestSolveStrategy(unittest.TestCase):
         #  strategy = Strategy(tight_constraints, int_vars)
 
         # Solve with strategy!
-        results_strategy = problem.solve_with_strategy(results["strategy"])
+        results_strategy = solve_with_strategy(problem, results["strategy"])
 
         # TODO: Solve issue!
         # Correct strategy but variable is infeasible for original problem.
@@ -223,8 +224,8 @@ class TestSolveStrategy(unittest.TestCase):
         # Split in 2 parts
         A1 = A[: int(m / 2), :]
         b1 = b[: int(m / 2)]
-        A2 = A[int(m / 2) :, :]
-        b2 = b[int(m / 2) :]
+        A2 = A[int(m / 2):, :]
+        b2 = b[int(m / 2):]
 
         # Cost
         c = np.random.rand(n)
@@ -242,7 +243,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results["strategy"])
+        results_new = solve_with_strategy(problem, results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -270,8 +271,8 @@ class TestSolveStrategy(unittest.TestCase):
         # Split in 2 parts
         A1 = A[: int(m / 2), :]
         b1 = b[: int(m / 2)]
-        A2 = A[int(m / 2) :, :]
-        b2 = b[int(m / 2) :]
+        A2 = A[int(m / 2):, :]
+        b2 = b[int(m / 2):]
 
         # Cost
         c = np.random.rand(n)
@@ -287,7 +288,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results["strategy"])
+        results_new = solve_with_strategy(problem, results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -315,8 +316,8 @@ class TestSolveStrategy(unittest.TestCase):
         # Split in 2 parts
         A1 = A[: int(m / 2), :]
         b1 = b[: int(m / 2)]
-        A2 = A[int(m / 2) :, :]
-        b2 = b[int(m / 2) :]
+        A2 = A[int(m / 2):, :]
+        b2 = b[int(m / 2):]
 
         # Cost
         c = np.random.rand(n)
@@ -333,7 +334,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = problem.solve_with_strategy(results["strategy"])
+        results_new = solve_with_strategy(problem, results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)

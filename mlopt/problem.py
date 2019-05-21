@@ -3,14 +3,13 @@ import numpy as np
 # Mlopt stuff
 from mlopt.strategy import Strategy
 from mlopt.settings import DEFAULT_SOLVER, DIVISION_TOL
-from mlopt.kkt import KKT, KKTSolver
-from mlopt.utils import get_n_processes, args_norms, tight_components
+from mlopt.kkt import KKT
+import mlopt.utils as u
 # Import cvxpy and constraint types
 import cvxpy as cp
 from cvxpy.constraints.nonpos import NonPos, Inequality
 from cvxpy.constraints.zero import Zero, Equality
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
-from cvxpy.reductions.solvers.solving_chain import SolvingChain
 # Progress bars
 from tqdm import tqdm
 import logging
@@ -156,7 +155,7 @@ class Problem(object):
         violations = []
         for c in self.constraints:
             # Get constraint arguments norms
-            arg_norms = args_norms(c.expr)
+            arg_norms = u.args_norms(c.expr)
 
             # Get relative value for all of the expression arguments
             relative_viol = np.amax(arg_norms)
@@ -198,7 +197,7 @@ class Problem(object):
             results['infeasibility'] = self.infeasibility()
             tight_constraints = {}
             for c in intermediate_problem.constraints:
-                tight_constraints[c.id] = tight_components(c)
+                tight_constraints[c.id] = u.tight_components(c)
 
             # Get integer variables
             x_int = {}
@@ -422,6 +421,11 @@ class Problem(object):
         n = len(theta)  # Number of points
 
         if parallel:
+            shutdown_ray = False
+
+            if not ray.is_initialized():
+                u.init_parallel()
+                shutdown_ray = True
 
             logging.info(message + " (parallel)")
             # Solve with ray
@@ -433,6 +437,9 @@ class Problem(object):
             results = []
             for r in tqdm(result_ids):
                 results.append(ray.get(r))
+
+            if shutdown_ray:
+                u.shutdown_parallel()
 
         else:
             logging.info(message + " (serial)")

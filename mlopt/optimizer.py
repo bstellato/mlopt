@@ -7,7 +7,6 @@ from mlopt.strategy import encode_strategies
 from mlopt.filter import Filter
 from mlopt.utils import n_features, accuracy, suboptimality
 import mlopt.utils as u
-from datetime import datetime as dt
 from mlopt.kkt import KKT, create_kkt_matrix
 from time import time
 from scipy.sparse.linalg import factorized
@@ -66,29 +65,22 @@ class Optimizer(object):
         # Parallelization
         self.parallel = parallel
 
-    def __enter__(self):
-        """Initialize ray"""
+    def init_parallel(self):
+        """Initialize parallel execution server."""
         if self.parallel:
-            n_proc = u.get_n_processes()
-            logging.info("Initializing ray over %i processors" %
-                         n_proc)
-            tmp_dir = '.ray_tmp/' + \
-                dt.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
-            if not os.path.exists(tmp_dir):
-                os.makedirs(tmp_dir)
-            ray.init(num_cpus=n_proc,
-                     redis_max_memory=(1024**2)*500,  # .1GB  # CAP
-                     object_store_memory=(1024**2)*20000,  # 20 GB
-                     temp_dir=tmp_dir,
-                     logging_level=logging.WARNING
-                     )
+            if not ray.is_initialized():
+                u.init_parallel()
 
-            # Problem is not serialized correctly
-            ray.register_custom_serializer(Problem, use_pickle=True)
+    def shutdown_parallel(self):
+        """Shutdown parallel execution server."""
+        u.shutdown_parallel()
+
+    def __enter__(self):
+        self.init_parallel()
         return self
 
     def __exit__(self, *a):
-        ray.shutdown()
+        self.shutdown_parallel()
 
     @property
     def n_strategies(self):

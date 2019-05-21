@@ -6,10 +6,16 @@ from mlopt.settings import PYTORCH, OPTIMAL_TREE
 import warnings
 from scikits.umfpack import UmfpackWarning
 # Ignore umfpack warning when amtrix is singular
-warnings.simplefilter('ignore', UmfpackWarning)
+#  warnings.simplefilter('ignore', UmfpackWarning)
+# TODO: Fixme, still prints
 warnings.filterwarnings(
     action='ignore',
     category=RuntimeWarning,
-    module='scikits.umfpack'
+    module='umfpack'
+)
+warnings.filterwarnings(
+    action='ignore',
+    category=UmfpackWarning,
+    module='umfpack'
 )
 

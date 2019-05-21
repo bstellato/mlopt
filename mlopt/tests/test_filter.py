@@ -29,6 +29,7 @@ class TestFilter(unittest.TestCase):
         m = mlopt.Optimizer(cp.Minimize(cost),
                             constraints,
                             log_level=logging.DEBUG)
+        m.init_parallel()
 
         '''
         Sample points
@@ -64,6 +65,9 @@ class TestFilter(unittest.TestCase):
         # Store stuff
         self.m = m
         self.df_test = df_test
+
+    def tearDown(self):
+        self.m.shutdown_parallel()
 
     def test_filter_simple(self):
 

@@ -9,6 +9,32 @@ import os
 import pandas as pd
 import mlopt
 import logging
+import ray
+from datetime import datetime as dt
+
+
+def init_parallel():
+    n_proc = get_n_processes()
+    logging.info("Initializing ray over %i processors" %
+                 n_proc)
+    tmp_dir = '.ray_tmp/' + \
+        dt.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
+    if not os.path.exists(tmp_dir):
+        os.makedirs(tmp_dir)
+    ray.init(num_cpus=n_proc,
+             redis_max_memory=(1024**2)*500,  # .1GB  # CAP
+             object_store_memory=(1024**2)*20000,  # 20 GB
+             temp_dir=tmp_dir,
+             logging_level=logging.WARNING
+             )
+
+    # Problem is not serialized correctly
+    from mlopt.problem import Problem
+    ray.register_custom_serializer(Problem, use_pickle=True)
+
+
+def shutdown_parallel():
+    ray.shutdown()
 
 
 def args_norms(expr):
