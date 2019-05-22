@@ -113,6 +113,9 @@ def learning_data(data_folder=DATA_FOLDER,
                   t_end=dt.date(2013, 1, 1),
                   T_periods=1):
 
+    print("Cost penalties")
+    print(lambda_cost)
+
     # Simulate
     simulation_data = simulate_system(data_folder,
                                       t_start, t_end,
@@ -153,7 +156,7 @@ def sample_around_points(df, n_total, radius={}):
             if col in radius:
                 rad = radius[col] * norm_val
             else:
-                rad = 0.05 * norm_val
+                rad = 0.001 * norm_val
 
             # Sample from uniform shpere (vectorize first)
             samples = uniform_sphere_sample(row[col].flatten(), rad,

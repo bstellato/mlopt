@@ -53,8 +53,9 @@ class Optimal(BasePolicy):
             self.lambda_cost = {'risk': stg.RISK_COST,
                                 'borrow': stg.BORROW_WEIGHT_COST,
                                 #  'norm0_trade': stg.NORM0_TRADE_COST,
-                                #  'norm1_trade': stg.NORM1_TRADE_COST,
-                                'norm2_trade': stg.NORM2_TRADE_COST}
+                                'norm1_trade': stg.NORM1_TRADE_COST,
+                                #  'norm2_trade': stg.NORM2_TRADE_COST
+                                }
         else:
             self.lambda_cost = lambda_cost
         lam = self.lambda_cost  # More readable code

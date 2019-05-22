@@ -54,7 +54,7 @@ class Optimizer(object):
 
         self._problem = Problem(objective, constraints,
                                 solver=DEFAULT_SOLVER,
-                                tight_constraints=True,
+                                tight_constraints=tight_constraints,
                                 **solver_options)
         self._solver_cache = None
         self.name = name

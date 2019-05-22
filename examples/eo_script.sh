@@ -16,4 +16,5 @@ elif [[ $SLURM_PARTITION == *"gpu"* ]]; then
 fi
 
 # Run actual script
-python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID
+# python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID
+python online_optimization/portfolio/portfolio.py --sparsity $SLURM_ARRAY_TASK_ID

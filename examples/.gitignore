@@ -1,3 +1,4 @@
 debug_*.py
 *.log
-ray_tmp/
+.ray_tmp/
+*.csv

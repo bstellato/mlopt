@@ -24,7 +24,8 @@ np.random.seed(1)
 STORAGE_DIR = "/pool001/stellato/online/portfolio"
 
 
-def create_mlopt_problem(df, k=None, lambda_cost=None):
+def create_mlopt_problem(df, k=None, lambda_cost=None,
+                         tight_constraints=False):
 
     # Get number of periods from data
     n_periods = len([col for col in df.columns if 'hat_r' in col])
@@ -33,7 +34,6 @@ def create_mlopt_problem(df, k=None, lambda_cost=None):
         lambda_cost = {'risk': stg.RISK_COST,
                        'borrow': stg.BORROW_COST,
                        #  'norm0_trade': stg.NORM0_TRADE_COST,
-                       #  'norm1_trade': stg.NORM1_TRADE_COST,
                        'norm1_trade': stg.NORM1_TRADE_COST}
     else:
         lambda_cost = lambda_cost
@@ -90,7 +90,9 @@ def create_mlopt_problem(df, k=None, lambda_cost=None):
 
     return mlopt.Optimizer(cp.Maximize(cost), constraints,
                            log_level=logging.INFO,
-                           #  verbose=True
+                           #  verbose=True,
+                           tight_constraints=tight_constraints,
+                           parallel=True,
                            )
 
 
@@ -111,14 +113,15 @@ def main():
 
     EXAMPLE_NAME = STORAGE_DIR + '/portfolio_%d_' % k
 
-    n_train = 10000
+    n_train = 5000
+    n_test = 2000
 
     # Define cost weights
     lambda_cost = {'risk': stg.RISK_COST,
                    'borrow': stg.BORROW_WEIGHT_COST,
                    #  'norm0_trade': stg.NORM0_TRADE_COST,
                    #  'norm1_trade': stg.NORM1_TRADE_COST,
-                   'norm1_trade': stg.NORM1_TRADE_COST}
+                   'norm1_trade': 1.0}
 
     nn_params = {
         'learning_rate': [0.0001, 0.001, 0.01],
@@ -145,97 +148,125 @@ def main():
                                t_end=t_end,
                                T_periods=T_periods,
                                lambda_cost=lambda_cost)
+    n_history_train = int(len(df_history) * 0.8)
+    df_history_train = df_history[:n_history_train]
+    df_history_test = df_history[n_history_train:]
 
     # Sample around points
-    df = sample_around_points(df_history,
-                              n_total=n_train)
+    df_train = sample_around_points(df_history_train,
+                                    n_total=n_train)
 
     # Define mlopt problem
-    m_mlopt = create_mlopt_problem(df, k=k,
+    m_mlopt = create_mlopt_problem(df_train, k=k,
                                    lambda_cost=lambda_cost)
+    with m_mlopt:
 
-    # Get samples
-    print("Get samples in parallel")
-    m_mlopt.get_samples(df, parallel=True, filter_strategies=False)
-    m_mlopt.save_training_data(EXAMPLE_NAME + 'not_condensed.pkl',
-                               delete_existing=True)
+        # Get samples
+        print("Get samples in parallel")
+        m_mlopt.get_samples(df_train, parallel=True, filter_strategies=False)
+        m_mlopt.save_training_data(EXAMPLE_NAME + 'not_condensed.pkl',
+                                   delete_existing=True)
+        #
+        #  m_mlopt.load_training_data(EXAMPLE_NAME + 'not_condensed.pkl')
+        #  m_mlopt.filter_strategies()
+        #
+        # Learn
+        m_mlopt.train(learner=mlopt.PYTORCH,
+                      n_best=10,
+                      filter_strategies=False,
+                      parallel=True,
+                      params=nn_params)
+
+        df_test = sample_around_points(df_history_test,
+                                       n_total=n_test)
+        res_general, res_detail = m_mlopt.performance(df_test,
+                                                      parallel=True,
+                                                      use_cache=True)
+
+        res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
+                           header=True)
+        res_detail.to_csv(EXAMPLE_NAME + "test_detail.csv")
+
+        # Evaluate loop performance
+        # TODO: Add!
+        #  perf_solver = u.performance(problem, sim_data_test)
+        #  perf_mlopt = u.performance(problem, sim_data_mlopt)
+        #  res_general['perf_solver'] = perf_solver
+        #  res_general['perf_mlopt'] = perf_mlopt
+        #  res_general['perf_degradation_perc'] = 100 * (1. - perf_mlopt/perf_solver)
+        #
+        #  # Export files
+        #  with open(EXAMPLE_NAME + 'sim_data_mlopt.pkl', 'wb') as handle:
+        #      pickle.dump(sim_data_mlopt, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        #
+        #  with open(EXAMPLE_NAME + 'sim_data_test.pkl', 'wb') as handle:
+        #      pickle.dump(sim_data_test, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
+        # OLD: Load data
+        #  with pd.HDFStore("./data/learn_data.h5") as sim_data:
+        #      df = sim_data['data']
+
+        # Learn
+
+        # Reduce number of assets
+        #  n_assets = 30
+        #  m_factors = 5
+        #
+        #  # F
+        #  F_red = []
+        #  for F in df_real['F']:
+        #      F_red.append(F[:n_assets, :m_factors])
+        #
+        #  # hat_r_red
+        #  hat_r_red = {}
+        #  for hat_r_col in [col for col in df_real.columns if 'hat_r' in col]:
+        #      hat_r = df_real[hat_r_col]
+        #      hat_r_temp = []
+        #      for r in hat_r:
+        #          hat_r_temp.append(r[:n_assets])
+        #      hat_r_red[hat_r_col] = hat_r_temp
+        #
+        #  #  w_init
+        #  w_init_red = []
+        #  for w in df_real['w_init']:
+        #      w_init_red.append(w[:n_assets])
+        #
+        #  #  Sigma_F
+        #  Sigma_F_red = []
+        #  for S in df_real['Sigma_F']:
+        #      Sigma_F_red.append(S[:m_factors, :m_factors])
+        #
+        #  #  sqrt_D
+        #  sqrt_D_red = []
+        #  for sqrt_D in df_real['sqrt_D']:
+        #      sqrt_D_red.append(sqrt_D[:n_assets])
+        #
+        #
+        #  df_red = pd.DataFrame()
+        #  df_red['F'] = F_red
+        #  df_red['w_init'] = w_init_red
+        #  df_red['Sigma_F'] = Sigma_F_red
+        #  df_red['sqrt_D'] = sqrt_D_red
+        #  for k, v in hat_r_red.items():
+        #      df_red[k] = v
+        #
+
+
+    #  m = create_mlopt_problem(df)
     #
-    #  m_mlopt.load_training_data(EXAMPLE_NAME + 'not_condensed.pkl')
-    m_mlopt.filter_strategies()
-
-    # Learn
-    m_mlopt.train(learner=mlopt.PYTORCH,
-                  n_best=10,
-                  filter_strategies=True,
-                  parallel=False,
-                  params=nn_params)
-
-
-    # OLD: Load data
-    #  with pd.HDFStore("./data/learn_data.h5") as sim_data:
-    #      df = sim_data['data']
-
-
-    # Learn
-
-
-    # Reduce number of assets
-    #  n_assets = 30
-    #  m_factors = 5
+    #  params = {
+    #      'learning_rate': [0.01],
+    #      'batch_size': [32],
+    #      'n_epochs': [200]
+    #  }
     #
-    #  # F
-    #  F_red = []
-    #  for F in df_real['F']:
-    #      F_red.append(F[:n_assets, :m_factors])
-    #
-    #  # hat_r_red
-    #  hat_r_red = {}
-    #  for hat_r_col in [col for col in df_real.columns if 'hat_r' in col]:
-    #      hat_r = df_real[hat_r_col]
-    #      hat_r_temp = []
-    #      for r in hat_r:
-    #          hat_r_temp.append(r[:n_assets])
-    #      hat_r_red[hat_r_col] = hat_r_temp
-    #
-    #  #  w_init
-    #  w_init_red = []
-    #  for w in df_real['w_init']:
-    #      w_init_red.append(w[:n_assets])
-    #
-    #  #  Sigma_F
-    #  Sigma_F_red = []
-    #  for S in df_real['Sigma_F']:
-    #      Sigma_F_red.append(S[:m_factors, :m_factors])
-    #
-    #  #  sqrt_D
-    #  sqrt_D_red = []
-    #  for sqrt_D in df_real['sqrt_D']:
-    #      sqrt_D_red.append(sqrt_D[:n_assets])
-    #
-    #
-    #  df_red = pd.DataFrame()
-    #  df_red['F'] = F_red
-    #  df_red['w_init'] = w_init_red
-    #  df_red['Sigma_F'] = Sigma_F_red
-    #  df_red['sqrt_D'] = sqrt_D_red
-    #  for k, v in hat_r_red.items():
-    #      df_red[k] = v
-    #
-
-
-#  m = create_mlopt_problem(df)
-#
-#  params = {
-#      'learning_rate': [0.01],
-#      'batch_size': [32],
-#      'n_epochs': [200]
-#  }
-#
-#  m.get_samples(df, parallel=True)
-#  m.get_samples(df_red, parallel=True)
-#  m.save_training_data("./data/train_data.pkl",
-#                       delete_existing=True)
-#  m.load_training_data("./data/train_data.pkl")
+    #  m.get_samples(df, parallel=True)
+    #  m.get_samples(df_red, parallel=True)
+    #  m.save_training_data("./data/train_data.pkl",
+    #                       delete_existing=True)
+    #  m.load_training_data("./data/train_data.pkl")
 
 
 
