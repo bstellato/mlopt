@@ -1,6 +1,5 @@
 from mlopt.problem import Problem, solve_with_strategy_ray, solve_with_strategy
-from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL, \
-    K_MAX_STRATEGIES
+from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
@@ -269,12 +268,10 @@ class Optimizer(object):
             self.sample(sampling_fn, parallel=parallel)
 
         # Condense strategies
-        if (len(self.encoding) > K_MAX_STRATEGIES) and \
-                filter_strategies:
+        if filter_strategies:
             self.filter_strategies()
 
-    def filter_strategies(self, k_max_strategies=K_MAX_STRATEGIES,
-                          parallel=True):
+    def filter_strategies(self, parallel=True):
         # Store full non filtered strategies
         self.encoding_full = self.encoding
         self.y_train_full = self.y_train
@@ -286,8 +283,7 @@ class Optimizer(object):
                               encoding=self.encoding,
                               problem=self._problem)
         self.y_train, self.encoding = \
-            self._filter.filter(k_max_strategies=k_max_strategies,
-                                parallel=parallel)
+            self._filter.filter(parallel=parallel)
 
     def train(self, X=None, sampling_fn=None,
               parallel=True,

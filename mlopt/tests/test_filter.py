@@ -71,28 +71,22 @@ class TestFilter(unittest.TestCase):
 
     def test_filter_simple(self):
 
-        k_max_strategies = 20
-
         self.m.get_samples(self.df_train, parallel=True,
                            filter_strategies=False)
         logging.info("Number of original strategies %d" %
                      len(self.m.encoding))
-        self.m.filter_strategies(k_max_strategies=k_max_strategies,
-                                 parallel=True)
+        self.m.filter_strategies(parallel=True)
         logging.info("Number of condensed strategies (parallel): %d" %
                      len(self.m.encoding))
-        n_condensed_parallel = len(self.m.encoding)
-        delattr(self.m._filter, "c")
-        delattr(self.m._filter, "filtered_strategies")
+        n_filter_parallel = len(self.m.encoding)
 
         logging.info("Recompute samples to cleanup filtered ones")
         self.m.get_samples(self.df_train, parallel=True,
                            filter_strategies=False)
-        self.m.filter_strategies(k_max_strategies=k_max_strategies,
-                                 parallel=False)
+        self.m.filter_strategies(parallel=False)
         logging.info("Number of condensed strategies (serial): %d" %
                      len(self.m.encoding))
-        n_condensed_serial = len(self.m.encoding)
+        n_filter_serial = len(self.m.encoding)
 
-        assert len(self.m._filter.encoding_full) >= n_condensed_parallel
-        assert n_condensed_serial == n_condensed_parallel
+        assert len(self.m._filter.encoding_full) >= n_filter_parallel
+        assert n_filter_serial == n_filter_parallel
