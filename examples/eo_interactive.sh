@@ -2,7 +2,7 @@
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=20
-#SBATCH --mem-per-cpu=5G
+#SBATCH --mem-per-cpu=6G
 #SBATCH --partition=sched_mit_sloan_interactive
 #SBATCH --time=2-00:00
 #SBATCH -o /pool001/stellato/output/output_%A_N%a.txt

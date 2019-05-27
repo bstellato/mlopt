@@ -173,7 +173,7 @@ def main():
         # Learn
         m_mlopt.train(learner=mlopt.PYTORCH,
                       n_best=10,
-                      filter_strategies=False,
+                      filter_strategies=True,
                       parallel=True,
                       params=nn_params)
 

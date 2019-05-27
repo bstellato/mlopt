@@ -85,68 +85,70 @@ def main():
     m_mlopt = mlopt.Optimizer(problem.objective, problem.constraints,
                               log_level=logging.INFO)
 
-    # Get samples
-    m_mlopt.get_samples(df_train, parallel=True, filter_strategies=False)
-    #  m_mlopt._compute_sample_strategy_pairs(parallel=True)
-    m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
-                               delete_existing=True)
+    with m_mlopt:
 
-    #  m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
-    #  m_mlopt.filter_strategies()
+        # Get samples
+        m_mlopt.get_samples(df_train, parallel=True, filter_strategies=False)
+        #  m_mlopt._compute_sample_strategy_pairs(parallel=True)
+        m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
+                                   delete_existing=True)
 
-    # Learn optimizer
-    m_mlopt.train(learner=mlopt.PYTORCH,
-                  n_best=10,
-                  filter_strategies=True,
-                  parallel=True,
-                  params=nn_params)
+        #  m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
+        #  m_mlopt.filter_strategies()
 
-    # Generate test trajectory and collect points
-    print("Simulate loop again to get trajectory points")
-    # TODO: Change seed!
-    P_load_test = u.P_load_profile(n_sim_test, seed=1)
+        # Learn optimizer
+        m_mlopt.train(learner=mlopt.PYTORCH,
+                      n_best=10,
+                      filter_strategies=True,
+                      parallel=True,
+                      params=nn_params)
 
-    # Loop with basic function
-    sim_data_test = u.simulate_loop(problem, init_data,
-                                    u.basic_loop_solve,
-                                    P_load_test,
-                                    n_sim_test)
-    # Loop with predictor
-    sim_data_mlopt = u.simulate_loop(m_mlopt, init_data,
-                                     u.predict_loop_solve,
-                                     P_load_test,
-                                     n_sim_test)
+        # Generate test trajectory and collect points
+        print("Simulate loop again to get trajectory points")
+        # TODO: Change seed!
+        P_load_test = u.P_load_profile(n_sim_test, seed=1)
 
-    # Evaluate open-loop performance on those parameters
-    df_test = u.sim_data_to_params(sim_data_test)
-    res_general, res_detail = m_mlopt.performance(df_test,
-                                                  parallel=False,
-                                                  use_cache=True)
+        # Loop with basic function
+        sim_data_test = u.simulate_loop(problem, init_data,
+                                        u.basic_loop_solve,
+                                        P_load_test,
+                                        n_sim_test)
+        # Loop with predictor
+        sim_data_mlopt = u.simulate_loop(m_mlopt, init_data,
+                                         u.predict_loop_solve,
+                                         P_load_test,
+                                         n_sim_test)
 
-    # Evaluate loop performance
-    perf_solver = u.performance(problem, sim_data_test)
-    perf_mlopt = u.performance(problem, sim_data_mlopt)
-    res_general['perf_solver'] = perf_solver
-    res_general['perf_mlopt'] = perf_mlopt
-    res_general['perf_degradation_perc'] = 100 * (1. - perf_mlopt/perf_solver)
+        # Evaluate open-loop performance on those parameters
+        df_test = u.sim_data_to_params(sim_data_test)
+        res_general, res_detail = m_mlopt.performance(df_test,
+                                                      parallel=False,
+                                                      use_cache=True)
 
-    # Export files
-    with open(EXAMPLE_NAME + 'sim_data_mlopt.pkl', 'wb') as handle:
-        pickle.dump(sim_data_mlopt, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # Evaluate loop performance
+        perf_solver = u.performance(problem, sim_data_test)
+        perf_mlopt = u.performance(problem, sim_data_mlopt)
+        res_general['perf_solver'] = perf_solver
+        res_general['perf_mlopt'] = perf_mlopt
+        res_general['perf_degradation_perc'] = 100 * (1. - perf_mlopt/perf_solver)
 
-    with open(EXAMPLE_NAME + 'sim_data_test.pkl', 'wb') as handle:
-        pickle.dump(sim_data_test, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # Export files
+        with open(EXAMPLE_NAME + 'sim_data_mlopt.pkl', 'wb') as handle:
+            pickle.dump(sim_data_mlopt, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
-                       header=True)
-    res_detail.to_csv(EXAMPLE_NAME + "test_detail.csv")
+        with open(EXAMPLE_NAME + 'sim_data_test.pkl', 'wb') as handle:
+            pickle.dump(sim_data_test, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    u.plot_sim_data(sim_data_mlopt, T_horizon, P_load_test,
-                    title='sim_data_mlopt',
-                    name=EXAMPLE_NAME)
-    u.plot_sim_data(sim_data_test, T_horizon, P_load_test,
-                    title='sim_data_test',
-                    name=EXAMPLE_NAME)
+        res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
+                           header=True)
+        res_detail.to_csv(EXAMPLE_NAME + "test_detail.csv")
+
+        u.plot_sim_data(sim_data_mlopt, T_horizon, P_load_test,
+                        title='sim_data_mlopt',
+                        name=EXAMPLE_NAME)
+        u.plot_sim_data(sim_data_test, T_horizon, P_load_test,
+                        title='sim_data_test',
+                        name=EXAMPLE_NAME)
 
 
 if __name__ == '__main__':

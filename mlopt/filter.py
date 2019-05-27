@@ -74,7 +74,7 @@ class Filter(object):
                                  for label in self.y_train])
 
         # Assign discarded samples and compute degradation
-        degradation = np.zeros(len(selected_strategies))
+        degradation = np.zeros(len(discarded_samples))
 
         if not parallel:
 
