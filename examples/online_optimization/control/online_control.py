@@ -76,9 +76,9 @@ def main():
 
     # Sample over balls around all the parameters
     df_train = u.sample_around_points(df,
-                                      radius={'z_init': .6,  # .2,
-                                              's_init': .6,  # .2,
-                                              'P_load': 0.05,  # 0.01
+                                      radius={'z_init': .4,  # .2,
+                                              #  's_init': .6,  # .2,
+                                              'P_load': 0.01,  # 0.01
                                               },
                                       n_total=n_train)
 

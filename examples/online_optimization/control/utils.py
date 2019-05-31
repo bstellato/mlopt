@@ -140,7 +140,7 @@ def control_problem(T=10,
     P = cp.Variable(T, name='P')      # Cell power
     s = cp.Variable(T+1, name='s')
     z = cp.Variable(T, name='z', boolean=True)
-    w = cp.Variable(T, name='w')
+    w = cp.Variable(T, name='w', integer=True)
     d = cp.Variable(T, name='d', boolean=True)
 
     # Constraints

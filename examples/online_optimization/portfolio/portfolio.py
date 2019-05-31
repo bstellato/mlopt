@@ -121,7 +121,7 @@ def main():
                    'borrow': stg.BORROW_WEIGHT_COST,
                    #  'norm0_trade': stg.NORM0_TRADE_COST,
                    #  'norm1_trade': stg.NORM1_TRADE_COST,
-                   'norm1_trade': 1.0}
+                   'norm1_trade': 0.1}
 
     nn_params = {
         'learning_rate': [0.0001, 0.001, 0.01],

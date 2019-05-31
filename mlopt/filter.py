@@ -102,7 +102,7 @@ class Filter(object):
                 self.y_train[discarded_samples[i]], degradation[i] = \
                     ray.get(result_ids[i])
 
-        return np.mean(degradation)
+        return degradation
 
     def select_strategies(self, samples_fraction):
         """Select the most frequent strategies depending on the counts"""
@@ -168,6 +168,8 @@ class Filter(object):
                                           parallel=parallel)
 
         logging.info("Average cost degradation = %.2e %%" %
-                     (100 * degradation))
+                     (100 * np.mean(degradation)))
+        logging.info("Max cost degradation = %.2e %%" %
+                     (100 * np.max(degradation)))
 
         return self.y_train, self.encoding
