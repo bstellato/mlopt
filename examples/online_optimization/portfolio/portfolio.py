@@ -3,7 +3,6 @@ import os
 import sys
 sys.path.append(os.getcwd())
 
-from mlopt.sampling import uniform_sphere_sample
 from mlopt.utils import benchmark
 import online_optimization.portfolio.simulation.settings as stg
 from online_optimization.portfolio.learning_data import learning_data, sample_around_points
@@ -25,7 +24,7 @@ STORAGE_DIR = "/pool001/stellato/online/portfolio"
 
 
 def create_mlopt_problem(df, k=None, lambda_cost=None,
-                         tight_constraints=False):
+                         tight_constraints=True):
 
     # Get number of periods from data
     n_periods = len([col for col in df.columns if 'hat_r' in col])
