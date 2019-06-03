@@ -22,10 +22,10 @@ def init_parallel():
     if not os.path.exists(tmp_dir):
         os.makedirs(tmp_dir)
     ray.init(num_cpus=n_proc,
-             redis_max_memory=(1024**2)*500,  # .1GB  # CAP
-             object_store_memory=(1024**2)*20000,  # 20 GB
+             # redis_max_memory=(1024**2)*500,  # .1GB  # CAP
+             # object_store_memory=(1024**2)*20000,  # 20 GB
              temp_dir=tmp_dir,
-             logging_level=logging.WARNING
+             logging_level=logging.INFO
              )
 
     # Problem is not serialized correctly

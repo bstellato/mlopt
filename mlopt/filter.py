@@ -1,4 +1,5 @@
 import ray
+from ray.rllib.utils.memory import ray_get_and_free   # Force memory deallocation
 import numpy as np
 import logging
 from mlopt.problem import solve_with_strategy
@@ -100,7 +101,7 @@ class Filter(object):
 
             for i in tqdm(range(len(discarded_samples))):
                 self.y_train[discarded_samples[i]], degradation[i] = \
-                    ray.get(result_ids[i])
+                    ray_get_and_free(result_ids[i])
 
         return degradation
 
