@@ -21,16 +21,20 @@ def init_parallel():
         dt.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
     if not os.path.exists(tmp_dir):
         os.makedirs(tmp_dir)
+    # Use local_mode for debugging
+    local_mode = True
     ray.init(num_cpus=n_proc,
-             # redis_max_memory=(1024**2)*500,  # .1GB  # CAP
-             # object_store_memory=(1024**2)*20000,  # 20 GB
+             # redis_max_memory=int(1e09)*20,  # 50GB
+             # object_store_memory=int(1e09)*20,  # 50GB
              temp_dir=tmp_dir,
-             logging_level=logging.INFO
+             logging_level=logging.INFO,
+             local_mode=local_mode,  # DEBUG
              )
 
     # Problem is not serialized correctly
-    from mlopt.problem import Problem
-    ray.register_custom_serializer(Problem, use_pickle=True)
+    if not local_mode:
+        from mlopt.problem import Problem
+        ray.register_custom_serializer(Problem, use_pickle=True)
 
 
 def shutdown_parallel():
