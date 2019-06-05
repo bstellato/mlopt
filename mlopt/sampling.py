@@ -71,17 +71,19 @@ class Sampler(object):
         # Initialize dataframes
         theta = pd.DataFrame()
         s_theta = []
+        obj_theta = []
 
         # Start with 100 samples
         for self.niter in range(self.max_iter):
             # Sample new points
             theta_new = self.sampling_fn(self.n_samples_iter)
-            s_theta_new = \
-                [r['strategy']
-                 for r in self.problem.solve_parametric(theta_new,
-                                                        parallel=parallel)]
+            results = self.problem.solve_parametric(theta_new,
+                                                    parallel=parallel)
+            s_theta_new = [r['strategy'] for r in results]
+            obj_theta_new = [r['cost'] for r in results]
             theta = theta.append(theta_new, ignore_index=True)
             s_theta += s_theta_new
+            obj_theta += obj_theta_new
             self.n_samples += self.n_samples_iter
 
             # Get unique strategies
@@ -108,12 +110,12 @@ class Sampler(object):
                 if n_samples_todo > 0:
                     # Sample new points
                     theta_new = self.sampling_fn(n_samples_todo)
-                    s_theta_new = \
-                        [r['strategy']
-                         for r in self.problem.solve_parametric(theta_new,
-                                                                parallel=parallel)]
+                    results = self.problem.solve_parametric(theta_new, parallel=parallel)
+                    s_theta_new = [r['strategy'] for r in results]
+                    obj_theta_new = [r['cost'] for r in results]
                     theta = theta.append(theta_new, ignore_index=True)
                     s_theta += s_theta_new
+                    obj_theta += obj_theta_new
                     self.n_samples += n_samples_todo
 
                     # Get unique strategies
@@ -132,7 +134,7 @@ class Sampler(object):
             #  if bound < epsilon:
             #      break
 
-        return theta, labels, encoding
+        return theta, labels, obj_theta, encoding
 
 
 def sample_around_points(df,

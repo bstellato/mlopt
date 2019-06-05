@@ -21,8 +21,10 @@ def init_parallel():
         dt.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
     if not os.path.exists(tmp_dir):
         os.makedirs(tmp_dir)
-    # Use local_mode for debugging
-    local_mode = True
+
+    # Use local_mode (serial) for debugging
+    local_mode = False
+
     ray.init(num_cpus=n_proc,
              # redis_max_memory=int(1e09)*20,  # 50GB
              # object_store_memory=int(1e09)*20,  # 50GB

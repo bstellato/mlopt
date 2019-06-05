@@ -113,16 +113,18 @@ class Optimizer(object):
             (self.y_train is not None) and \
             (self.encoding is not None)
 
-    def sample(self, sampling_fn, parallel=True):
+    def sample(self, sampling_fn, parallel=None):
         """
         Sample parameters.
         """
+        if parallel is None:
+            parallel=self.parallel
 
         # Create sampler
         self._sampler = Sampler(self._problem, sampling_fn)
 
         # Sample parameters
-        self.X_train, self.y_train, self.encoding = \
+        self.X_train, self.y_train, self.obj_train, self.encoding = \
             self._sampler.sample(parallel=parallel)
 
     def save_training_data(self, file_name, delete_existing=False):
@@ -208,9 +210,14 @@ class Optimizer(object):
         self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
         self._sampler.compute_good_turing(self.y_train)
 
-    def get_samples(self, X=None, sampling_fn=None, parallel=True,
+    def get_samples(self, X=None, sampling_fn=None,
+                    parallel=None,
                     filter_strategies=True):
         """Get samples either from data or from sampling function"""
+
+        if parallel is None:
+            parallel=self.parallel
+
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
             err = "Not enough arguments to train the model"
@@ -271,8 +278,12 @@ class Optimizer(object):
         if filter_strategies:
             self.filter_strategies()
 
-    def filter_strategies(self, parallel=True):
+    def filter_strategies(self, parallel=None):
         # Store full non filtered strategies
+
+        if parallel is None:
+            parallel=self.parallel
+
         self.encoding_full = self.encoding
         self.y_train_full = self.y_train
 
@@ -286,7 +297,7 @@ class Optimizer(object):
             self._filter.filter(parallel=parallel)
 
     def train(self, X=None, sampling_fn=None,
-              parallel=True,
+              parallel=None,
               learner=DEFAULT_LEARNER,
               filter_strategies=True,
               **learner_options):
@@ -313,8 +324,12 @@ class Optimizer(object):
             A dict of options for the learner.
         """
 
+        if parallel is None:
+            parallel=self.parallel
+
         # Get training samples
-        self.get_samples(X, sampling_fn, parallel,
+        self.get_samples(X, sampling_fn,
+                         parallel=parallel,
                          filter_strategies=filter_strategies)
 
         # Define learner
@@ -633,7 +648,7 @@ class Optimizer(object):
         return optimizer
 
     def performance(self, theta,
-                    parallel=True,
+                    parallel=None,
                     use_cache=True):
         """
         Evaluate optimizer performance on data theta by comparing the
@@ -653,6 +668,9 @@ class Optimizer(object):
         dict
             Detailed results summary.
         """
+
+        if parallel is None:
+            parallel=self.parallel
 
         logging.info("Performance evaluation")
         # Get strategy for each point

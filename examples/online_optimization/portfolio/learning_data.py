@@ -156,7 +156,7 @@ def sample_around_points(df, n_total, radius={}):
             if col in radius:
                 rad = radius[col] * norm_val
             else:
-                rad = 0.001 * norm_val
+                rad = 1e-04 * norm_val
 
             # Sample from uniform shpere (vectorize first)
             samples = uniform_sphere_sample(row[col].flatten(), rad,

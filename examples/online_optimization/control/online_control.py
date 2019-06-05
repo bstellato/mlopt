@@ -78,17 +78,19 @@ def main():
     df_train = u.sample_around_points(df,
                                       radius={'z_init': .4,  # .2,
                                               #  's_init': .6,  # .2,
-                                              'P_load': 0.01,  # 0.01
+                                              'P_load': 0.001,  # 0.01
                                               },
                                       n_total=n_train)
 
     m_mlopt = mlopt.Optimizer(problem.objective, problem.constraints,
-                              log_level=logging.INFO)
+                              log_level=logging.INFO,
+                              parallel=False)
 
-    with m_mlopt:
+    # with m_mlopt:
+    if True:  # Debug remove parallel
 
         # Get samples
-        m_mlopt.get_samples(df_train, parallel=True, filter_strategies=False)
+        m_mlopt.get_samples(df_train, filter_strategies=False)
         #  m_mlopt._compute_sample_strategy_pairs(parallel=True)
         m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
                                    delete_existing=True)
@@ -100,7 +102,6 @@ def main():
         m_mlopt.train(learner=mlopt.PYTORCH,
                       n_best=10,
                       filter_strategies=True,
-                      parallel=True,
                       params=nn_params)
 
         # Generate test trajectory and collect points
@@ -122,7 +123,6 @@ def main():
         # Evaluate open-loop performance on those parameters
         df_test = u.sim_data_to_params(sim_data_test)
         res_general, res_detail = m_mlopt.performance(df_test,
-                                                      parallel=False,
                                                       use_cache=True)
 
         # Evaluate loop performance

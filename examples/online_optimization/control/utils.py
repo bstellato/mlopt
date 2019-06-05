@@ -350,7 +350,7 @@ def sample_around_points(df,
             if col in radius:
                 rad = radius[col] * norm_val
             else:
-                rad = 0.01 * norm_val
+                rad = 1e-04 * norm_val
 
             samples = uniform_sphere_sample(row[col], rad,
                                             n=n_samples_per_point)
