@@ -17,8 +17,13 @@ def init_parallel():
     n_proc = get_n_processes()
     logging.info("Initializing ray over %i processors" %
                  n_proc)
-    tmp_dir = '.ray_tmp/' + \
-        dt.now().strftime("%Y-%m-%d_%H-%M-%S") + "/"
+
+    # Check if we are on SLURM or not
+    try:
+        os.environ["SLURM_CPUS_PER_TASK"]
+    except KeyError:
+        tmp_dir = '.ray_tmp/'
+    tmp_dir = '/pool001/%s/.ray_tmp/' % os.environ["USER"]
     if not os.path.exists(tmp_dir):
         os.makedirs(tmp_dir)
 

@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=5
-#SBATCH --mem-per-cpu=15G
+#SBATCH --cpus-per-task=10
+#SBATCH --mem-per-cpu=8G
 #SBATCH # --gres=gpu:1
-#SBATCH --partition=sched_mit_sloan_interactive
+#SBATCH --partition=sched_mit_sloan_batch
 #SBATCH --time=0-24:00
-#SBATCH -o /pool001/stellato/online/control/control_%A_N%a.txt
+#SBATCH -o /pool001/stellato/online/portfolio/portfolio_%A_N%a.txt
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
@@ -26,4 +26,5 @@ elif [[ $SLURM_PARTITION == *"gpu"* ]]; then
 fi
 
 # Run actual script
-python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID
+# python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID
+python online_optimization/portfolio/portfolio.py --sparsity $SLURM_ARRAY_TASK_ID

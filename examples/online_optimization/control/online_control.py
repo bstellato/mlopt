@@ -92,16 +92,18 @@ def main():
         # Get samples
         m_mlopt.get_samples(df_train, filter_strategies=False)
         #  m_mlopt._compute_sample_strategy_pairs(parallel=True)
-        m_mlopt.save_training_data(EXAMPLE_NAME + 'condensed.pkl',
+        m_mlopt.save_training_data(EXAMPLE_NAME + 'data.pkl',
                                    delete_existing=True)
 
-        #  m_mlopt.load_training_data(EXAMPLE_NAME + 'condensed.pkl')
-        #  m_mlopt.filter_strategies()
+        m_mlopt.load_training_data(EXAMPLE_NAME + 'data.pkl')
+        m_mlopt.filter_strategies()
+        m_mlopt.save_training_data(EXAMPLE_NAME + 'data_filtered.pkl',
+                                   delete_existing=True)
 
         # Learn optimizer
         m_mlopt.train(learner=mlopt.PYTORCH,
                       n_best=10,
-                      filter_strategies=True,
+                      filter_strategies=False,
                       params=nn_params)
 
         # Generate test trajectory and collect points
