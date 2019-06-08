@@ -278,6 +278,16 @@ class Optimizer(object):
         if filter_strategies:
             self.filter_strategies()
 
+        # Add factorization faching if
+        # 1. Problem is MIQP
+        # TODO: Add the second point!
+        # 2. Parameters enter only in the problem vectors
+        if self._problem.is_qp():
+            logging.info("Caching KKT solver factors for each strategy "
+                         "(it works only for QP-representable problems "
+                         "with parameters only in constraints RHS)")
+            self.cache_factors()
+
     def filter_strategies(self, parallel=None):
         # Store full non filtered strategies
 
@@ -339,16 +349,6 @@ class Optimizer(object):
 
         # Train learner
         self._learner.train(self.X_train, self.y_train)
-
-        # Add factorization faching if
-        # 1. Problem is MIQP
-        # TODO: Add the second point!
-        # 2. Parameters enter only in the problem vectors
-        if self._problem.is_qp():
-            logging.info("Caching KKT solver factors for each strategy "
-                         "(it works only for QP-representable problems "
-                         "with parameters only in constraints RHS)")
-            self.cache_factors()
 
     def cache_factors(self):
         """Cache linear system solver factorizations"""

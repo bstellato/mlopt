@@ -75,9 +75,6 @@ class PyTorchNeuralNet(Learner):
             self.options['params']['n_hidden'] = \
                 [int((self.n_classes + self.n_input))]
 
-        # Pick minimum between n_best and n_classes
-        self.options['n_best'] = min(options.pop('n_best', N_BEST),
-                                     self.n_classes)
         # Get fraction between training and validation
         self.options['frac_train'] = options.pop('frac_train', FRAC_TRAIN)
 

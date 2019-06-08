@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 
-DATA_FOLDER = '/pool001/stellato/online/control_working'
+DATA_FOLDER = '/pool001/stellato/online/portfolio_show'
 
 
 '''
@@ -13,14 +13,14 @@ General
 dfs = []
 for f in os.listdir(DATA_FOLDER):
     if f.endswith(".csv") and 'general' in f:
-        T = [int(s) for s in f.split("_") if s.isdigit()][0]
+        K = [int(s) for s in f.split("_") if s.isdigit()][0]
 
         # Read file and append horizon length
-        df_T = pd.read_csv(os.path.join(DATA_FOLDER, f),
+        df_K = pd.read_csv(os.path.join(DATA_FOLDER, f),
                            index_col=0, squeeze=True)
-        df_T['T'] = T
-        dfs.append(df_T)
-df = pd.concat(dfs, axis=1).T.sort_values(by=['T'])
+        df_K['K'] = K
+        dfs.append(df_K)
+df = pd.concat(dfs, axis=1).T.sort_values(by=['K'])
 
 # Export updted table in csv
 df.to_csv(os.path.join(DATA_FOLDER, 'complete.csv'))
@@ -33,16 +33,16 @@ Detail
 dfs_detail = []
 for f in os.listdir(DATA_FOLDER):
     if f.endswith(".csv") and 'detail' in f:
-        T = [int(s) for s in f.split("_") if s.isdigit()][0]
+        K = [int(s) for s in f.split("_") if s.isdigit()][0]
 
         # Read file and append horizon length
-        df_T = pd.read_csv(os.path.join(DATA_FOLDER, f),
+        df_K = pd.read_csv(os.path.join(DATA_FOLDER, f),
                            index_col=0)
-        df_T['T'] = [T] * len(df_T)
-        df_T.to_csv(os.path.join(DATA_FOLDER, '%d_full.csv' % T))
-        dfs_detail.append(df_T)
+        df_K['K'] = [K] * len(df_K)
+        df_K.to_csv(os.path.join(DATA_FOLDER, '%d_full.csv' % K))
+        dfs_detail.append(df_K)
 df_detail = pd.concat(dfs_detail,
-                      ignore_index=True).sort_values(by=['T']).reset_index(drop=True)
+                      ignore_index=True).sort_values(by=['K']).reset_index(drop=True)
 
 # Export updted table in csv
 df_detail.to_csv(os.path.join(DATA_FOLDER, 'complete_full.csv'))

@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=10
-#SBATCH --mem-per-cpu=8G
+#SBATCH --cpus-per-task=20
+#SBATCH --mem-per-cpu=5G
 #SBATCH # --gres=gpu:1
 #SBATCH --partition=sched_mit_sloan_batch
 #SBATCH --time=0-24:00
