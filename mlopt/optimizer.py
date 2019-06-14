@@ -1,4 +1,4 @@
-from mlopt.problem import Problem, solve_with_strategy_ray, solve_with_strategy
+from mlopt.problem import Problem, solve_with_strategy
 from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
@@ -17,7 +17,7 @@ from glob import glob
 import tempfile
 import tarfile
 import pickle as pkl
-import ray
+from joblib import Parallel, delayed
 from tqdm import tqdm
 import logging
 
@@ -63,26 +63,6 @@ class Optimizer(object):
         self.X_train = None
         self.y_train = None
 
-        # Parallelization
-        self.parallel = parallel
-
-    def init_parallel(self):
-        """Initialize parallel execution server."""
-        if self.parallel:
-            if not ray.is_initialized():
-                u.init_parallel()
-
-    def shutdown_parallel(self):
-        """Shutdown parallel execution server."""
-        u.shutdown_parallel()
-
-    def __enter__(self):
-        self.init_parallel()
-        return self
-
-    def __exit__(self, *a):
-        self.shutdown_parallel()
-
     @property
     def n_strategies(self):
         """Number of strategies."""
@@ -113,12 +93,10 @@ class Optimizer(object):
             (self.y_train is not None) and \
             (self.encoding is not None)
 
-    def sample(self, sampling_fn, parallel=None):
+    def sample(self, sampling_fn, parallel=False):
         """
         Sample parameters.
         """
-        if parallel is None:
-            parallel=self.parallel
 
         # Create sampler
         self._sampler = Sampler(self._problem, sampling_fn)
@@ -211,12 +189,9 @@ class Optimizer(object):
         self._sampler.compute_good_turing(self.y_train)
 
     def get_samples(self, X=None, sampling_fn=None,
-                    parallel=None,
-                    filter_strategies=True):
+                    parallel=True,
+                    filter_strategies=False):
         """Get samples either from data or from sampling function"""
-
-        if parallel is None:
-            parallel=self.parallel
 
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
@@ -276,7 +251,7 @@ class Optimizer(object):
 
         # Condense strategies
         if filter_strategies:
-            self.filter_strategies()
+            self.filter_strategies(parallel=parallel)
 
         # Add factorization faching if
         # 1. Problem is MIQP
@@ -288,11 +263,8 @@ class Optimizer(object):
                          "with parameters only in constraints RHS)")
             self.cache_factors()
 
-    def filter_strategies(self, parallel=None):
+    def filter_strategies(self, parallel=False):
         # Store full non filtered strategies
-
-        if parallel is None:
-            parallel=self.parallel
 
         self.encoding_full = self.encoding
         self.y_train_full = self.y_train
@@ -306,10 +278,11 @@ class Optimizer(object):
         self.y_train, self.encoding = \
             self._filter.filter(parallel=parallel)
 
-    def train(self, X=None, sampling_fn=None,
-              parallel=None,
+    def train(self, X=None,
+              sampling_fn=None,
+              parallel=True,
               learner=DEFAULT_LEARNER,
-              filter_strategies=True,
+              filter_strategies=False,
               **learner_options):
         """
         Train optimizer using parameter X.
@@ -333,9 +306,6 @@ class Optimizer(object):
         learner_options : dict, optional
             A dict of options for the learner.
         """
-
-        if parallel is None:
-            parallel=self.parallel
 
         # Get training samples
         self.get_samples(X, sampling_fn,
@@ -417,30 +387,18 @@ class Optimizer(object):
         if self._solver_cache and use_cache:
             cache = [self._solver_cache[l] for l in labels]
 
-        if parallel:
+        n_jobs = u.get_n_processes(n_best) if parallel else 1
 
-            result_ids = []
-            for s in strategies:
-                result_ids.append(
-                    solve_with_strategy_ray.remote(self._problem,
-                                                   s, cache))
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(solve_with_strategy)(self._problem,
+                                         strategies[j],
+                                         cache[j])
+            for j in range(n_best))
 
-            results = []
-            for r in result_ids:
-                results.append(ray.get(r))
-
-            x = [r["x"] for r in results]
-            time = [r["time"] for r in results]
-            infeas = [r["infeasibility"] for r in results]
-            cost = [r["cost"] for r in results]
-        else:
-            for j in range(n_best):
-                res = solve_with_strategy(self._problem,
-                                          strategies[j], cache[j])
-                x.append(res['x'])
-                time.append(res['time'])
-                infeas.append(res['infeasibility'])
-                cost.append(res['cost'])
+        x = [r["x"] for r in results]
+        time = [r["time"] for r in results]
+        infeas = [r["infeasibility"] for r in results]
+        cost = [r["cost"] for r in results]
 
         # Pick best class between k ones
         infeas = np.array(infeas)
@@ -648,7 +606,7 @@ class Optimizer(object):
         return optimizer
 
     def performance(self, theta,
-                    parallel=None,
+                    parallel=False,
                     use_cache=True):
         """
         Evaluate optimizer performance on data theta by comparing the
@@ -668,9 +626,6 @@ class Optimizer(object):
         dict
             Detailed results summary.
         """
-
-        if parallel is None:
-            parallel=self.parallel
 
         logging.info("Performance evaluation")
         # Get strategy for each point

@@ -61,16 +61,12 @@ class TestSave(unittest.TestCase):
         # Define problem
         self.optimizer = Optimizer(cp.Minimize(self.cost),
                                    self.constraints)
-        self.optimizer.init_parallel()
 
         # Define learners
         self.learners = [
             #  s.OPTIMAL_TREE,  # Disable. Too slow
             s.PYTORCH
         ]
-
-    def tearDown(self):
-        self.optimizer.shutdown_parallel()
 
     def test_save_load_data(self):
         """Test save load data"""

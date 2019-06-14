@@ -31,7 +31,6 @@ class TestCaching(unittest.TestCase):
         m = mlopt.Optimizer(cp.Minimize(cost),
                             constraints,
                             log_level=logging.DEBUG)
-        m.init_parallel()
 
         '''
         Sample points
@@ -68,9 +67,6 @@ class TestCaching(unittest.TestCase):
         # Store stuff
         self.m = m
         self.df_test = df_test
-
-    def tearDown(self):
-        self.m.shutdown_parallel()
 
     def test_solve(self):
         """Solve problem with or without caching"""

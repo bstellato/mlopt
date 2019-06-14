@@ -1,4 +1,4 @@
-import ray
+from joblib import Parallel, delayed
 import numpy as np
 # Mlopt stuff
 from mlopt.strategy import Strategy
@@ -428,41 +428,16 @@ class Problem(object):
         """
         n = len(theta)  # Number of points
 
-        if parallel:
-            shutdown_ray = False
+        n_jobs = u.get_n_processes() if parallel else 1
 
-            if not ray.is_initialized():
-                u.init_parallel()
-                shutdown_ray = True
+        logging.info(message + " (n_jobs = %d)" % n_jobs)
 
-            logging.info(message + " (parallel)")
-            # Solve with ray
-            result_ids = []
-            for i in range(n):
-                result_ids.append(
-                    populate_and_solve_ray.remote(self, theta.iloc[i]))
-
-            results = []
-            for r in tqdm(result_ids):
-                results.append(ray.get(r))
-
-            if shutdown_ray:
-                u.shutdown_parallel()
-
-        else:
-            logging.info(message + " (serial)")
-            # Preallocate solutions
-            results = []
-            for i in tqdm(range(n)):
-                results.append(populate_and_solve(self, theta.iloc[i, :]))
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(populate_and_solve)(self, theta.iloc[i])
+            for i in tqdm(range(n))
+        )
 
         return results
-
-
-@ray.remote
-def populate_and_solve_ray(problem, theta):
-    """Ray wrapper."""
-    return populate_and_solve(problem, theta)
 
 
 def populate_and_solve(problem, theta):
@@ -473,10 +448,6 @@ def populate_and_solve(problem, theta):
     results = problem.solve()
 
     return results
-
-
-def solve_with_strategy_ray(problem, strategy, cache=None):
-    return solve_with_strategy(problem, strategy, cache=None)
 
 
 def solve_with_strategy(problem,

@@ -1,19 +1,13 @@
-import ray
-from ray.rllib.utils.memory import ray_get_and_free   # Force memory deallocation
+from joblib import Parallel, delayed
 import numpy as np
 import logging
 from mlopt.problem import solve_with_strategy
 from mlopt.strategy import strategy_distance
 import mlopt.settings as stg
+import mlopt.utils as u
 from mlopt.problem import Problem
 from tqdm import tqdm
 import os
-
-
-@ray.remote
-def best_strategy_ray(*args):
-    """Ray wrapper."""
-    return best_strategy(*args)
 
 
 def best_strategy(theta, obj_train, encoding, problem):
@@ -44,6 +38,7 @@ def best_strategy(theta, obj_train, encoding, problem):
 
 class Filter(object):
     """Strategy filter."""
+
     def __init__(self,
                  X_train=None,
                  y_train=None,
@@ -77,31 +72,34 @@ class Filter(object):
         # Assign discarded samples and compute degradation
         degradation = np.zeros(len(discarded_samples))
 
-        if not parallel:
+        n_jobs = u.get_n_processes() if parallel else 1
 
-            for i in tqdm(range(len(discarded_samples))):
-                sample_idx = discarded_samples[i]
-                self.y_train[sample_idx], degradation[i] = \
-                    best_strategy(self.X_train.iloc[sample_idx],
-                                  self.obj_train[sample_idx],
-                                  self.encoding,
-                                  self.problem)
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(best_strategy)(self.X_train.iloc[i], self.obj_train[i],
+                                   self.encoding, self.problem)
+            for i in tqdm(range(len(discarded_samples)))
+        )
 
-        else:
-            # Share encoding between all processors
-            encoding_id = ray.put(self.encoding)
+        for i in range(len(discarded_samples)):
+            sample_idx = discarded_samples[i]
+            self.y_train[sample_idx], degradation[i] = results[i]
 
-            result_ids = []
-            for i in discarded_samples:
-                result_ids.append(
-                    best_strategy_ray.remote(self.X_train.iloc[i],
-                                             self.obj_train[i],
-                                             encoding_id,
-                                             self.problem))
+            # TODO check if we need to have the encoding variable shared
 
-            for i in tqdm(range(len(discarded_samples))):
-                self.y_train[discarded_samples[i]], degradation[i] = \
-                    ray_get_and_free(result_ids[i])
+            # # Share encoding between all processors
+            # encoding_id = ray.put(self.encoding)
+
+            # result_ids = []
+            # for i in discarded_samples:
+            #     result_ids.append(
+            #         best_strategy_ray.remote(self.X_train.iloc[i],
+            #                                  self.obj_train[i],
+            #                                  encoding_id,
+            #                                  self.problem))
+
+            # for i in tqdm(range(len(discarded_samples))):
+            #     self.y_train[discarded_samples[i]], degradation[i] = \
+            #         ray_get_and_free(result_ids[i])
 
         return degradation
 

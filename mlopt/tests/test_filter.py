@@ -29,7 +29,6 @@ class TestFilter(unittest.TestCase):
         m = mlopt.Optimizer(cp.Minimize(cost),
                             constraints,
                             log_level=logging.DEBUG)
-        m.init_parallel()
 
         '''
         Sample points
@@ -66,9 +65,6 @@ class TestFilter(unittest.TestCase):
         self.m = m
         self.df_test = df_test
 
-    def tearDown(self):
-        self.m.shutdown_parallel()
-
     def test_filter_simple(self):
 
         self.m.get_samples(self.df_train, parallel=True,
@@ -81,7 +77,7 @@ class TestFilter(unittest.TestCase):
         n_filter_parallel = len(self.m.encoding)
 
         logging.info("Recompute samples to cleanup filtered ones")
-        self.m.get_samples(self.df_train, parallel=True,
+        self.m.get_samples(self.df_train, parallel=False,
                            filter_strategies=False)
         self.m.filter_strategies(parallel=False)
         logging.info("Number of condensed strategies (serial): %d" %
