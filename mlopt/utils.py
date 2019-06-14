@@ -9,7 +9,6 @@ import os
 import pandas as pd
 import mlopt
 import logging
-import ray
 
 
 # def init_parallel():
