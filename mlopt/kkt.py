@@ -24,11 +24,28 @@ import numpy as np
 #  from pypardiso import spsolve
 #  from pypardiso.pardiso_wrapper import PyPardisoError
 from scipy.sparse.linalg import spsolve
-#  from scikits.umfpack import UmfpackWarning
+from scipy.sparse.linalg import factorized
+from scikits.umfpack import UmfpackWarning
 import time
+import warnings
 import logging
 
 KKT = "KKT"
+
+
+class CatchSimularMatrixWarnings(object):
+
+    def __init__(self):
+        self.catcher = warnings.catch_warnings()
+        
+    def __enter__(self):
+        self.catcher.__enter__()
+        warnings.simplefilter("ignore", UmfpackWarning)
+        warnings.filterwarnings("ignore",
+                                message="divide by zero encountered in double_scalars")
+
+    def __exit__(self, *args):
+        self.catcher.__exit__()
 
 
 def create_kkt_matrix(data):
@@ -55,6 +72,12 @@ def create_kkt_system(data):
     rhs = create_kkt_rhs(data)
 
     return KKT, rhs
+
+
+def factorize_kkt_matrix(KKT):
+    
+    with CatchSimularMatrixWarnings():
+        return factorized(KKT)
 
 
 class KKTSolver(QpSolver):
@@ -115,7 +138,9 @@ class KKTSolver(QpSolver):
             #  KKT = KKT.T.dot(KKT)
 
             t_start = time.time()
-            x = spsolve(KKT, rhs, use_umfpack=True)
+            with CatchSimularMatrixWarnings():
+                x = spsolve(KKT, rhs, use_umfpack=True)
+
             #  x = spa.linalg.lsqr(KKT, rhs)[0]
             #  try:
             #      x = spsolve(KKT, rhs, use_umfpack=True)
@@ -129,7 +154,9 @@ class KKTSolver(QpSolver):
             rhs = create_kkt_rhs(data)
 
             t_start = time.time()
-            x = KKT_cache['factors'](rhs)
+
+            with CatchSimularMatrixWarnings():
+                x = KKT_cache['factors'](rhs)
             #  try:
             #      x = KKT_cache['factors'](rhs)
             #  except (RuntimeWarning, ValueError) as e:

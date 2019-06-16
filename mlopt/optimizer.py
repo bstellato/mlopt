@@ -6,9 +6,9 @@ from mlopt.strategy import encode_strategies
 from mlopt.filter import Filter
 from mlopt.utils import n_features, accuracy, suboptimality
 import mlopt.utils as u
-from mlopt.kkt import KKT, create_kkt_matrix
+from mlopt.kkt import KKT, create_kkt_matrix, factorize_kkt_matrix
+import warnings
 from time import time
-from scipy.sparse.linalg import factorized
 import cvxpy.settings as cps
 import pandas as pd
 import numpy as np
@@ -342,7 +342,7 @@ class Optimizer(object):
                 reduced_problem.get_problem_data(solver=KKT)
 
             KKT_mat = create_kkt_matrix(data)
-            solve_kkt = factorized(KKT_mat)
+            solve_kkt = factorize_kkt_matrix(KKT_mat)
 
             cache = {}
             cache['factors'] = solve_kkt
