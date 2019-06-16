@@ -157,42 +157,41 @@ def main():
     # Define mlopt problem
     m_mlopt = create_mlopt_problem(df_train, k=k,
                                    lambda_cost=lambda_cost)
-    with m_mlopt:
 
-        # Get samples
-        print("Get samples in parallel")
-        m_mlopt.get_samples(df_train,
-                            parallel=True,
-                            filter_strategies=False)
-        m_mlopt.save_training_data(EXAMPLE_NAME + 'data.pkl',
-                                   delete_existing=True)
+    # Get samples
+    print("Get samples in parallel")
+    m_mlopt.get_samples(df_train,
+                        parallel=True,
+                        filter_strategies=False)
+    m_mlopt.save_training_data(EXAMPLE_NAME + 'data.pkl',
+                                delete_existing=True)
 
-        # m_mlopt.load_training_data(EXAMPLE_NAME + 'data.pkl')
+    # m_mlopt.load_training_data(EXAMPLE_NAME + 'data.pkl')
 
-        # m_mlopt.filter_strategies()
+    # m_mlopt.filter_strategies()
 
-        # m_mlopt.save_training_data(EXAMPLE_NAME + 'data_filtered.pkl',
-        #                            delete_existing=True)
-        
-        # Learn
-        # m_mlopt.train(learner=mlopt.PYTORCH,
-        #               n_best=10,
-        #               filter_strategies=False,
-        #               parallel=True,
-        #               params=nn_params)
+    # m_mlopt.save_training_data(EXAMPLE_NAME + 'data_filtered.pkl',
+    #                            delete_existing=True)
 
-        # df_test = sample_around_points(df_history_test,
-        #                                n_total=n_test)
-        # res_general, res_detail = m_mlopt.performance(df_test,
-        #                                               parallel=True,
-        #                                               use_cache=True)
+    # Learn
+    # m_mlopt.train(learner=mlopt.PYTORCH,
+    #               n_best=10,
+    #               filter_strategies=False,
+    #               parallel=True,
+    #               params=nn_params)
 
-        # res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
-        #                    header=True)
-        # res_detail.to_csv(EXAMPLE_NAME + "test_detail.csv")
+    # df_test = sample_around_points(df_history_test,
+    #                                n_total=n_test)
+    # res_general, res_detail = m_mlopt.performance(df_test,
+    #                                               parallel=True,
+    #                                               use_cache=True)
 
-        # Evaluate loop performance
-        # TODO: Add!
+    # res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
+    #                    header=True)
+    # res_detail.to_csv(EXAMPLE_NAME + "test_detail.csv")
+
+    # Evaluate loop performance
+    # TODO: Add!
 
 if __name__ == '__main__':
     main()
