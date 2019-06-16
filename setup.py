@@ -24,7 +24,6 @@ setup(name='mlopt',
                         "pandas",
                         "joblib",
                         "tqdm",
-                        "scikit-umfpack",
-                        "gurobi"],
+                        "scikit-umfpack"],
       license='Apache License, Version 2.0',
       )

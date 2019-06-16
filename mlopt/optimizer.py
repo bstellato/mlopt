@@ -20,6 +20,7 @@ import pickle as pkl
 from joblib import Parallel, delayed
 from tqdm import tqdm
 import logging
+import sys
 
 
 class Optimizer(object):
@@ -30,7 +31,7 @@ class Optimizer(object):
     def __init__(self,
                  objective, constraints,
                  name="problem",
-                 log_level=logging.WARNING,
+                 log_level=logging.INFO,
                  parallel=True,
                  tight_constraints=True,
                  **solver_options):
@@ -49,7 +50,13 @@ class Optimizer(object):
             A dict of options for the internal solver.
         """
 
-        logging.basicConfig(level=log_level)
+        root = logging.getLogger()
+        root.setLevel(log_level)
+        # handler = logging.StreamHandler(sys.stdout)
+        # handler.setLevel(logging.DEBUG)
+        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # handler.setFormatter(formatter)
+        # root.addHandler(handler)
 
         self._problem = Problem(objective, constraints,
                                 solver=DEFAULT_SOLVER,
@@ -57,7 +64,6 @@ class Optimizer(object):
                                 **solver_options)
         self._solver_cache = None
         self.name = name
-
         self._learner = None
         self.encoding = None
         self.X_train = None

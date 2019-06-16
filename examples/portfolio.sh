@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=20
+#SBATCH --cpus-per-task=10
 #SBATCH --mem-per-cpu=5G
 #SBATCH # --gres=gpu:1
 #SBATCH --partition=sched_mit_sloan_batch
 #SBATCH --time=3-00:00
-#SBATCH -o /pool001/stellato/online/portfolio/portfolio_%A_N%a.txt
+#SBATCH -o /home/gridsan/stellato/results/online/portfolio/portfolio_%A_N%a.txt
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
