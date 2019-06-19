@@ -13,11 +13,11 @@ import numpy as np
 import logging
 
 
-def weights_init(m):
-    if isinstance(m, nn.Linear):
-        nn.init.xavier_uniform_(m.weight.data)
-        x = 0.5
-        nn.init.uniform_(m.bias, -x, x)
+# def weights_init(m):
+#     if isinstance(m, nn.Linear):
+#         nn.init.xavier_uniform_(m.weight.data)
+#         x = 0.5
+#         nn.init.uniform_(m.bias, -x, x)
 
 
 class Net(nn.Module):
@@ -25,18 +25,33 @@ class Net(nn.Module):
     PyTorch internal neural network class.
     """
 
-    def __init__(self, n_input, n_classes, n_layers, n_hidden):
+    def __init__(self, n_input, n_classes, n_hidden):
         super(Net, self).__init__()
 
-        self.layers = nn.ModuleList([nn.Linear(n_input, n_hidden)])
-        self.layers.extend([nn.Linear(n_hidden, n_hidden)
-                            for _ in range(n_layers - 2)])
-        self.layers.append(nn.Linear(n_hidden, n_classes))
+        self.in_layer = nn.Linear(n_input, n_hidden)
+        self.batchnorm = nn.BatchNorm1d(n_hidden)
+        self.linear1 = nn.Linear(n_hidden, n_hidden)
+        self.linear2 = nn.Linear(n_hidden, n_hidden)
+        self.out_layer = nn.Linear(n_hidden, n_classes)
+
+        # OLD Structure
+        # self.layers = nn.ModuleList([nn.Linear(n_input, n_hidden)])
+        # self.layers.extend([nn.Linear(n_hidden, n_hidden)
+        #                     for _ in range(n_layers - 2)])
+        # self.layers.append(nn.Linear(n_hidden, n_classes))
 
     def forward(self, x):
-        for layer in self.layers[:-1]:
-            x = F.relu(layer(x))
-        x = self.layers[-1](x)
+
+        x = F.relu(self.in_layer(x))
+        x = self.batchnorm(x)
+        x = F.relu(self.linear1(x))
+        x = F.relu(self.linear2(x))
+        x = self.out_layer(x)
+
+        # OLD
+        # for layer in self.layers[:-1]:
+        #     x = F.relu(layer(x))
+        # x = self.layers[-1](x)
 
         return x
 
@@ -73,7 +88,7 @@ class PyTorchNeuralNet(Learner):
             self.options['params'][p] = default_params[p]
         if 'n_hidden' not in self.options['params'].keys():
             self.options['params']['n_hidden'] = \
-                [int((self.n_classes + self.n_input))]
+                [int((self.n_classes + self.n_input)/2)]
 
         # Get fraction between training and validation
         self.options['frac_train'] = options.pop('frac_train', FRAC_TRAIN)
@@ -82,7 +97,8 @@ class PyTorchNeuralNet(Learner):
         self.device = torch.device("cpu")
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
-            logging.info("Using CUDA GPU with Pytorch")
+            logging.info("Using CUDA GPU %s with Pytorch" %
+                         torch.cuda.get_device_name(self.device))
         else:
             self.device = torch.device("cpu")
             logging.info("Using CPU with Pytorch")
@@ -102,14 +118,12 @@ class PyTorchNeuralNet(Learner):
         - batch size
         - n_epochs
         - learning_rate
-        - n_layers
         - n_hidden
         """
 
         # Create PyTorch Neural Network and port to to device
         self.net = Net(self.n_input,
                        self.n_classes,
-                       params['n_layers'],
                        params['n_hidden']).to(self.device)
 
         # Set network in training mode (not evaluation)
@@ -142,7 +156,7 @@ class PyTorchNeuralNet(Learner):
 
         # Reset parameters
         torch.manual_seed(1)  # Reset seed
-        self.net.apply(weights_init)  # Initialize weights
+        # self.net.apply(weights_init)  # Initialize weights
 
         with trange(params['n_epochs'], desc="Training neural net") as t:
             for epoch in t:  # loop over dataset multiple times
@@ -163,17 +177,17 @@ class PyTorchNeuralNet(Learner):
                 t.set_description("Training neural net (epoch %4i, cost %.2e)"
                                   % (epoch + 1, avg_cost))
 
-    def normalize(self, X, recompute_stats=True):
-        """Normalize data. Recompute mean and std if training mode."""
-        if recompute_stats:
-            self.X_mean, self.X_std = X.mean(axis=0), X.std(axis=0)
+    # def normalize(self, X, recompute_stats=True):
+    #     """Normalize data. Recompute mean and std if training mode."""
+    #     if recompute_stats:
+    #         self.X_mean, self.X_std = X.mean(axis=0), X.std(axis=0)
 
-            # Ignore small values of standard deviation
-            for i in range(len(self.X_std)):
-                if self.X_std[i] < DIVISION_TOL:
-                    self.X_std[i] = 1.
+    #         # Ignore small values of standard deviation
+    #         for i in range(len(self.X_std)):
+    #             if self.X_std[i] < DIVISION_TOL:
+    #                 self.X_std[i] = 1.
 
-        X[:] = (X - self.X_mean) / self.X_std
+    #     X[:] = (X - self.X_mean) / self.X_std
 
     def train(self, X, y):
         """
@@ -192,8 +206,8 @@ class PyTorchNeuralNet(Learner):
         # Convert X dataframe to numpy array
         X = pandas2array(X)
 
-        # Normalize data
-        self.normalize(X, recompute_stats=True)
+        # # Normalize data
+        # self.normalize(X, recompute_stats=True)
 
         # Split dataset in training and validation
         frac_train = self.options['frac_train']
@@ -211,12 +225,10 @@ class PyTorchNeuralNet(Learner):
             'learning_rate': learning_rate,
             'batch_size': batch_size,
             'n_epochs': n_epochs,
-            'n_layers': n_layers,
             'n_hidden': n_hidden}
             for learning_rate in self.options['params']['learning_rate']
             for batch_size in self.options['params']['batch_size']
             for n_epochs in self.options['params']['n_epochs']
-            for n_layers in self.options['params']['n_layers']
             for n_hidden in self.options['params']['n_hidden']]
         n_models = len(params)
 
@@ -234,7 +246,9 @@ class PyTorchNeuralNet(Learner):
                 self.train_instance(X_train, y_train, params[i])
 
                 # Predict validation (data already normalized)
-                y_pred = self.predict(X_valid, n_best=1, normalize=False)
+                y_pred = self.predict(X_valid, n_best=1,
+                                      # normalize=False
+                )
 
                 # Get accuracy
                 accuracy_vec[i] = np.sum(
@@ -257,14 +271,16 @@ class PyTorchNeuralNet(Learner):
         # Retrain network with best parameters over whole dataset
         self.train_instance(X, y, self.best_params)
 
-    def predict(self, X, n_best=None, normalize=True):
+    def predict(self, X, n_best=None,
+                # normalize=True
+    ):
 
         # Convert X dataframe to numpy array
         X = pandas2array(X)
 
         # Normalize data
-        if normalize:
-            self.normalize(X, recompute_stats=False)
+        # if normalize:
+        #     self.normalize(X, recompute_stats=False)
 
         self.net.eval()
 

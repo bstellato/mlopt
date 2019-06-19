@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import mlopt
 import logging
+from tqdm import tqdm
 
 
 # def init_parallel():
@@ -87,7 +88,7 @@ def get_n_processes(max_n=np.inf):
     """
     try:
         # Check number of cpus if we are on a SLURM server
-        n_cpus = int(os.environ["SLURM_CPUS_PER_TASK"])
+        n_cpus = int(os.environ["SLURM_NPROCS"])
     except KeyError:
         n_cpus = cpu_count()
     n_proc = min(max_n, n_cpus)
@@ -250,21 +251,20 @@ def pandas2array(X):
             X = pd.DataFrame(X).transpose()
         # get number of datapoints
         n_data = len(X)
-        # Get dimensions by inspecting first row
-        n = n_features(X)
-
-        # Allocate full vector
-        X_new = np.empty((0, n))
 
         # Unroll
         # TODO: Speedup this process
-        for i in range(n_data):
-            x_data = X.iloc[i].values
-            x_temp = np.concatenate([np.atleast_1d(v).flatten()
-                                     for v in x_data])
-            X_new = np.vstack((X_new, x_temp))
+        x_temp_list = []
+        for i in tqdm(range(n_data),
+                      desc="Converting dataframe to array"):
+            x_temp_list.append(
+                np.concatenate([np.atleast_1d(v).flatten()
+                                for v in X.iloc[i].values])
+                )
+        X_new = np.vstack(x_temp_list)
 
     return X_new
+
 
 
 def suboptimality(cost_pred, cost_test):

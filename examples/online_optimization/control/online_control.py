@@ -2,7 +2,6 @@
 import os
 import sys
 sys.path.append(os.getcwd())
-
 import online_optimization.control.utils as u
 import logging
 import numpy as np
@@ -19,13 +18,14 @@ def main():
     # Problem data
     T_total = 500
     tau = 1.0
-    n_train = 1000
+    n_train = 100000
     n_sim_test = 1000
     nn_params = {
-        'learning_rate': [0.0001, 0.001, 0.01],
-        'batch_size': [32, 64],
-        'n_epochs': [200, 300],
-        'n_layers': [7, 10]
+        'learning_rate': [0.0001, 0.001],
+        'batch_size': [32],
+        'n_epochs': [10],
+        # OLD STUFF
+        # 'n_layers': [7, 10]
         #  {'learning_rate': 0.0001, 'batch_size': 64, 'n_epochs': 300, 'n_layers': 10}
         #  'learning_rate': [0.0001],
         #  'batch_size': [64],
@@ -49,7 +49,7 @@ def main():
     if not os.path.exists(STORAGE_DIR):
         os.makedirs(STORAGE_DIR)
 
-    EXAMPLE_NAME = STORAGE_DIR + '/online_control_%d_' % T_horizon
+    EXAMPLE_NAME = STORAGE_DIR + '/control_%d_' % T_horizon
 
     # Get trajectory
     P_load = u.P_load_profile(T_total)
@@ -97,15 +97,14 @@ def main():
     # m_mlopt.save_training_data(EXAMPLE_NAME + 'data_filtered.pkl',
     #                            delete_existing=True)
 
-    # # Learn optimizer
+    # # # Learn optimizer
     # m_mlopt.train(learner=mlopt.PYTORCH,
     #               n_best=10,
     #               filter_strategies=False,
     #               params=nn_params)
 
-    # # Generate test trajectory and collect points
-    # print("Simulate loop again to get trajectory points")
-    # # TODO: Change seed!
+    # # # Generate test trajectory and collect points
+    # logging.info("Simulate loop again to get trajectory points")
     # P_load_test = u.P_load_profile(n_sim_test, seed=1)
 
     # # Loop with basic function

@@ -123,3 +123,4 @@ venv.bak/
 dmypy.json
 *.pkl
 .ray_tmp/
+*.*~

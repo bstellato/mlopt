@@ -13,6 +13,14 @@ from os import path, remove
 DATA_FOLDER = './online_optimization/portfolio/data'
 
 
+def get_dimensions(data_folder=DATA_FOLDER):
+    
+    with pd.HDFStore(path.join(data_folder, "risk_data.h5")) as risk_data:
+        exposures = risk_data['exposures']
+
+    return exposures.loc[exposures.index[0][0]].shape
+
+
 def simulate_system(data_folder, t_start, t_end, T_periods, lambda_cost=None):
     """Load stocks and simulate data"""
     # Load data
@@ -130,7 +138,7 @@ def learning_data(data_folder=DATA_FOLDER,
     return learning_data
 
 
-def sample_around_points(df, n_total, radius={}):
+def sample_around_points(df, n_total, radius={}, shuffle=True):
     """
     Sample around points provided in the dataframe for a total of
     n_total points. We sample each parameter using a uniform
@@ -189,6 +197,9 @@ def sample_around_points(df, n_total, radius={}):
             df_row[col] = list(samples)
 
         df_samples = df_samples.append(df_row)
+
+        # Shuffle data
+        df_samples = df_samples.sample(frac=1).reset_index(drop=True)
 
     return df_samples
 

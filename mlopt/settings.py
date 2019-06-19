@@ -27,9 +27,9 @@ FRAC_TRAIN = 0.9  # Fraction dividing training and validation
 # Neural network default parameters
 NET_TRAINING_PARAMS = {
     'learning_rate': [1e-04, 1e-03, 1e-02],
-    'n_epochs': [100, 200, 500],
-    'batch_size': [32, 128],
-    'n_layers': [5, 7, 10]
+    'n_epochs': [10, 20],
+    'batch_size': [32, 64],
+    # 'n_layers': [5, 7, 10]
 }
 
 # Sampling

@@ -155,6 +155,9 @@ class Optimizer(object):
                          '_problem': self._problem,
                          'encoding': self.encoding}
 
+            if hasattr(self, '_solver_cache'):
+                data_dict['_solver_cache'] = self._solver_cache
+
             # Store strategy filter
             if hasattr(self, '_filter'):
                 data_dict['_filter'] = self._filter
@@ -185,6 +188,9 @@ class Optimizer(object):
         self.obj_train = data_dict['obj_train']
         self._problem = data_dict['_problem']
         self.encoding = data_dict['encoding']
+
+        if ('_solver_cache' in data_dict):
+            self._solver_cache = data_dict['_solver_cache']
 
         # Full strategies backup after filtering
         if ('_filter' in data_dict):
@@ -263,7 +269,7 @@ class Optimizer(object):
         # 1. Problem is MIQP
         # TODO: Add the second point!
         # 2. Parameters enter only in the problem vectors
-        if self._problem.is_qp():
+        if (self._solver_cache is None) and self._problem.is_qp():
             logging.info("Caching KKT solver factors for each strategy "
                          "(it works only for QP-representable problems "
                          "with parameters only in constraints RHS)")
