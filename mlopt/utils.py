@@ -12,41 +12,6 @@ import logging
 from tqdm import tqdm
 
 
-# def init_parallel():
-#     n_proc = get_n_processes()
-#     logging.info("Initializing ray over %i processors" %
-#                  n_proc)
-
-#     # Check if we are on SLURM or not
-#     try:
-#         os.environ["SLURM_CPUS_PER_TASK"]
-#     except KeyError:
-#         tmp_dir = '.ray_tmp/'
-#     tmp_dir = '/pool001/%s/.ray_tmp/' % os.environ["USER"]
-#     if not os.path.exists(tmp_dir):
-#         os.makedirs(tmp_dir)
-
-#     # Use local_mode (serial) for debugging
-#     local_mode = False
-
-#     ray.init(num_cpus=n_proc,
-#              # redis_max_memory=int(1e09)*20,  # 50GB
-#              # object_store_memory=int(1e09)*20,  # 50GB
-#              temp_dir=tmp_dir,
-#              logging_level=logging.INFO,
-#              local_mode=local_mode,  # DEBUG
-#              )
-
-#     # Problem is not serialized correctly
-#     if not local_mode:
-#         from mlopt.problem import Problem
-#         ray.register_custom_serializer(Problem, use_pickle=True)
-
-
-# def shutdown_parallel():
-#     ray.shutdown()
-
-
 def args_norms(expr):
     """Calculate norm of the arguments in a cvxpy expression"""
     if expr.args:
@@ -317,3 +282,5 @@ def accuracy(results_pred, results_test):
                     idx_correct[i] = 1
 
     return np.sum(idx_correct) / n_points, idx_correct
+
+

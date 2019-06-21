@@ -7,7 +7,7 @@ from mlopt.filter import Filter
 from mlopt.utils import n_features, accuracy, suboptimality
 import mlopt.utils as u
 from mlopt.kkt import KKT, create_kkt_matrix, factorize_kkt_matrix
-import warnings
+from mlopt.utils import pandas2array
 from time import time
 import cvxpy.settings as cps
 import pandas as pd
@@ -155,8 +155,8 @@ class Optimizer(object):
                          '_problem': self._problem,
                          'encoding': self.encoding}
 
-            if hasattr(self, '_solver_cache'):
-                data_dict['_solver_cache'] = self._solver_cache
+            # if hasattr(self, '_solver_cache'):
+            #     data_dict['_solver_cache'] = self._solver_cache
 
             # Store strategy filter
             if hasattr(self, '_filter'):
@@ -270,9 +270,6 @@ class Optimizer(object):
         # TODO: Add the second point!
         # 2. Parameters enter only in the problem vectors
         if (self._solver_cache is None) and self._problem.is_qp():
-            logging.info("Caching KKT solver factors for each strategy "
-                         "(it works only for QP-representable problems "
-                         "with parameters only in constraints RHS)")
             self.cache_factors()
 
     def filter_strategies(self, parallel=False):
@@ -330,13 +327,17 @@ class Optimizer(object):
                                              **learner_options)
 
         # Train learner
-        self._learner.train(self.X_train, self.y_train)
+        self._learner.train(pandas2array(self.X_train),
+                            self.y_train)
 
     def cache_factors(self):
         """Cache linear system solver factorizations"""
 
         self._solver_cache = []
-        for strategy_idx in range(self.n_strategies):
+        logging.info("Caching KKT solver factors for each strategy "
+                        "(it works only for QP-representable problems "
+                        "with parameters only in constraints RHS)")
+        for strategy_idx in tqdm(range(self.n_strategies)):
 
             # Get a parameter giving that strategy
             strategy = self.encoding[strategy_idx]
@@ -459,7 +460,6 @@ class Optimizer(object):
 
         if isinstance(X, pd.Series):
             X = pd.DataFrame(X).transpose()
-
         n_points = len(X)
 
         if use_cache and not self._solver_cache:
@@ -476,8 +476,9 @@ class Optimizer(object):
         results = []
 
         # Predict best n_best classes for all the points
+        X_pred = pandas2array(X)
         t_start = time()
-        classes = self._learner.predict(X)
+        classes = self._learner.predict(X_pred)
         t_predict = (time() - t_start) / n_points  # Average predict time
 
         logging.info(message)
@@ -546,7 +547,7 @@ class Optimizer(object):
             with open(os.path.join(tmpdir, "optimizer.pkl"), 'wb') \
                     as optimizer:
                 file_dict = {'_problem': self._problem,
-                             '_solver_cache': self._solver_cache,
+                             # '_solver_cache': self._solver_cache,  # Cannot pickle
                              'learner_name': self._learner.name,
                              'learner_options': self._learner.options,
                              'encoding': self.encoding

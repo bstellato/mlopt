@@ -36,11 +36,11 @@ class Learner(ABC):
     def load(self, file_name):
         """Load learner from file"""
 
-    def pick_best_probabilities(self, y, n_best=None):
+    def pick_best_class(self, y, n_best=None):
         """
         Sort predictions and pick best points.
 
-        Use n_best probabilities to choose classes that
+        Use n_best classes to choose classes that
         are most likely.
         """
         n_points = y.shape[0]
@@ -54,4 +54,3 @@ class Learner(ABC):
             idx_probs[i, :] = np.argsort(y[i, :])[-n_best:]
 
         return idx_probs
-

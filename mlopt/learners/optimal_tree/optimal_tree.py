@@ -154,7 +154,7 @@ class OptimalTree(Learner):
         proba = self._predict(self._lnr, X)
         y = self._convert(self._array, proba)
 
-        return self.pick_best_probabilities(y)
+        return self.pick_best_class(y)
 
     def save(self, file_name):
         # Save tree as json file

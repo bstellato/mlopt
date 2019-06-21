@@ -115,7 +115,7 @@ class TestParallel(unittest.TestCase):
         params = {
             'learning_rate': [0.01],
             'batch_size': [32],
-            'n_epochs': [200],
+            'n_epochs': [20],
             'n_layers': [5]
         }
         m.train(df,

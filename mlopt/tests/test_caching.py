@@ -54,7 +54,7 @@ class TestCaching(unittest.TestCase):
         params = {
             'learning_rate': [0.01],
             'batch_size': [100],
-            'n_epochs': [200],
+            'n_epochs': [20],
             'n_layers': [5]
         }
 
