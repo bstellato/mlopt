@@ -1,16 +1,19 @@
-#!/bin/bash
-#SBATCH --cpus-per-task=15
-#SBATCH --mem-per-cpu=4G
-#SBATCH # --gres=gpu:volta:1 --partition=gpu
+#!/bin/zsh
+#SBATCH --ntasks=1
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=1
+#SBATCH # --mem-per-cpu=4G
+#SBATCH --gres=gpu:volta:1
+#SBATCH --partition=gpu
 #SBATCH -o /home/gridsan/stellato/results/online/control/control_%A_N%a.txt
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
 # Activate environment
-# conda activate python37
+conda activate python37
 
 # module load gurobi/8.0.1
-# export GRB_LICENSE_FILE="/home/software/gurobi/gurobi.lic"
+export GRB_LICENSE_FILE="/home/software/gurobi/gurobi.lic"
 
 SLURM_PARTITION=`squeue -h -o "%P" -j$SLURM_JOB_ID`;
 if [[ $SLURM_PARTITION == *"interactive"* ]]; then
@@ -22,5 +25,5 @@ elif [[ $SLURM_PARTITION == *"gpu"* ]]; then
 fi
 
 # Run actual script
-python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID 2>&1
+HDF5_USE_FILE_LOCKING=FALSE python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID 2>&1
 # 2>&1 | tee /home/gridsan/stellato/results/online/control/control_${SLURM_JOB_ID}_N${SLURM_ARRAY_TASK_ID}.txt

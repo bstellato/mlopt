@@ -1,17 +1,17 @@
-#!/bin/bash
+#!/bin/zsh
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=10
-#SBATCH --mem-per-cpu=5G
-#SBATCH # --gres=gpu:1
-#SBATCH --partition=sched_mit_sloan_batch
+#SBATCH --cpus-per-task=1
+#SBATCH # --mem-per-cpu=5G
+#SBATCH --gres=gpu:volta:1
+#SBATCH --partition=gpu
 #SBATCH --time=3-00:00
 #SBATCH -o /home/gridsan/stellato/results/online/portfolio/portfolio_%A_N%a.txt
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
 
 # Activate environment
-source activate python37
+conda activate python37
 
 # module load gurobi/8.0.1
 export GRB_LICENSE_FILE="/home/software/gurobi/gurobi.lic"
@@ -27,4 +27,4 @@ fi
 
 # Run actual script
 # python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID
-python online_optimization/portfolio/portfolio.py --sparsity $SLURM_ARRAY_TASK_ID
+HDF5_USE_FILE_LOCKING=FALSE python online_optimization/portfolio/portfolio.py --sparsity $SLURM_ARRAY_TASK_ID

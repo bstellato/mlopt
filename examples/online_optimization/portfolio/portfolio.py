@@ -71,18 +71,19 @@ if __name__ == '__main__':
     m_mlopt = create_mlopt_problem(n, m, T_periods, k=k,
                                    lambda_cost=lambda_cost)
 
+    # Get data for learning
+    print("Get learning data by simulating with no integer variables (faster)")
+    df_history = learning_data(t_start=t_start,
+                               t_end=t_end,
+                               T_periods=T_periods,
+                               lambda_cost=lambda_cost)
+    n_history_train = int(len(df_history) * 0.8)
+    df_history_train = df_history[:n_history_train]
+    df_history_test = df_history[n_history_train:]
+
     # Check if learning data already there
     if not os.path.isfile(EXAMPLE_NAME + 'data.pkl'):
     
-        # Get data for learning
-        print("Get learning data by simulating with no integer variables (faster)")
-        df_history = learning_data(t_start=t_start,
-                                   t_end=t_end,
-                                   T_periods=T_periods,
-                                   lambda_cost=lambda_cost)
-        n_history_train = int(len(df_history) * 0.8)
-        df_history_train = df_history[:n_history_train]
-        df_history_test = df_history[n_history_train:]
 
         # Sample around points
         df_train = sample_around_points(df_history_train,
@@ -97,7 +98,7 @@ if __name__ == '__main__':
                             parallel=True,
                             filter_strategies=False)
         m_mlopt.save_training_data(EXAMPLE_NAME + 'data.pkl',
-                                    delete_existing=True)
+                                   delete_existing=True)
 
     else:
         # Load data
@@ -111,15 +112,15 @@ if __name__ == '__main__':
 
     # Learn
     m_mlopt.train(learner=mlopt.PYTORCH,
-                  n_best=10,
+                  n_best=5,
                   filter_strategies=False,
-                  parallel=True,
+                  parallel=False,
                   params=nn_params)
 
     df_test = sample_around_points(df_history_test,
                                    n_total=n_test)
     res_general, res_detail = m_mlopt.performance(df_test,
-                                                  parallel=True,
+                                                  parallel=False,
                                                   use_cache=True)
 
     res_general.to_csv(EXAMPLE_NAME + "test_general.csv",

@@ -231,7 +231,6 @@ def pandas2array(X):
     return X_new
 
 
-
 def suboptimality(cost_pred, cost_test):
     """Compute suboptimality"""
     if np.abs(cost_test) < DIVISION_TOL:
