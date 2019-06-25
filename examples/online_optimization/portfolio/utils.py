@@ -38,12 +38,10 @@ def create_mlopt_problem(n, m, n_periods, k=None,
     constraints = [w[0] == w_init]
     for t in range(1, n_periods + 1):
 
-        risk_cost = lambda_cost['risk'] * (
-            #  cp.quad_form(F.T * w[t], Sigma_F) +
+        risk_cost = lambda_cost['risk'] * (            
             cp.sum_squares(cp.multiply(sqrt_Sigma_F, F.T * w[t])) +
             cp.sum_squares(cp.multiply(sqrt_D, w[t])))
-        #  risk_cost = lambda_cost['risk'] * cp.quad_form(w[t], Sigma)
-
+        
         holding_cost = lambda_cost['borrow'] * \
             cp.sum(stg.BORROW_COST * cp.neg(w[t]))
 
@@ -70,8 +68,9 @@ def create_mlopt_problem(n, m, n_periods, k=None,
                            parallel=True,
                            )
 
+
 def get_problem_dimensions(df):
     
     n, m = df.iloc[0]['F'].shape
 
-    return n, m, n_periods
+    return n, m

@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     # # Learn optimizer
     m_mlopt.train(learner=mlopt.PYTORCH,
-                  n_best=5,
+                  n_best=10,
                   filter_strategies=False,
                   parallel=False,
                   params=nn_params)

@@ -5,7 +5,7 @@ sys.path.append(os.getcwd())
 
 from mlopt.utils import benchmark
 import online_optimization.portfolio.simulation.settings as stg
-from online_optimization.portfolio.learning_data import learning_data, sample_around_points, get_dimensions
+from online_optimization.portfolio.learning_data import learning_data, sample_around_points, get_problem_dimensions
 from online_optimization.portfolio.utils import create_mlopt_problem
 import mlopt
 import numpy as np
