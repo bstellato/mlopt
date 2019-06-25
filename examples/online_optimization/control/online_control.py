@@ -120,6 +120,11 @@ if __name__ == '__main__':
     logging.info("Simulate loop again to get trajectory points")
     P_load_test = u.P_load_profile(n_sim_test, seed=1)
 
+    sim_data_test = u.simulate_loop(problem, init_data,
+                                    u.basic_loop_solve,
+                                    P_load_test,
+                                    T_total)
+
     # Evaluate open-loop performance on those parameters
     df_test = u.sim_data_to_params(sim_data_test)
     res_general, res_detail = m_mlopt.performance(df_test,

@@ -1,11 +1,9 @@
 #!/bin/zsh
-#SBATCH --ntasks=1
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=1
-#SBATCH # --mem-per-cpu=5G
+#SBATCH -n 12
+#SBATCH -N 1
+#SBATCH -c 1
 #SBATCH --gres=gpu:volta:1
 #SBATCH --partition=gpu
-#SBATCH --time=3-00:00
 #SBATCH -o /home/gridsan/stellato/results/online/portfolio/portfolio_%A_N%a.txt
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com

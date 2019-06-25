@@ -121,7 +121,7 @@ if __name__ == '__main__':
                                    n_total=n_test)
     res_general, res_detail = m_mlopt.performance(df_test,
                                                   parallel=False,
-                                                  use_cache=True)
+                                                  use_cache=False)
 
     res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
                        header=True)

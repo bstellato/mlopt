@@ -1,13 +1,15 @@
 #!/bin/zsh
-#SBATCH --ntasks=1
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=1
-#SBATCH # --mem-per-cpu=4G
+#SBATCH -c 1
+#SBATCH -n 12
+#SBATCH -N 1
 #SBATCH --gres=gpu:volta:1
-#SBATCH --partition=gpu
+#SBATCH -p gpu
 #SBATCH -o /home/gridsan/stellato/results/online/control/control_%A_N%a.txt
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=bartolomeo.stellato@gmail.com
+
+# Mandatory for slurm stuff
+source /etc/profile
 
 # Activate environment
 conda activate python37
@@ -25,5 +27,5 @@ elif [[ $SLURM_PARTITION == *"gpu"* ]]; then
 fi
 
 # Run actual script
-HDF5_USE_FILE_LOCKING=FALSE python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID 2>&1
+HDF5_USE_FILE_LOCKING=FALSE python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID
 # 2>&1 | tee /home/gridsan/stellato/results/online/control/control_${SLURM_JOB_ID}_N${SLURM_ARRAY_TASK_ID}.txt
