@@ -62,6 +62,9 @@ class Problem(object):
         # Set solver cache
         self._solver_cache = None
 
+    def sense(self):
+        return type(self.cvxpy_problem.objective)
+
     def _canonicalize(self):
         self.cvxpy_problem._construct_chains(solver=self.solver)
 

@@ -231,16 +231,20 @@ def pandas2array(X):
     return X_new
 
 
-def suboptimality(cost_pred, cost_test):
+def suboptimality(cost_pred, cost_test, sense):
     """Compute suboptimality"""
     if np.abs(cost_test) < DIVISION_TOL:
         cost_norm = 1.
     else:
         cost_norm = np.abs(cost_test)
-    return (cost_pred - cost_test)/cost_norm
+
+    if sense == cp.Minimize:
+        return (cost_pred - cost_test)/cost_norm
+    else: # Maximize
+        return (cost_test - cost_pred)/cost_norm        
 
 
-def accuracy(results_pred, results_test):
+def accuracy(results_pred, results_test, sense):
     """
     Accuracy comparison between predicted and test results.
 
@@ -276,8 +280,9 @@ def accuracy(results_pred, results_test):
             # Check feasibility
             if r_pred['infeasibility'] <= INFEAS_TOL:
                 # Check cost function value
-                subopt = suboptimality(r_pred['cost'], r_test['cost'])
-                if subopt <= SUBOPT_TOL:
+                subopt = suboptimality(r_pred['cost'], r_test['cost'],
+                                       sense)
+                if np.abs(subopt) <= SUBOPT_TOL:
                     idx_correct[i] = 1
 
     return np.sum(idx_correct) / n_points, idx_correct

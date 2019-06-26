@@ -26,3 +26,6 @@ fi
 # Run actual script
 # python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID
 HDF5_USE_FILE_LOCKING=FALSE python online_optimization/portfolio/portfolio.py --sparsity $SLURM_ARRAY_TASK_ID
+
+# Process data and put together with other results
+python online_optimization/portfolio/process_data.py 

@@ -29,3 +29,6 @@ fi
 # Run actual script
 HDF5_USE_FILE_LOCKING=FALSE python online_optimization/control/online_control.py --horizon $SLURM_ARRAY_TASK_ID
 # 2>&1 | tee /home/gridsan/stellato/results/online/control/control_${SLURM_JOB_ID}_N${SLURM_ARRAY_TASK_ID}.txt
+
+# Process data and put together with other results
+python online_optimization/control/process_data.py 

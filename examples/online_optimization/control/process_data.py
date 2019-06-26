@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 
-DATA_FOLDER = '/pool001/stellato/online/control_working'
+DATA_FOLDER = '/home/gridsan/stellato/results/online/control'
 
 
 '''

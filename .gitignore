@@ -124,3 +124,13 @@ dmypy.json
 *.pkl
 .ray_tmp/
 *.*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*

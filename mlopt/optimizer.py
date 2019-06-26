@@ -8,6 +8,7 @@ from mlopt.utils import n_features, accuracy, suboptimality
 import mlopt.utils as u
 from mlopt.kkt import KKT, create_kkt_matrix, factorize_kkt_matrix
 from mlopt.utils import pandas2array
+from cvxpy import Minimize, Maximize
 from time import time
 import cvxpy.settings as cps
 import pandas as pd
@@ -419,9 +420,14 @@ class Optimizer(object):
         idx_filter = np.where(infeas <= INFEAS_TOL)[0]
         if len(idx_filter) > 0:
             # Case 1: Feasible points
-            # -> Get solution with minimum cost
+            # -> Get solution with best cost
             #    between feasible ones
-            idx_pick = idx_filter[np.argmin(cost[idx_filter])]
+            if self._problem.sense() == Minimize:
+                idx_pick = idx_filter[np.argmin(cost[idx_filter])]
+            elif self._problem.sense() == Maximize:
+                idx_pick = idx_filter[np.argmax(cost[idx_filter])]
+            else:
+                raise ValueError('Objective type not understood')
         else:
             # Case 2: No feasible points
             # -> Get solution with minimum infeasibility
@@ -669,11 +675,13 @@ class Optimizer(object):
         # Compute comparative statistics
         time_comp = np.array([time_test[i] / time_pred[i]
                               for i in range(n_test)])
-        subopt = np.array([suboptimality(cost_pred[i], cost_test[i])
+        subopt = np.array([suboptimality(cost_pred[i], cost_test[i],
+                                         self._problem.sense())
                            for i in range(n_test)])
 
         # accuracy
-        test_accuracy, idx_correct = accuracy(results_pred, results_test)
+        test_accuracy, idx_correct = accuracy(results_pred, results_test,
+                                              self._problem.sense())
 
         # Time statistics
         avg_time_improv = np.mean(time_test) / np.mean(time_pred)

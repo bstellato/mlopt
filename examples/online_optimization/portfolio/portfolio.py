@@ -5,8 +5,8 @@ sys.path.append(os.getcwd())
 
 from mlopt.utils import benchmark
 import online_optimization.portfolio.simulation.settings as stg
-from online_optimization.portfolio.learning_data import learning_data, sample_around_points, get_problem_dimensions
-from online_optimization.portfolio.utils import create_mlopt_problem
+from online_optimization.portfolio.learning_data import learning_data, sample_around_points, get_dimensions
+from online_optimization.portfolio.utils import create_mlopt_problem, get_problem_dimensions
 import mlopt
 import numpy as np
 import scipy.sparse as spa
@@ -50,11 +50,10 @@ if __name__ == '__main__':
         'learning_rate': [0.0001, 0.001, 0.01],
         'batch_size': [32],
         'n_epochs': [10, 20],
-        #  {'learning_rate': 0.0001, 'batch_size': 64, 'n_epochs': 300, 'n_layers': 10}
-        #  'learning_rate': [0.0001],
-        #  'batch_size': [64],
-        #  'n_epochs': [300],
-        #  'n_layers': [10]
+        # DEBUG
+         # 'learning_rate': [0.001],
+         # 'batch_size': [32],
+         # 'n_epochs': [10],
     }
 
     # Define initial value
@@ -77,14 +76,26 @@ if __name__ == '__main__':
                                t_end=t_end,
                                T_periods=T_periods,
                                lambda_cost=lambda_cost)
+    
+
+    # Split dataset properly and shuffle
+    np.random.seed(0)
+    idx_pick = np.arange(len(df_history))
+    # DEBUG REMOVE SHUFFLE
+    # np.random.shuffle(idx_pick)
     n_history_train = int(len(df_history) * 0.8)
-    df_history_train = df_history[:n_history_train]
-    df_history_test = df_history[n_history_train:]
+
+    train_idx = idx_pick[:n_history_train]
+    test_idx = idx_pick[n_history_train:]
+    df_history_train = df_history.iloc[train_idx].reset_index(drop=True)
+
+    # DEBUG use test dataset as training
+    df_history_test = df_history.iloc[train_idx].reset_index(drop=True)
+    # df_history_test = df_history.iloc[test_idx].reset_index(drop=True)
 
     # Check if learning data already there
     if not os.path.isfile(EXAMPLE_NAME + 'data.pkl'):
     
-
         # Sample around points
         df_train = sample_around_points(df_history_train,
                                         n_total=n_train)
@@ -121,7 +132,7 @@ if __name__ == '__main__':
                                    n_total=n_test)
     res_general, res_detail = m_mlopt.performance(df_test,
                                                   parallel=False,
-                                                  use_cache=False)
+                                                  use_cache=True)
 
     res_general.to_csv(EXAMPLE_NAME + "test_general.csv",
                        header=True)
