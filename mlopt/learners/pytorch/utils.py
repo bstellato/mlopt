@@ -10,7 +10,7 @@ def accuracy(outputs, labels):
 
     Args:
         outputs: (np.ndarray) output of the model
-        labels: (np.ndarray) batch labels 
+        labels: (np.ndarray) batch labels
 
     Returns: (float) accuracy in [0,1]
     """
@@ -42,9 +42,9 @@ def eval_metrics(outputs, labels, loss):
     return summary
 
 
-def get_dataloader(X, y, batch_size=1):
+def get_dataloader(X, y, batch_size=1, ytype=torch.long):
     X = torch.tensor(X, dtype=torch.float)
-    y = torch.tensor(y, dtype=torch.long)
+    y = torch.tensor(y, dtype=ytype)
 
     return DataLoader(TensorDataset(X, y),
                       batch_size=batch_size,
@@ -85,4 +85,3 @@ METRICS = {
 
 
 METRICS_STEPS = 100
-

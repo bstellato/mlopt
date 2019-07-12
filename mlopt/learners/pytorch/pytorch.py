@@ -17,7 +17,7 @@ class PyTorchNeuralNet(Learner):
     PyTorch Neural Network learner.
     """
 
-    def __init__(self, **options):
+    def __init__(self, onehot=True, **options):
         """
         Initialize PyTorch neural network class.
 
@@ -30,6 +30,7 @@ class PyTorchNeuralNet(Learner):
         self.name = PYTORCH
         self.n_input = options.pop('n_input')
         self.n_classes = options.pop('n_classes')
+        self.onehot = onehot
 
         # Default params grid
         default_params = NET_TRAINING_PARAMS
@@ -64,7 +65,10 @@ class PyTorchNeuralNet(Learner):
                                      self.n_classes)
 
         # Define loss
-        self.loss = nn.CrossEntropyLoss()
+        if onehot:
+            self.loss = nn.CrossEntropyLoss()
+        else:
+            self.loss = nn.MultiLabelSoftMarginLoss()
 
     def train_epoch(self, dataloader):
 
@@ -185,6 +189,7 @@ class PyTorchNeuralNet(Learner):
         """
 
         self.n_train = len(X)
+        ytype = torch.long if self.onehot else torch.float
 
         # Convert X dataframe to numpy array
         # TODO: Move outside
@@ -192,7 +197,7 @@ class PyTorchNeuralNet(Learner):
 
         # # Normalize data
 
-        # Shuffle data, split in train and validation and create dataloader here
+        # Shuffle data, split in train and validation and create dataloader
         np.random.seed(0)
         idx_pick = np.arange(self.n_train)
         np.random.shuffle(idx_pick)
@@ -206,7 +211,7 @@ class PyTorchNeuralNet(Learner):
         # Create validation data loader
         # Training data loader will be created when evaluating the model
         # which depends on the batch_size variable
-        valid_dl = u.get_dataloader(X_valid, y_valid)
+        valid_dl = u.get_dataloader(X_valid, y_valid, ytype=ytype)
 
         logging.info("Split dataset in %d training and %d validation" %
                      (len(train_idx), len(valid_idx)))
@@ -234,9 +239,10 @@ class PyTorchNeuralNet(Learner):
         if n_models > 1:
             for i in range(n_models):
 
-                # Create dataloader 
+                # Create dataloader
                 train_dl = u.get_dataloader(X_train, y_train,
-                                            batch_size=params[i]['batch_size'])
+                                            batch_size=params[i]['batch_size'],
+                                            ytype=ytype)
 
                 accuracy_vec[i] = self.train_instance(train_dl, valid_dl,
                                                       params[i])
@@ -254,7 +260,8 @@ class PyTorchNeuralNet(Learner):
             self.best_params = params[0]
             train_dl = \
                 u.get_dataloader(X_train, y_train,
-                                 batch_size=self.best_params['batch_size'])
+                                 batch_size=self.best_params['batch_size'],
+                                 ytype=ytype)
 
         logging.info(self.best_params)
         # Retrain network with best parameters over whole dataset
@@ -271,11 +278,13 @@ class PyTorchNeuralNet(Learner):
             # Convert pandas df to array (unroll tuples)
             X = torch.tensor(X, dtype=torch.float).to(self.device)
 
+        if self.onehot:
             # Evaluate classes
             # NB. Removed softmax (unscaled probabilities)
             y = self.net(X).detach().cpu().numpy()
-
-        return self.pick_best_class(y, n_best=n_best)
+            return self.pick_best_class(y, n_best=n_best)
+        else:
+            return torch.sigmoid(self.net(X)).detach().cpu().numpy()
 
     def save(self, file_name):
         # Save state dictionary to file
