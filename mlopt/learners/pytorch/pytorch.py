@@ -160,22 +160,24 @@ class PyTorchNeuralNet(Learner):
         # store/load
         # best_valid_accuracy = 0.0
 
-        for epoch in range(params['n_epochs']):  # loop over dataset multiple times
+        for epoch in range(params['n_epochs']):  # loop over dataset
 
             logging.info("Epoch {}/{}".format(epoch + 1, params['n_epochs']))
 
             train_metrics = self.train_epoch(train_dl)
             valid_metrics = self.evaluate(valid_dl)
 
-            valid_accuracy = valid_metrics['accuracy']
-
+            if self.onehot:
+                valid_evaluate = valid_metrics['accuracy']
+            else:
+                valid_evaluate = -valid_metrics['loss']
 
             # is_best = valid_accuracy >= best_valid_accuracy
             # if is_best:
             #     logging.info("- Found new best accuracy")
             #     best_valid_accuracy = valid_accuracy
 
-        return valid_accuracy
+        return valid_evaluate
 
     def train(self, X, y):
         """
@@ -237,7 +239,7 @@ class PyTorchNeuralNet(Learner):
                      "%d inputs, %d outputs" % (self.n_input, self.n_classes))
 
         # Create vector of results
-        accuracy_vec = np.zeros(n_models)
+        metrics_vec = np.zeros(n_models)
 
         if n_models > 1:
             for i in range(n_models):
@@ -247,11 +249,11 @@ class PyTorchNeuralNet(Learner):
                                             batch_size=params[i]['batch_size'],
                                             ytype=ytype)
 
-                accuracy_vec[i] = self.train_instance(train_dl, valid_dl,
-                                                      params[i])
+                metrics_vec[i] = self.train_instance(train_dl, valid_dl,
+                                                     params[i])
 
             # Pick best parameters
-            self.best_params = params[np.argmax(accuracy_vec)]
+            self.best_params = params[np.argmax(metrics_vec)]
             logging.info("Best parameters")
             logging.info(str(self.best_params))
             logging.info("Train neural network with best parameters")
