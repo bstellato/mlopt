@@ -137,6 +137,7 @@ class PyTorchNeuralNet(Learner):
         # Create PyTorch Neural Network and port to to device
         self.net = Net(self.n_input,
                        self.n_classes,
+                       params['n_layers'],
                        params['n_hidden']).to(self.device)
 
         info_str = "Learning Neural Network with parameters: "
@@ -221,10 +222,12 @@ class PyTorchNeuralNet(Learner):
             'learning_rate': learning_rate,
             'batch_size': batch_size,
             'n_epochs': n_epochs,
+            'n_layers': n_layers,
             'n_hidden': n_hidden}
             for learning_rate in self.options['params']['learning_rate']
             for batch_size in self.options['params']['batch_size']
             for n_epochs in self.options['params']['n_epochs']
+            for n_layers in self.options['params']['n_layers']
             for n_hidden in self.options['params']['n_hidden']
         ]
         n_models = len(params)
