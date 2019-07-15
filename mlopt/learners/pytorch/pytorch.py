@@ -173,7 +173,6 @@ class PyTorchNeuralNet(Learner):
             train_metrics = self.train_epoch(train_dl)
             valid_metrics = self.evaluate(valid_dl)
 
-            # TODO: Change here! Use accuracy for both.
             # Change evaluate calling a function set using the onehot flag
             if self.onehot:
                 valid_evaluate = valid_metrics['accuracy']
