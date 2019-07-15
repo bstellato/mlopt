@@ -31,6 +31,11 @@ class PyTorchNeuralNet(Learner):
         self.n_input = options.pop('n_input')
         self.n_classes = options.pop('n_classes')
         self.onehot = onehot
+        if onehot:
+            self.metrics = {'accuracy': u.accuracy_onehot}
+        else:
+            self.metrics = {'mean_squared_error': u.mean_squared_error}
+            
 
         # Default params grid
         default_params = NET_TRAINING_PARAMS
@@ -98,6 +103,7 @@ class PyTorchNeuralNet(Learner):
                 if i % 100 == 0:
                     metrics.append(u.eval_metrics(outputs,
                                                   labels,
+                                                  self.metrics,
                                                   loss))
 
         return u.log_metrics(metrics, string="Train")
@@ -122,7 +128,7 @@ class PyTorchNeuralNet(Learner):
                 outputs = self.net(inputs)
                 loss = self.loss(outputs, labels)
 
-                metrics.append(u.eval_metrics(outputs, labels, loss))
+                metrics.append(u.eval_metrics(outputs, labels, self.metrics, loss))
 
         return u.log_metrics(metrics, string="Eval")
 
@@ -167,6 +173,8 @@ class PyTorchNeuralNet(Learner):
             train_metrics = self.train_epoch(train_dl)
             valid_metrics = self.evaluate(valid_dl)
 
+            # TODO: Change here! Use accuracy for both.
+            # Change evaluate calling a function set using the onehot flag
             if self.onehot:
                 valid_evaluate = valid_metrics['accuracy']
             else:
@@ -285,7 +293,7 @@ class PyTorchNeuralNet(Learner):
 
         if self.onehot:
             # Evaluate classes
-            # NB. Removed softmax (unscaled probabilities)
+            # NB. Removed softmax for faster prediction (unscaled probabilities)
             y = self.net(X).detach().cpu().numpy()
             return self.pick_best_class(y, n_best=n_best)
         else:
