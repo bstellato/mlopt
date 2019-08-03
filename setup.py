@@ -24,6 +24,7 @@ setup(name='mlopt',
                         "pandas",
                         "joblib",
                         "tqdm",
-                        "scikit-umfpack"],
+                        "scikit-umfpack",
+                        "interpretableai"],
       license='Apache License, Version 2.0',
       )
