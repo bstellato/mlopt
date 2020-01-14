@@ -17,7 +17,7 @@ class PyTorchNeuralNet(Learner):
     PyTorch Neural Network learner.
     """
 
-    def __init__(self, **options):
+    def __init__(self, onehot=True, **options):
         """
         Initialize PyTorch neural network class.
 
@@ -30,6 +30,12 @@ class PyTorchNeuralNet(Learner):
         self.name = PYTORCH
         self.n_input = options.pop('n_input')
         self.n_classes = options.pop('n_classes')
+        self.onehot = onehot
+        if onehot:
+            self.metrics = {'accuracy': u.accuracy_onehot}
+        else:
+            self.metrics = {'mean_squared_error': u.mean_squared_error}
+            
 
         # Default params grid
         default_params = NET_TRAINING_PARAMS
@@ -64,7 +70,10 @@ class PyTorchNeuralNet(Learner):
                                      self.n_classes)
 
         # Define loss
-        self.loss = nn.CrossEntropyLoss()
+        if onehot:
+            self.loss = nn.CrossEntropyLoss()
+        else:
+            self.loss = nn.MultiLabelSoftMarginLoss()
 
     def train_epoch(self, dataloader):
 
@@ -94,6 +103,7 @@ class PyTorchNeuralNet(Learner):
                 if i % 100 == 0:
                     metrics.append(u.eval_metrics(outputs,
                                                   labels,
+                                                  self.metrics,
                                                   loss))
 
         return u.log_metrics(metrics, string="Train")
@@ -118,7 +128,7 @@ class PyTorchNeuralNet(Learner):
                 outputs = self.net(inputs)
                 loss = self.loss(outputs, labels)
 
-                metrics.append(u.eval_metrics(outputs, labels, loss))
+                metrics.append(u.eval_metrics(outputs, labels, self.metrics, loss))
 
         return u.log_metrics(metrics, string="Eval")
 
@@ -133,6 +143,7 @@ class PyTorchNeuralNet(Learner):
         # Create PyTorch Neural Network and port to to device
         self.net = Net(self.n_input,
                        self.n_classes,
+                       params['n_layers'],
                        params['n_hidden']).to(self.device)
 
         info_str = "Learning Neural Network with parameters: "
@@ -155,22 +166,25 @@ class PyTorchNeuralNet(Learner):
         # store/load
         # best_valid_accuracy = 0.0
 
-        for epoch in range(params['n_epochs']):  # loop over dataset multiple times
+        for epoch in range(params['n_epochs']):  # loop over dataset
 
             logging.info("Epoch {}/{}".format(epoch + 1, params['n_epochs']))
 
             train_metrics = self.train_epoch(train_dl)
             valid_metrics = self.evaluate(valid_dl)
 
-            valid_accuracy = valid_metrics['accuracy']
-
+            # Change evaluate calling a function set using the onehot flag
+            if self.onehot:
+                valid_evaluate = valid_metrics['accuracy']
+            else:
+                valid_evaluate = -valid_metrics['loss']
 
             # is_best = valid_accuracy >= best_valid_accuracy
             # if is_best:
             #     logging.info("- Found new best accuracy")
             #     best_valid_accuracy = valid_accuracy
 
-        return valid_accuracy
+        return valid_evaluate
 
     def train(self, X, y):
         """
@@ -185,6 +199,7 @@ class PyTorchNeuralNet(Learner):
         """
 
         self.n_train = len(X)
+        ytype = torch.long if self.onehot else torch.float
 
         # Convert X dataframe to numpy array
         # TODO: Move outside
@@ -192,7 +207,7 @@ class PyTorchNeuralNet(Learner):
 
         # # Normalize data
 
-        # Shuffle data, split in train and validation and create dataloader here
+        # Shuffle data, split in train and validation and create dataloader
         np.random.seed(0)
         idx_pick = np.arange(self.n_train)
         np.random.shuffle(idx_pick)
@@ -206,7 +221,7 @@ class PyTorchNeuralNet(Learner):
         # Create validation data loader
         # Training data loader will be created when evaluating the model
         # which depends on the batch_size variable
-        valid_dl = u.get_dataloader(X_valid, y_valid)
+        valid_dl = u.get_dataloader(X_valid, y_valid, ytype=ytype)
 
         logging.info("Split dataset in %d training and %d validation" %
                      (len(train_idx), len(valid_idx)))
@@ -216,10 +231,12 @@ class PyTorchNeuralNet(Learner):
             'learning_rate': learning_rate,
             'batch_size': batch_size,
             'n_epochs': n_epochs,
+            'n_layers': n_layers,
             'n_hidden': n_hidden}
             for learning_rate in self.options['params']['learning_rate']
             for batch_size in self.options['params']['batch_size']
             for n_epochs in self.options['params']['n_epochs']
+            for n_layers in self.options['params']['n_layers']
             for n_hidden in self.options['params']['n_hidden']
         ]
         n_models = len(params)
@@ -229,20 +246,21 @@ class PyTorchNeuralNet(Learner):
                      "%d inputs, %d outputs" % (self.n_input, self.n_classes))
 
         # Create vector of results
-        accuracy_vec = np.zeros(n_models)
+        metrics_vec = np.zeros(n_models)
 
         if n_models > 1:
             for i in range(n_models):
 
-                # Create dataloader 
+                # Create dataloader
                 train_dl = u.get_dataloader(X_train, y_train,
-                                            batch_size=params[i]['batch_size'])
+                                            batch_size=params[i]['batch_size'],
+                                            ytype=ytype)
 
-                accuracy_vec[i] = self.train_instance(train_dl, valid_dl,
-                                                      params[i])
+                metrics_vec[i] = self.train_instance(train_dl, valid_dl,
+                                                     params[i])
 
             # Pick best parameters
-            self.best_params = params[np.argmax(accuracy_vec)]
+            self.best_params = params[np.argmax(metrics_vec)]
             logging.info("Best parameters")
             logging.info(str(self.best_params))
             logging.info("Train neural network with best parameters")
@@ -254,7 +272,8 @@ class PyTorchNeuralNet(Learner):
             self.best_params = params[0]
             train_dl = \
                 u.get_dataloader(X_train, y_train,
-                                 batch_size=self.best_params['batch_size'])
+                                 batch_size=self.best_params['batch_size'],
+                                 ytype=ytype)
 
         logging.info(self.best_params)
         # Retrain network with best parameters over whole dataset
@@ -271,11 +290,13 @@ class PyTorchNeuralNet(Learner):
             # Convert pandas df to array (unroll tuples)
             X = torch.tensor(X, dtype=torch.float).to(self.device)
 
+        if self.onehot:
             # Evaluate classes
-            # NB. Removed softmax (unscaled probabilities)
+            # NB. Removed softmax for faster prediction (unscaled probabilities)
             y = self.net(X).detach().cpu().numpy()
-
-        return self.pick_best_class(y, n_best=n_best)
+            return self.pick_best_class(y, n_best=n_best)
+        else:
+            return torch.sigmoid(self.net(X)).detach().cpu().numpy()
 
     def save(self, file_name):
         # Save state dictionary to file

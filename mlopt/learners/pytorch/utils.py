@@ -4,19 +4,47 @@ from torch.utils.data import TensorDataset, DataLoader
 import logging
 
 
-def accuracy(outputs, labels):
+# How often should we compute the metrics
+METRICS_STEPS = 100
+
+
+def accuracy_onehot(outputs, labels):
     """
     Compute the accuracy, given the outputs and labels for all images.
 
     Args:
         outputs: (np.ndarray) output of the model
-        labels: (np.ndarray) batch labels 
+        labels: (np.ndarray) batch labels
 
     Returns: (float) accuracy in [0,1]
     """
     outputs = np.argmax(outputs, axis=1)
     return np.sum(outputs == labels) / float(labels.size)
 
+
+def mean_squared_error(outputs, labels):
+    """
+    Compute the mean squared error after rounding, 
+    given the outputs and labels.
+
+    Args:
+        outputs: (np.ndarray) output of the model
+        labels: (np.ndarray) batch labels
+
+    Returns: (float) accuracy in [0,1]
+    """
+    n_samples = len(labels)
+    
+    # NB. There should be no need to square since the values can be
+    # either 1 or 0
+    normalized_outputs = np.reciprocal(1 + np.exp(-outputs))  # Normalize using sigmoid
+    differences = np.round(normalized_outputs) - labels
+    squared_diff = differences.dot(differences.T)
+    errors = np.diag(squared_diff) if n_samples > 1 else squared_diff[0][0]
+    mse = np.sum(errors) / n_samples
+
+    return mse
+     
 
 def log_metrics(metrics, string="Train"):
     # compute mean of all metrics in summary
@@ -29,22 +57,22 @@ def log_metrics(metrics, string="Train"):
     return metrics_mean
 
 
-def eval_metrics(outputs, labels, loss):
+def eval_metrics(outputs, labels, metrics, loss):
     outputs = outputs.detach().cpu().numpy()
     labels = labels.detach().cpu().numpy()
 
     # compute all metrics on this batch
-    summary = {metric: METRICS[metric](outputs,
+    summary = {metric: metrics[metric](outputs,
                                        labels)
-               for metric in METRICS}
+               for metric in metrics}
     summary['loss'] = loss.item()
 
     return summary
 
 
-def get_dataloader(X, y, batch_size=1):
+def get_dataloader(X, y, batch_size=1, ytype=torch.long):
     X = torch.tensor(X, dtype=torch.float)
-    y = torch.tensor(y, dtype=torch.long)
+    y = torch.tensor(y, dtype=ytype)
 
     return DataLoader(TensorDataset(X, y),
                       batch_size=batch_size,
@@ -76,13 +104,4 @@ class RunningAverage():
         return self.total/float(self.steps)
 
 
-# maintain all metrics required in this dictionary- these are used in
-# the training and evaluation loops
-METRICS = {
-    'accuracy': accuracy,
-    # could add more metrics such as accuracy for each token type
-}
-
-
-METRICS_STEPS = 100
 

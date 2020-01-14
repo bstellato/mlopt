@@ -7,13 +7,14 @@ class Net(nn.Module):
     PyTorch internal neural network class.
     """
 
-    def __init__(self, n_input, n_classes, n_hidden):
+    def __init__(self, n_input, n_classes, n_layers, n_hidden):
         super(Net, self).__init__()
 
         self.in_layer = nn.Linear(n_input, n_hidden)
         self.batchnorm = nn.BatchNorm1d(n_hidden)
-        self.linear1 = nn.Linear(n_hidden, n_hidden)
-        self.linear2 = nn.Linear(n_hidden, n_hidden)
+        self.linear = nn.ModuleList([nn.Linear(n_hidden, n_hidden)])
+        self.linear.extend([nn.Linear(n_hidden, n_hidden)
+                            for _ in range(n_layers - 1)])
         self.out_layer = nn.Linear(n_hidden, n_classes)
 
         # OLD Structure with linear layers
@@ -26,8 +27,8 @@ class Net(nn.Module):
 
         x = F.relu(self.in_layer(x))
         x = self.batchnorm(x)
-        x = F.relu(self.linear1(x))
-        x = F.relu(self.linear2(x))
+        for layer in self.linear:
+            x = F.relu(layer(x))
         x = self.out_layer(x)
 
         # OLD
