@@ -1,9 +1,10 @@
 from joblib import Parallel, delayed
+import mlopt.settings as stg
 import numpy as np
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 from mlopt.problem import solve_with_strategy
 from mlopt.strategy import strategy_distance
-import mlopt.settings as stg
 import mlopt.utils as u
 from mlopt.problem import Problem
 from tqdm import tqdm

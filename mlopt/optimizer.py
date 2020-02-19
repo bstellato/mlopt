@@ -1,5 +1,5 @@
 from mlopt.problem import Problem, solve_with_strategy
-from mlopt.settings import DEFAULT_SOLVER, DEFAULT_LEARNER, INFEAS_TOL
+import mlopt.settings as stg
 from mlopt.learners import LEARNER_MAP
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
@@ -21,6 +21,7 @@ import pickle as pkl
 from joblib import Parallel, delayed
 from tqdm import tqdm
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 import sys
 
 
@@ -51,8 +52,7 @@ class Optimizer(object):
             A dict of options for the internal solver.
         """
 
-        root = logging.getLogger()
-        root.setLevel(log_level)
+        logger.setLevel(log_level)
         # handler = logging.StreamHandler(sys.stdout)
         # handler.setLevel(logging.DEBUG)
         # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -60,7 +60,7 @@ class Optimizer(object):
         # root.addHandler(handler)
 
         self._problem = Problem(objective, constraints,
-                                solver=DEFAULT_SOLVER,
+                                solver=stg.DEFAULT_SOLVER,
                                 tight_constraints=tight_constraints,
                                 **solver_options)
         self._solver_cache = None
@@ -76,7 +76,7 @@ class Optimizer(object):
         if self.encoding is None:
             err = "Model has been trained yet to " + \
                 "return the number of strategies."
-            logging.error(err)
+            logger.error(err)
             raise ValueError(err)
 
         return len(self.encoding)
@@ -144,7 +144,7 @@ class Optimizer(object):
         if not self.samples_present():
             err = "You need to get the strategies " + \
                 "from the data first by training the model."
-            logging.error(err)
+            logger.error(err)
             raise ValueError(err)
 
         # Save to file
@@ -203,24 +203,24 @@ class Optimizer(object):
 
     def get_samples(self, X=None, sampling_fn=None,
                     parallel=True,
-                    filter_strategies=False):
+                    filter_strategies=stg.FILTER_STRATEGIES):
         """Get samples either from data or from sampling function"""
 
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
             err = "Not enough arguments to train the model"
-            logging.error(err)
+            logger.error(err)
             raise ValueError(err)
 
         if X is not None and sampling_fn is not None:
             err = "You can pass only one value between X and sampling_fn"
-            logging.error(err)
+            logger.error(err)
             raise ValueError(err)
 
         # Check if data is passed, otherwise train
         #  if (X is not None) and not self.samples_present():
         if X is not None:
-            logging.info("Use new data")
+            logger.info("Use new data")
             self.X_train = X
             self.y_train = None
             self.encoding = None
@@ -237,7 +237,7 @@ class Optimizer(object):
                                    if 'strategy' not in x.keys()}
             if not_feasible_points:
                 e = "number of infeasible points %d" % len(not_feasible_points)
-                logging.error(e)
+                logger.error(e)
                 raise ValueError(e)
 
             self.obj_train = [r['cost'] for r in results]
@@ -257,7 +257,7 @@ class Optimizer(object):
             self._sampler.compute_good_turing(self.y_train)
 
         elif sampling_fn is not None and not self.samples_present():
-            logging.info("Use iterative sampling")
+            logger.info("Use iterative sampling")
             # Create X_train, y_train and encoding from
             # sampling function
             self.sample(sampling_fn, parallel=parallel)
@@ -291,7 +291,7 @@ class Optimizer(object):
     def train(self, X=None,
               sampling_fn=None,
               parallel=True,
-              learner=DEFAULT_LEARNER,
+              learner=stg.DEFAULT_LEARNER,
               filter_strategies=False,
               **learner_options):
         """
@@ -335,7 +335,7 @@ class Optimizer(object):
         """Cache linear system solver factorizations"""
 
         self._solver_cache = []
-        logging.info("Caching KKT solver factors for each strategy "
+        logger.info("Caching KKT solver factors for each strategy "
                         "(it works only for QP-representable problems "
                         "with parameters only in constraints RHS)")
         for strategy_idx in tqdm(range(self.n_strategies)):
@@ -417,7 +417,7 @@ class Optimizer(object):
         # Pick best class between k ones
         infeas = np.array(infeas)
         cost = np.array(cost)
-        idx_filter = np.where(infeas <= INFEAS_TOL)[0]
+        idx_filter = np.where(infeas <= stg.INFEAS_TOL)[0]
         if len(idx_filter) > 0:
             # Case 1: Feasible points
             # -> Get solution with best cost
@@ -471,7 +471,7 @@ class Optimizer(object):
         if use_cache and not self._solver_cache:
             err = "Solver cache requested but the cache has not been" + \
                 "computed for this problem. Is it MIQP representable?"
-            logging.error(err)
+            logger.error(err)
             raise ValueError(err)
 
         # Change verbose setting
@@ -487,7 +487,7 @@ class Optimizer(object):
         classes = self._learner.predict(X_pred)
         t_predict = (time() - t_start) / n_points  # Average predict time
 
-        logging.info(message)
+        logger.info(message)
 
         for i in tqdm(range(n_points)):
 
@@ -646,7 +646,7 @@ class Optimizer(object):
             Detailed results summary.
         """
 
-        logging.info("Performance evaluation")
+        logger.info("Performance evaluation")
         # Get strategy for each point
         results_test = self._problem.solve_parametric(theta,
                                                       parallel=parallel,
@@ -703,13 +703,13 @@ class Optimizer(object):
                 "n_correct": np.sum(idx_correct),
                 "n_strategies": n_strategies,
                 "accuracy": 100 * test_accuracy,
-                "n_infeas": np.sum(infeas >= INFEAS_TOL),
+                "n_infeas": np.sum(infeas >= stg.INFEAS_TOL),
                 "avg_infeas": np.mean(infeas),
                 "std_infeas": np.std(infeas),
                 "avg_subopt": np.mean(subopt[np.where(infeas <=
-                                      INFEAS_TOL)[0]]),
+                                      stg.INFEAS_TOL)[0]]),
                 "std_subopt": np.std(subopt[np.where(infeas <=
-                                     INFEAS_TOL)[0]]),
+                                     stg.INFEAS_TOL)[0]]),
                 "max_infeas": np.max(infeas),
                 "max_subopt": np.max(subopt),
                 "mean_solve_time_pred": np.mean(solve_time_pred),

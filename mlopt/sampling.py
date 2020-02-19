@@ -2,8 +2,9 @@ import numpy as np
 from scipy.special import gammainc
 import pandas as pd
 from mlopt.strategy import encode_strategies
-from mlopt.settings import SAMPLING_TOL as EPS
+import mlopt.settings as stg
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 
 
 class Sampler(object):
@@ -46,7 +47,7 @@ class Sampler(object):
 
         # Check if there are labels appearing only once
         if not any(np.where(freq == 1)[0]):
-            logging.info("No labels appearing only once")
+            logger.info("No labels appearing only once")
             n1 = 0
             #  n1 = np.inf
         else:
@@ -61,12 +62,12 @@ class Sampler(object):
         self.good_turing_smooth = self.alpha * n1/self.n_samples + \
             (1 - self.alpha) * self.good_turing_smooth
 
-    def sample(self, parallel=True, epsilon=EPS, beta=1e-05):
+    def sample(self, parallel=True, epsilon=stg.SAMPLING_TOL, beta=1e-05):
         """
         Iterative sampling.
         """
 
-        logging.info("Iterative sampling")
+        logger.info("Iterative sampling")
 
         # Initialize dataframes
         theta = pd.DataFrame()
@@ -92,7 +93,7 @@ class Sampler(object):
             # Get Good Turing Estimator
             self.compute_good_turing(labels)
 
-            logging.info("i: %d, gt: %.2e, gt smooth: %.2e, n: %d " %
+            logger.info("i: %d, gt: %.2e, gt smooth: %.2e, n: %d " %
                          (self.niter+1, self.good_turing,
                           self.good_turing_smooth,
                           self.n_samples))

@@ -1,6 +1,5 @@
 from mlopt.learners.learner import Learner
-from mlopt.settings import N_BEST, FRAC_TRAIN, PYTORCH, \
-        NET_TRAINING_PARAMS, DIVISION_TOL
+import mlopt.settings as stg
 import mlopt.learners.pytorch.utils as u
 from mlopt.learners.pytorch.model import Net
 from tqdm import tqdm
@@ -10,6 +9,7 @@ import torch.nn as nn                                   # Neural network tools
 import torch.optim as optim                             # Optimizer tools
 import numpy as np
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 
 
 class PyTorchNeuralNet(Learner):
@@ -27,12 +27,12 @@ class PyTorchNeuralNet(Learner):
             Learner options as a dictionary.
         """
         # Define learner name
-        self.name = PYTORCH
+        self.name = stg.PYTORCH
         self.n_input = options.pop('n_input')
         self.n_classes = options.pop('n_classes')
 
         # Default params grid
-        default_params = NET_TRAINING_PARAMS
+        default_params = stg.NET_TRAINING_PARAMS
 
         # Unpack settings
         self.options = {}
@@ -47,20 +47,20 @@ class PyTorchNeuralNet(Learner):
                 [int((self.n_classes + self.n_input)/2)]
 
         # Get fraction between training and validation
-        self.options['frac_train'] = options.pop('frac_train', FRAC_TRAIN)
+        self.options['frac_train'] = options.pop('frac_train', stg.FRAC_TRAIN)
 
         # Define device
         self.device = torch.device("cpu")
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
-            logging.info("Using CUDA GPU %s with Pytorch" %
+            logger.info("Using CUDA GPU %s with Pytorch" %
                          torch.cuda.get_device_name(self.device))
         else:
             self.device = torch.device("cpu")
-            logging.info("Using CPU with Pytorch")
+            logger.info("Using CPU with Pytorch")
 
         # Pick minimum between n_best and n_classes
-        self.options['n_best'] = min(options.pop('n_best', N_BEST),
+        self.options['n_best'] = min(options.pop('n_best', stg.N_BEST),
                                      self.n_classes)
 
         # Define loss
@@ -137,7 +137,7 @@ class PyTorchNeuralNet(Learner):
 
         info_str = "Learning Neural Network with parameters: "
         info_str += str(params)
-        logging.info(info_str)
+        logger.info(info_str)
 
         # Define optimizer
         self.optimizer = optim.Adam(self.net.parameters(),
@@ -157,7 +157,7 @@ class PyTorchNeuralNet(Learner):
 
         for epoch in range(params['n_epochs']):  # loop over dataset multiple times
 
-            logging.info("Epoch {}/{}".format(epoch + 1, params['n_epochs']))
+            logger.info("Epoch {}/{}".format(epoch + 1, params['n_epochs']))
 
             train_metrics = self.train_epoch(train_dl)
             valid_metrics = self.evaluate(valid_dl)
@@ -167,7 +167,7 @@ class PyTorchNeuralNet(Learner):
 
             # is_best = valid_accuracy >= best_valid_accuracy
             # if is_best:
-            #     logging.info("- Found new best accuracy")
+            #     logger.info("- Found new best accuracy")
             #     best_valid_accuracy = valid_accuracy
 
         return valid_accuracy
@@ -208,7 +208,7 @@ class PyTorchNeuralNet(Learner):
         # which depends on the batch_size variable
         valid_dl = u.get_dataloader(X_valid, y_valid)
 
-        logging.info("Split dataset in %d training and %d validation" %
+        logger.info("Split dataset in %d training and %d validation" %
                      (len(train_idx), len(valid_idx)))
 
         # Create parameter vector
@@ -224,7 +224,7 @@ class PyTorchNeuralNet(Learner):
         ]
         n_models = len(params)
 
-        logging.info("Train Neural Network with %d " % n_models +
+        logger.info("Train Neural Network with %d " % n_models +
                      "sets of parameters, " +
                      "%d inputs, %d outputs" % (self.n_input, self.n_classes))
 
@@ -234,7 +234,7 @@ class PyTorchNeuralNet(Learner):
         if n_models > 1:
             for i in range(n_models):
 
-                # Create dataloader 
+                # Create dataloader
                 train_dl = u.get_dataloader(X_train, y_train,
                                             batch_size=params[i]['batch_size'])
 
@@ -243,20 +243,20 @@ class PyTorchNeuralNet(Learner):
 
             # Pick best parameters
             self.best_params = params[np.argmax(accuracy_vec)]
-            logging.info("Best parameters")
-            logging.info(str(self.best_params))
-            logging.info("Train neural network with best parameters")
+            logger.info("Best parameters")
+            logger.info(str(self.best_params))
+            logger.info("Train neural network with best parameters")
 
         else:
 
-            logging.info("Train neural network with "
+            logger.info("Train neural network with "
                          "just one set of parameters")
             self.best_params = params[0]
             train_dl = \
                 u.get_dataloader(X_train, y_train,
                                  batch_size=self.best_params['batch_size'])
 
-        logging.info(self.best_params)
+        logger.info(self.best_params)
         # Retrain network with best parameters over whole dataset
         self.train_instance(train_dl, valid_dl, self.best_params)
 
@@ -286,7 +286,7 @@ class PyTorchNeuralNet(Learner):
         # Check if file name exists
         if not os.path.isfile(file_name + ".pkl"):
             err = "PyTorch pkl file does not exist."
-            logging.error(err)
+            logger.error(err)
             raise ValueError(err)
 
         # Load state dictionary from file

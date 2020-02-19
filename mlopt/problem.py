@@ -2,7 +2,7 @@ from joblib import Parallel, delayed
 import numpy as np
 # Mlopt stuff
 from mlopt.strategy import Strategy
-from mlopt.settings import DEFAULT_SOLVER, DIVISION_TOL
+import mlopt.settings as stg
 from mlopt.kkt import KKT
 import mlopt.utils as u
 # Import cvxpy and constraint types
@@ -13,13 +13,14 @@ from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
 from tqdm import tqdm
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 
 
 class Problem(object):
 
     def __init__(self,
                  objective, constraints,
-                 solver=DEFAULT_SOLVER,
+                 solver=stg.DEFAULT_SOLVER,
                  tight_constraints=True,
                  **solver_options):
         """
@@ -40,6 +41,7 @@ class Problem(object):
         # Assign solver
         self.solver = solver
 
+
         # Define problem
         self.cvxpy_problem = cp.Problem(objective,
                                         constraints)
@@ -54,6 +56,10 @@ class Problem(object):
         self.bool_vars = [v for v in
                           self.cvxpy_problem._intermediate_problem.variables()
                           if v.attributes['boolean']]
+
+        # Add default solver options to solver options
+        if solver == stg.DEFAULT_SOLVER:
+            solver_options.update(stg.DEFAULT_SOLVER_OPTIONS)
 
         # Set options
         self.tight_constraints = tight_constraints
@@ -78,7 +84,7 @@ class Problem(object):
         """Set internal solver."""
         if s not in INSTALLED_SOLVERS:
             err = 'Solver %s not installed.' % s
-            logging.error(err)
+            logger.error(err)
             raise ValueError(err)
         self._solver = s
 
@@ -167,7 +173,7 @@ class Problem(object):
 
             # Normalize relative tolerance if too small
             relative_viol = relative_viol \
-                if relative_viol > DIVISION_TOL else 1.
+                if relative_viol > stg.DIVISION_TOL else 1.
 
             # Append violation
             violations.append(np.atleast_1d(c.violation().flatten() /
@@ -285,10 +291,8 @@ class Problem(object):
             Results dictionary.
         """
         problem = self.cvxpy_problem
-        self._solve(problem, solver=self.solver,
-                    OptimalityTol=1e-09,
-                    FeasibilityTol=1e-09,
-                    BarConvTol=1e-10,
+        self._solve(problem,
+                    solver=self.solver,
                     **self.solver_options)
 
         return self._parse_solution(problem)
@@ -307,7 +311,7 @@ class Problem(object):
             if key not in con_keys:
                 err = "Tight constraints not compatible " + \
                     "with problem. Constaint IDs not matching."
-                logging.error(err)
+                logger.error(err)
                 raise ValueError(err)
 
         int_var_err = "Integer variables not compatible " + \
@@ -317,10 +321,10 @@ class Problem(object):
             try:
                 v = variables[key]
             except KeyError:
-                logging.error(err)
+                logger.error(err)
                 raise ValueError(int_var_err)
             if not self._is_var_mip(v):
-                logging.error(int_var_err)
+                logger.error(int_var_err)
                 raise ValueError(int_var_err)
 
     def _construct_reduced_problem(self, strategy):
@@ -433,7 +437,7 @@ class Problem(object):
 
         n_jobs = u.get_n_processes() if parallel else 1
 
-        logging.info(message + " (n_jobs = %d)" % n_jobs)
+        logger.info(message + " (n_jobs = %d)" % n_jobs)
 
         results = Parallel(n_jobs=n_jobs)(
             delayed(populate_and_solve)(self, theta.iloc[i])

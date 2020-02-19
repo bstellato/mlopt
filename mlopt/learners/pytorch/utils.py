@@ -1,7 +1,9 @@
 import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+import mlopt.settings as stg
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 
 
 def accuracy(outputs, labels):
@@ -10,7 +12,7 @@ def accuracy(outputs, labels):
 
     Args:
         outputs: (np.ndarray) output of the model
-        labels: (np.ndarray) batch labels 
+        labels: (np.ndarray) batch labels
 
     Returns: (float) accuracy in [0,1]
     """
@@ -24,7 +26,7 @@ def log_metrics(metrics, string="Train"):
                     for metric in metrics[0]}
     metrics_string = " ; ".join("{}: {:05.3f}".format(k, v)
                                 for k, v in metrics_mean.items())
-    logging.info("- {} metrics: ".format(string) + metrics_string)
+    logger.info("- {} metrics: ".format(string) + metrics_string)
 
     return metrics_mean
 

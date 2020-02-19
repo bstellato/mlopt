@@ -1,5 +1,5 @@
 from mlopt.learners.learner import Learner
-from mlopt.settings import N_BEST, FRAC_TRAIN, OPTIMAL_TREE
+import mlopt.settings as stg
 from mlopt.utils import pandas2array, get_n_processes
 import shutil
 from subprocess import call
@@ -7,6 +7,7 @@ import time
 import os
 import sys
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 
 
 
@@ -32,7 +33,7 @@ class OptimalTree(Learner):
         self.nprocs = Distributed.nprocs
 
         # Define name
-        self.name = OPTIMAL_TREE
+        self.name = stg.OPTIMAL_TREE
 
         # Assign settings
         self.n_input = options.pop('n_input')
@@ -46,12 +47,12 @@ class OptimalTree(Learner):
         self.options['max_depth'] = options.pop('max_depth', [5, 10, 15])
         self.options['minbucket'] = options.pop('minbucket', [1, 5, 10])
         # Pick minimum between n_best and n_classes
-        self.options['n_best'] = min(options.pop('n_best', N_BEST),
+        self.options['n_best'] = min(options.pop('n_best', stg.N_BEST),
                                      self.n_classes)
         self.options['save_svg'] = options.pop('save_svg', False)
 
         # Get fraction between training and validation
-        self.options['frac_train'] = options.pop('frac_train', FRAC_TRAIN)
+        self.options['frac_train'] = options.pop('frac_train', stg.FRAC_TRAIN)
 
         # Load Julia
         n_cpus = get_n_processes()
@@ -125,7 +126,7 @@ class OptimalTree(Learner):
             info_str += "on %d processors" % self.nprocs()
         else:
             info_str += "\n"
-        logging.info(info_str)
+        logger.info(info_str)
 
         # Start time
         start_time = time.time()
@@ -161,7 +162,7 @@ class OptimalTree(Learner):
 
         # End time
         end_time = time.time()
-        logging.info("Tree training time %.2f" % (end_time - start_time))
+        logger.info("Tree training time %.2f" % (end_time - start_time))
 
     def predict(self, X):
 
@@ -194,13 +195,13 @@ class OptimalTree(Learner):
                       file_name + ".svg",
                       file_name + ".dot"])
             else:
-                logging.warning("dot command not found in path")
+                logger.warning("dot command not found in path")
 
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".json"):
             err = "Optimal Tree json file does not exist."
-            logging.error(err)
+            logger.error(err)
             raise ValueError(err)
 
         # Load tree from file

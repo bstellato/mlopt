@@ -1,5 +1,7 @@
 import numpy as np
+import mlopt.settings as stg
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 
 
 class Strategy(object):
@@ -21,7 +23,7 @@ class Strategy(object):
         for _, v in tight_constraints.items():
             if np.any(np.logical_or(v < 0, v > 1)):
                 err = "Tight constraints vector is not boolean."
-                logging.error(err)
+                logger.error(err)
                 raise ValueError(err)
 
         # Check that integer variables are non negative
@@ -138,13 +140,13 @@ def encode_strategies(strategies):
     Strategies array
         Array of unique strategies.
     """
-    logging.info("Encoding strategies")
+    logger.info("Encoding strategies")
     N = len(strategies)
 
-    logging.info("Getting unique set of strategies")
+    logger.info("Getting unique set of strategies")
     unique = unique_strategies(strategies)
     n_unique_strategies = len(unique)
-    logging.info("Found %d unique strategies" % n_unique_strategies)
+    logger.info("Found %d unique strategies" % n_unique_strategies)
 
     # Map strategies to number
     y = -1 * np.ones(N, dtype='int')

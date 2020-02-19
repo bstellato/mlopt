@@ -1,14 +1,13 @@
 import numpy as np
 from multiprocessing import cpu_count
-#  from pathos.multiprocessing import cpu_count
-from mlopt.settings import INFEAS_TOL, SUBOPT_TOL, TIGHT_CONSTRAINTS_TOL, \
-        DIVISION_TOL
 import cvxpy as cp
 from cvxpy.constraints.zero import Zero, Equality
 import os
 import pandas as pd
 import mlopt
+import mlopt.settings as stg
 import logging
+logger = logging.getLogger(stg.LOGGER_NAME)
 from tqdm import tqdm
 
 
@@ -35,7 +34,7 @@ def tight_components(con):
 
     # Otherwise return violation
     rel_norm = 1.0
-    return np.abs(con.expr.value) <= TIGHT_CONSTRAINTS_TOL * (1 + rel_norm)
+    return np.abs(con.expr.value) <= stg.TIGHT_CONSTRAINTS_TOL * (1 + rel_norm)
 
 
 def get_n_processes(max_n=np.inf):
@@ -110,14 +109,14 @@ def benchmark(m,  # Optimizer
     already_run = os.path.isfile(data_file_general) and \
         os.path.isfile(data_file_detail)
     if already_run:
-        logging.info("Loading data %s" % data_file)
+        logger.info("Loading data %s" % data_file)
         general = pd.read_csv(data_file_general)
         detail = pd.read_csv(data_file_detail)
     else:
-        logging.info("Perform training for %s" % data_file)
+        logger.info("Perform training for %s" % data_file)
 
-        logging.info("Training NN")
-        logging.info("-----------\n")
+        logger.info("Training NN")
+        logger.info("-----------\n")
 
         # Train neural network
         m.train(sampling_fn=sample_fn,
@@ -133,8 +132,8 @@ def benchmark(m,  # Optimizer
         #  Train and test using optimal trees
         if trees:
 
-            logging.info("Training OCT")
-            logging.info("-----------\n")
+            logger.info("Training OCT")
+            logger.info("-----------\n")
 
             # OCT
             m.train(
@@ -150,8 +149,8 @@ def benchmark(m,  # Optimizer
             general = general.append(oct_general)
             detail = detail.append(oct_detail)
 
-            logging.info("Training OCT-H")
-            logging.info("-----------\n")
+            logger.info("Training OCT-H")
+            logger.info("-----------\n")
 
             # OCT-H
             m.train(
@@ -233,7 +232,7 @@ def pandas2array(X):
 
 def suboptimality(cost_pred, cost_test, sense):
     """Compute suboptimality"""
-    if np.abs(cost_test) < DIVISION_TOL:
+    if np.abs(cost_test) < stg.DIVISION_TOL:
         cost_norm = 1.
     else:
         cost_norm = np.abs(cost_test)
@@ -241,7 +240,7 @@ def suboptimality(cost_pred, cost_test, sense):
     if sense == cp.Minimize:
         return (cost_pred - cost_test)/cost_norm
     else: # Maximize
-        return (cost_test - cost_pred)/cost_norm        
+        return (cost_test - cost_pred)/cost_norm
 
 
 def accuracy(results_pred, results_test, sense):
@@ -278,11 +277,11 @@ def accuracy(results_pred, results_test, sense):
             idx_correct[i] = 1
         else:
             # Check feasibility
-            if r_pred['infeasibility'] <= INFEAS_TOL:
+            if r_pred['infeasibility'] <= stg.INFEAS_TOL:
                 # Check cost function value
                 subopt = suboptimality(r_pred['cost'], r_test['cost'],
                                        sense)
-                if np.abs(subopt) <= SUBOPT_TOL:
+                if np.abs(subopt) <= stg.SUBOPT_TOL:
                     idx_correct[i] = 1
 
     return np.sum(idx_correct) / n_points, idx_correct
