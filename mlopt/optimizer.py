@@ -19,9 +19,7 @@ import tempfile
 import tarfile
 import pickle as pkl
 from joblib import Parallel, delayed
-from tqdm import tqdm
-import logging
-logger = logging.getLogger(stg.LOGGER_NAME)
+from tqdm.autonotebook import tqdm
 import sys
 
 
@@ -33,7 +31,7 @@ class Optimizer(object):
     def __init__(self,
                  objective, constraints,
                  name="problem",
-                 log_level=logging.INFO,
+                 log_level=None,
                  parallel=True,
                  tight_constraints=True,
                  **solver_options):
@@ -52,7 +50,8 @@ class Optimizer(object):
             A dict of options for the internal solver.
         """
 
-        logger.setLevel(log_level)
+        if log_level is not None:
+            stg.logger.setLevel(log_level)
         # handler = logging.StreamHandler(sys.stdout)
         # handler.setLevel(logging.DEBUG)
         # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -76,7 +75,7 @@ class Optimizer(object):
         if self.encoding is None:
             err = "Model has been trained yet to " + \
                 "return the number of strategies."
-            logger.error(err)
+            stg.logger.error(err)
             raise ValueError(err)
 
         return len(self.encoding)
@@ -144,7 +143,7 @@ class Optimizer(object):
         if not self.samples_present():
             err = "You need to get the strategies " + \
                 "from the data first by training the model."
-            logger.error(err)
+            stg.logger.error(err)
             raise ValueError(err)
 
         # Save to file
@@ -209,18 +208,18 @@ class Optimizer(object):
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
             err = "Not enough arguments to train the model"
-            logger.error(err)
+            stg.logger.error(err)
             raise ValueError(err)
 
         if X is not None and sampling_fn is not None:
             err = "You can pass only one value between X and sampling_fn"
-            logger.error(err)
+            stg.logger.error(err)
             raise ValueError(err)
 
         # Check if data is passed, otherwise train
         #  if (X is not None) and not self.samples_present():
         if X is not None:
-            logger.info("Use new data")
+            stg.logger.info("Use new data")
             self.X_train = X
             self.y_train = None
             self.encoding = None
@@ -234,19 +233,19 @@ class Optimizer(object):
                                                      "for training set")
 
             not_feasible_points = {i: x for i, x in enumerate(results)
-                                   if 'strategy' not in x.keys()}
+                                   if np.isnan(x['x']).any()}
             if not_feasible_points:
-                e = "number of infeasible points %d" % len(not_feasible_points)
-                logger.error(e)
+                e = "Infeasible points found. Number of infeasible points %d" % len(not_feasible_points)
+                stg.logger.error(e)
                 raise ValueError(e)
 
             self.obj_train = [r['cost'] for r in results]
             train_strategies = [r['strategy'] for r in results]
 
             # Check if the problems are solvable
-            for r in results:
-                assert r['status'] in cps.SOLUTION_PRESENT, \
-                    "The training points must be feasible"
+            #  for r in results:
+            #      assert r['status'] in cps.SOLUTION_PRESENT, \
+            #          "The training points must be feasible"
 
             # Encode strategies
             self.y_train, self.encoding = \
@@ -257,7 +256,7 @@ class Optimizer(object):
             self._sampler.compute_good_turing(self.y_train)
 
         elif sampling_fn is not None and not self.samples_present():
-            logger.info("Use iterative sampling")
+            stg.logger.info("Use iterative sampling")
             # Create X_train, y_train and encoding from
             # sampling function
             self.sample(sampling_fn, parallel=parallel)
@@ -335,7 +334,7 @@ class Optimizer(object):
         """Cache linear system solver factorizations"""
 
         self._solver_cache = []
-        logger.info("Caching KKT solver factors for each strategy "
+        stg.logger.info("Caching KKT solver factors for each strategy "
                         "(it works only for QP-representable problems "
                         "with parameters only in constraints RHS)")
         for strategy_idx in tqdm(range(self.n_strategies)):
@@ -471,7 +470,7 @@ class Optimizer(object):
         if use_cache and not self._solver_cache:
             err = "Solver cache requested but the cache has not been" + \
                 "computed for this problem. Is it MIQP representable?"
-            logger.error(err)
+            stg.logger.error(err)
             raise ValueError(err)
 
         # Change verbose setting
@@ -487,7 +486,7 @@ class Optimizer(object):
         classes = self._learner.predict(X_pred)
         t_predict = (time() - t_start) / n_points  # Average predict time
 
-        logger.info(message)
+        stg.logger.info(message)
 
         for i in tqdm(range(n_points)):
 
@@ -646,7 +645,7 @@ class Optimizer(object):
             Detailed results summary.
         """
 
-        logger.info("Performance evaluation")
+        stg.logger.info("Performance evaluation")
         # Get strategy for each point
         results_test = self._problem.solve_parametric(theta,
                                                       parallel=parallel,

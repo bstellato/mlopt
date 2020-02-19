@@ -11,9 +11,7 @@ from cvxpy.constraints.nonpos import NonPos, Inequality
 from cvxpy.constraints.zero import Zero, Equality
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
-from tqdm import tqdm
-import logging
-logger = logging.getLogger(stg.LOGGER_NAME)
+from tqdm.autonotebook import tqdm
 
 
 class Problem(object):
@@ -84,7 +82,7 @@ class Problem(object):
         """Set internal solver."""
         if s not in INSTALLED_SOLVERS:
             err = 'Solver %s not installed.' % s
-            logger.error(err)
+            stg.logger.error(err)
             raise ValueError(err)
         self._solver = s
 
@@ -311,7 +309,7 @@ class Problem(object):
             if key not in con_keys:
                 err = "Tight constraints not compatible " + \
                     "with problem. Constaint IDs not matching."
-                logger.error(err)
+                stg.logger.error(err)
                 raise ValueError(err)
 
         int_var_err = "Integer variables not compatible " + \
@@ -321,10 +319,10 @@ class Problem(object):
             try:
                 v = variables[key]
             except KeyError:
-                logger.error(err)
+                stg.logger.error(err)
                 raise ValueError(int_var_err)
             if not self._is_var_mip(v):
-                logger.error(int_var_err)
+                stg.logger.error(int_var_err)
                 raise ValueError(int_var_err)
 
     def _construct_reduced_problem(self, strategy):
@@ -437,7 +435,7 @@ class Problem(object):
 
         n_jobs = u.get_n_processes() if parallel else 1
 
-        logger.info(message + " (n_jobs = %d)" % n_jobs)
+        stg.logger.info(message + " (n_jobs = %d)" % n_jobs)
 
         results = Parallel(n_jobs=n_jobs)(
             delayed(populate_and_solve)(self, theta.iloc[i])

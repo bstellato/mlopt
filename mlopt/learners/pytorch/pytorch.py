@@ -2,14 +2,12 @@ from mlopt.learners.learner import Learner
 import mlopt.settings as stg
 import mlopt.learners.pytorch.utils as u
 from mlopt.learners.pytorch.model import Net
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import os
 import torch                                            # Basic utilities
 import torch.nn as nn                                   # Neural network tools
 import torch.optim as optim                             # Optimizer tools
 import numpy as np
-import logging
-logger = logging.getLogger(stg.LOGGER_NAME)
 
 
 class PyTorchNeuralNet(Learner):
@@ -53,11 +51,11 @@ class PyTorchNeuralNet(Learner):
         self.device = torch.device("cpu")
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
-            logger.info("Using CUDA GPU %s with Pytorch" %
+            stg.logger.info("Using CUDA GPU %s with Pytorch" %
                          torch.cuda.get_device_name(self.device))
         else:
             self.device = torch.device("cpu")
-            logger.info("Using CPU with Pytorch")
+            stg.logger.info("Using CPU with Pytorch")
 
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', stg.N_BEST),
@@ -137,7 +135,7 @@ class PyTorchNeuralNet(Learner):
 
         info_str = "Learning Neural Network with parameters: "
         info_str += str(params)
-        logger.info(info_str)
+        stg.logger.info(info_str)
 
         # Define optimizer
         self.optimizer = optim.Adam(self.net.parameters(),
@@ -157,7 +155,7 @@ class PyTorchNeuralNet(Learner):
 
         for epoch in range(params['n_epochs']):  # loop over dataset multiple times
 
-            logger.info("Epoch {}/{}".format(epoch + 1, params['n_epochs']))
+            stg.logger.info("Epoch {}/{}".format(epoch + 1, params['n_epochs']))
 
             train_metrics = self.train_epoch(train_dl)
             valid_metrics = self.evaluate(valid_dl)
@@ -167,7 +165,7 @@ class PyTorchNeuralNet(Learner):
 
             # is_best = valid_accuracy >= best_valid_accuracy
             # if is_best:
-            #     logger.info("- Found new best accuracy")
+            #     stg.logger.info("- Found new best accuracy")
             #     best_valid_accuracy = valid_accuracy
 
         return valid_accuracy
@@ -208,7 +206,7 @@ class PyTorchNeuralNet(Learner):
         # which depends on the batch_size variable
         valid_dl = u.get_dataloader(X_valid, y_valid)
 
-        logger.info("Split dataset in %d training and %d validation" %
+        stg.logger.info("Split dataset in %d training and %d validation" %
                      (len(train_idx), len(valid_idx)))
 
         # Create parameter vector
@@ -224,7 +222,7 @@ class PyTorchNeuralNet(Learner):
         ]
         n_models = len(params)
 
-        logger.info("Train Neural Network with %d " % n_models +
+        stg.logger.info("Train Neural Network with %d " % n_models +
                      "sets of parameters, " +
                      "%d inputs, %d outputs" % (self.n_input, self.n_classes))
 
@@ -243,20 +241,20 @@ class PyTorchNeuralNet(Learner):
 
             # Pick best parameters
             self.best_params = params[np.argmax(accuracy_vec)]
-            logger.info("Best parameters")
-            logger.info(str(self.best_params))
-            logger.info("Train neural network with best parameters")
+            stg.logger.info("Best parameters")
+            stg.logger.info(str(self.best_params))
+            stg.logger.info("Train neural network with best parameters")
 
         else:
 
-            logger.info("Train neural network with "
+            stg.logger.info("Train neural network with "
                          "just one set of parameters")
             self.best_params = params[0]
             train_dl = \
                 u.get_dataloader(X_train, y_train,
                                  batch_size=self.best_params['batch_size'])
 
-        logger.info(self.best_params)
+        stg.logger.info(self.best_params)
         # Retrain network with best parameters over whole dataset
         self.train_instance(train_dl, valid_dl, self.best_params)
 
@@ -286,7 +284,7 @@ class PyTorchNeuralNet(Learner):
         # Check if file name exists
         if not os.path.isfile(file_name + ".pkl"):
             err = "PyTorch pkl file does not exist."
-            logger.error(err)
+            stg.logger.error(err)
             raise ValueError(err)
 
         # Load state dictionary from file

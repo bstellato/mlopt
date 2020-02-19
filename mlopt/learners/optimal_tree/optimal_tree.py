@@ -6,8 +6,6 @@ from subprocess import call
 import time
 import os
 import sys
-import logging
-logger = logging.getLogger(stg.LOGGER_NAME)
 
 
 
@@ -44,8 +42,10 @@ class OptimalTree(Learner):
         #      options.pop('fast_num_support_restarts', [20])
         self.options['parallel'] = options.pop('parallel_trees', True)
         self.options['cp'] = options.pop('cp', None)
-        self.options['max_depth'] = options.pop('max_depth', [5, 10, 15])
-        self.options['minbucket'] = options.pop('minbucket', [1, 5, 10])
+        self.options['max_depth'] = options.pop('max_depth',
+                stg.OPTIMAL_TREE_TRAINING_PARAMS['max_depth'])
+        self.options['minbucket'] = options.pop('minbucket',
+                stg.OPTIMAL_TREE_TRAINING_PARAMS['minbucket'])
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', stg.N_BEST),
                                      self.n_classes)
@@ -126,7 +126,7 @@ class OptimalTree(Learner):
             info_str += "on %d processors" % self.nprocs()
         else:
             info_str += "\n"
-        logger.info(info_str)
+        stg.logger.info(info_str)
 
         # Start time
         start_time = time.time()
@@ -162,7 +162,7 @@ class OptimalTree(Learner):
 
         # End time
         end_time = time.time()
-        logger.info("Tree training time %.2f" % (end_time - start_time))
+        stg.logger.info("Tree training time %.2f" % (end_time - start_time))
 
     def predict(self, X):
 
@@ -195,13 +195,13 @@ class OptimalTree(Learner):
                       file_name + ".svg",
                       file_name + ".dot"])
             else:
-                logger.warning("dot command not found in path")
+                stg.logger.warning("dot command not found in path")
 
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".json"):
             err = "Optimal Tree json file does not exist."
-            logger.error(err)
+            stg.logger.error(err)
             raise ValueError(err)
 
         # Load tree from file

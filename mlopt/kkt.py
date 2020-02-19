@@ -18,8 +18,6 @@ from scikits.umfpack import UmfpackWarning
 import time
 import warnings
 import mlopt.settings as stg
-import logging
-logger = logging.getLogger(stg.LOGGER_NAME)
 
 KKT = "KKT"
 
@@ -113,14 +111,14 @@ class KKTSolver(QpSolver):
         n_con = len(data['b'])
         if data['F'].shape[0] > 0:
             err = 'KKT supports only equality constrained QPs.'
-            logger.error(err)
+            stg.logger.error(err)
             raise SolverError(err)
 
-        logger.debug("Solving %d x %d linear system A x = b " %
+        stg.logger.debug("Solving %d x %d linear system A x = b " %
                       (n_var + n_con, n_var + n_con))
 
         if KKT_cache is None:
-            logger.debug("Not using KKT solver cache")
+            stg.logger.debug("Not using KKT solver cache")
 
             KKT, rhs = create_kkt_system(data)
 
@@ -140,7 +138,7 @@ class KKTSolver(QpSolver):
             t_end = time.time()
 
         else:
-            logger.debug("Using KKT solver cache")
+            stg.logger.debug("Using KKT solver cache")
 
             rhs = create_kkt_rhs(data)
 

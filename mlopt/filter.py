@@ -1,13 +1,12 @@
 from joblib import Parallel, delayed
 import mlopt.settings as stg
 import numpy as np
-import logging
-logger = logging.getLogger(stg.LOGGER_NAME)
+import mlopt.settings as stg
 from mlopt.problem import solve_with_strategy
 from mlopt.strategy import strategy_distance
 import mlopt.utils as u
 from mlopt.problem import Problem
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import os
 
 
@@ -31,8 +30,8 @@ def best_strategy(theta, obj_train, encoding, problem):
     # Find minimum one
     best_strategy = np.argmin(degradation)
     if degradation[best_strategy] > stg.FILTER_SUBOPT:
-        logging.warning("Sample assigned to strategy more " +
-                        "than %.2e suboptimal." % stg.FILTER_SUBOPT)
+        stg.logger.warning("Sample assigned to strategy more " +
+                           "than %.2e suboptimal." % stg.FILTER_SUBOPT)
 
     return best_strategy, degradation[best_strategy]
 

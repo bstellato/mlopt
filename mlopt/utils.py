@@ -6,9 +6,7 @@ import os
 import pandas as pd
 import mlopt
 import mlopt.settings as stg
-import logging
-logger = logging.getLogger(stg.LOGGER_NAME)
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 
 def args_norms(expr):
@@ -109,14 +107,14 @@ def benchmark(m,  # Optimizer
     already_run = os.path.isfile(data_file_general) and \
         os.path.isfile(data_file_detail)
     if already_run:
-        logger.info("Loading data %s" % data_file)
+        stg.logger.info("Loading data %s" % data_file)
         general = pd.read_csv(data_file_general)
         detail = pd.read_csv(data_file_detail)
     else:
-        logger.info("Perform training for %s" % data_file)
+        stg.logger.info("Perform training for %s" % data_file)
 
-        logger.info("Training NN")
-        logger.info("-----------\n")
+        stg.logger.info("Training NN")
+        stg.logger.info("-----------\n")
 
         # Train neural network
         m.train(sampling_fn=sample_fn,
@@ -132,8 +130,8 @@ def benchmark(m,  # Optimizer
         #  Train and test using optimal trees
         if trees:
 
-            logger.info("Training OCT")
-            logger.info("-----------\n")
+            stg.logger.info("Training OCT")
+            stg.logger.info("-----------\n")
 
             # OCT
             m.train(
@@ -149,8 +147,8 @@ def benchmark(m,  # Optimizer
             general = general.append(oct_general)
             detail = detail.append(oct_detail)
 
-            logger.info("Training OCT-H")
-            logger.info("-----------\n")
+            stg.logger.info("Training OCT-H")
+            stg.logger.info("-----------\n")
 
             # OCT-H
             m.train(
