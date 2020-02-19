@@ -26,8 +26,8 @@ class OptimalTree(Learner):
             Learner options as a dictionary.
         """
         # Import julia and IAI module
-        from julia import Julia
-        Julia(compiled_modules=False)
+        #  from julia import Julia
+        #  Julia(compiled_modules=False)
         from interpretableai import iai
         self.iai = iai
         from julia import Distributed
@@ -141,7 +141,7 @@ class OptimalTree(Learner):
             # self._create_classifier(
             #     ls_random_seed=self.optimaltrees_options['ls_random_seed']
             # )
-        
+
         # Create grid search
         self._grid = \
             self.iai.GridSearch(
@@ -157,7 +157,7 @@ class OptimalTree(Learner):
 
         # Extract learner
         self._lnr = self._grid.get_learner()
-        
+
         # self._fit(self._grid, X, y,
         #           train_proportion=self.options['frac_train'])
 

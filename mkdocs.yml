@@ -2,9 +2,15 @@ site_name: "mlopt"
 site_description: 'Machine Learning Optimizer'
 site_author: "Bartolomeo Stellato"
 
-nav:
-    - mlopt: index.md
-    - Getting started: getting_started.md
+pages:
+  - Home: index.md
+
+  - Getting started: getting_started.md
+
+  - Manual:
+    - Learners:
+      - OptimalTreees: learners/optimal_trees.md
+      - Pytorch: learners/pytorch.md
 
 theme:
   name: 'material'
