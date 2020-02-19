@@ -1,0 +1,29 @@
+site_name: "mlopt"
+site_description: 'Machine Learning Optimizer'
+site_author: "Bartolomeo Stellato"
+
+nav:
+    - mlopt: index.md
+    - Getting started: getting_started.md
+
+theme:
+  name: 'material'
+  palette:
+    primary: 'blue grey'
+    accent: 'light blue'
+
+
+
+repo_name: 'bstellato/mlopt'
+repo_url: 'https://github.com/bstellato/mlopt'
+
+
+extra:
+  social:
+    - type: 'github'
+      link: 'https://github.com/bstellato'
+
+
+
+copyright: 'Copyright &copy; 2020 Bartolomeo Stellato'
+
