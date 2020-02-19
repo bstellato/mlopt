@@ -1,5 +1,0 @@
-debug_*.py
-*.log
-.ray_tmp/
-*.csv
-core.*

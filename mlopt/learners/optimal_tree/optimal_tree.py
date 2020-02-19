@@ -26,8 +26,6 @@ class OptimalTree(Learner):
             Learner options as a dictionary.
         """
         # Import julia and IAI module
-        #  from julia import Julia
-        #  Julia(compiled_modules=False)
         from interpretableai import iai
         self.iai = iai
         from julia import Distributed
@@ -208,5 +206,5 @@ class OptimalTree(Learner):
         # Load tree from file
         # io = self._open(file_name + ".json", "r")
         # self._lnr = self._read(io)
-        self._lnr = self.iai.read_json(filen_name + ".json")
+        self._lnr = self.iai.read_json(file_name + ".json")
         # self._close(io)
