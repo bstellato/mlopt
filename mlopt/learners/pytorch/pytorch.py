@@ -1,29 +1,35 @@
 from mlopt.learners.learner import Learner
 import mlopt.settings as stg
 import mlopt.learners.pytorch.utils as u
-from mlopt.learners.pytorch.model import Net, DEFAULT_TRAINING_PARAMS
-from tqdm.autonotebook import tqdm
+from mlopt.learners.pytorch.model import Net
+from mlopt.learners.pytorch.settings import DEFAULT_TRAINING_PARAMS
+from tqdm import tqdm
 import os
-import torch                                            # Basic utilities
-import torch.nn as nn                                   # Neural network tools
-import torch.optim as optim                             # Optimizer tools
 import numpy as np
 
 
-class PyTorchNeuralNet(Learner):
+class PytorchNeuralNet(Learner):
     """
-    PyTorch Neural Network learner.
+    Pytorch Neural Network learner.
     """
 
     def __init__(self, **options):
         """
-        Initialize PyTorch neural network class.
+        Initialize Pytorch neural network class.
 
         Parameters
         ----------
         options : dict
             Learner options as a dictionary.
         """
+
+        if not PytorchNeuralNet.is_installed():
+            raise ValueError("Pytorch not installed")
+
+        # import torch
+        import torch
+        self.torch = torch
+
         # Define learner name
         self.name = stg.PYTORCH
         self.n_input = options.pop('n_input')
@@ -48,13 +54,13 @@ class PyTorchNeuralNet(Learner):
         self.options['frac_train'] = options.pop('frac_train', stg.FRAC_TRAIN)
 
         # Define device
-        self.device = torch.device("cpu")
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda:0")
+        self.device = self.torch.device("cpu")
+        if self.torch.cuda.is_available():
+            self.device = self.torch.device("cuda:0")
             stg.logger.info("Using CUDA GPU %s with Pytorch" %
-                         torch.cuda.get_device_name(self.device))
+                         self.torch.cuda.get_device_name(self.device))
         else:
-            self.device = torch.device("cpu")
+            self.device = self.torch.device("cpu")
             stg.logger.info("Using CPU with Pytorch")
 
         # Pick minimum between n_best and n_classes
@@ -62,7 +68,15 @@ class PyTorchNeuralNet(Learner):
                                      self.n_classes)
 
         # Define loss
-        self.loss = nn.CrossEntropyLoss()
+        self.loss = self.torch.nn.CrossEntropyLoss()
+
+    @classmethod
+    def is_installed(cls):
+        try:
+            import torch
+        except ImportError:
+            return False
+        return True
 
     def train_epoch(self, dataloader):
 
@@ -103,7 +117,7 @@ class PyTorchNeuralNet(Learner):
         # set model to evaluation mode
         self.net.eval()
 
-        with torch.no_grad():  # Disable gradients
+        with self.torch.no_grad():  # Disable gradients
 
             # compute metrics over the dataset
             for inputs, labels in dataloader:
@@ -128,7 +142,7 @@ class PyTorchNeuralNet(Learner):
         Train single instance of the network for parameters in params
         """
 
-        # Create PyTorch Neural Network and port to to device
+        # Create Pytorch Neural Network and port to to device
         self.net = Net(self.n_input,
                        self.n_classes,
                        params['n_hidden']).to(self.device)
@@ -138,13 +152,13 @@ class PyTorchNeuralNet(Learner):
         stg.logger.info(info_str)
 
         # Define optimizer
-        self.optimizer = optim.Adam(self.net.parameters(),
+        self.optimizer = self.torch.optim.Adam(self.net.parameters(),
                                     lr=params['learning_rate'])
 
         # Reset seed
-        torch.manual_seed(1)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed(1)
+        self.torch.manual_seed(1)
+        if self.torch.cuda.is_available():
+            self.torch.cuda.manual_seed(1)
 
         # Set network in training mode (not evaluation)
         self.net.train()
@@ -264,10 +278,10 @@ class PyTorchNeuralNet(Learner):
         n_best = n_best if (n_best is not None) else self.options['n_best']
 
         self.net.eval()  # Put layers in evaluation mode
-        with torch.no_grad():
+        with self.torch.no_grad():
 
             # Convert pandas df to array (unroll tuples)
-            X = torch.tensor(X, dtype=torch.float).to(self.device)
+            X = self.torch.tensor(X, dtype=self.torch.float).to(self.device)
 
             # Evaluate classes
             # NB. Removed softmax (unscaled probabilities)
@@ -278,16 +292,16 @@ class PyTorchNeuralNet(Learner):
     def save(self, file_name):
         # Save state dictionary to file
         # https://pytorch.org/tutorials/beginner/saving_loading_models.html
-        torch.save(self.net.state_dict(), file_name + ".pkl")
+        self.torch.save(self.net.state_dict(), file_name + ".pkl")
 
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".pkl"):
-            err = "PyTorch pkl file does not exist."
+            err = "Pytorch pkl file does not exist."
             stg.logger.error(err)
             raise ValueError(err)
 
         # Load state dictionary from file
         # https://pytorch.org/tutorials/beginner/saving_loading_models.html
-        self.net.load_state_dict(torch.load(file_name + ".pkl"))
+        self.net.load_state_dict(self.torch.load(file_name + ".pkl"))
         self.net.eval()  # Necessary to set the model to evaluation mode

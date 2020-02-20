@@ -6,7 +6,7 @@ from mlopt.problem import solve_with_strategy
 from mlopt.strategy import strategy_distance
 import mlopt.utils as u
 from mlopt.problem import Problem
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 import os
 
 

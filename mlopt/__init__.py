@@ -1,5 +1,6 @@
 from mlopt.optimizer import Optimizer
 from mlopt.settings import PYTORCH, OPTIMAL_TREE
+from mlopt.learners import installed_learners
 
 
 # Suppress warnings

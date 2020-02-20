@@ -11,6 +11,13 @@ class Learner(ABC):
     n_train : int
         Number of training samples.
     """
+
+    @classmethod
+    @abstractmethod
+    def is_installed(cls):
+        """Is learner installed?"""
+        return NotImplemented
+
     @property
     def n_train(self):
         """Number of training samples."""
@@ -23,18 +30,22 @@ class Learner(ABC):
     @abstractmethod
     def train(self, X, y):
         """Learn predictor form data."""
+        return NotImplemented
 
     @abstractmethod
     def predict(self, X):
         """Predict strategies from data."""
+        return NotImplemented
 
     @abstractmethod
     def save(self, file_name):
         """Save learner to file"""
+        return NotImplemented
 
     @abstractmethod
     def load(self, file_name):
         """Load learner from file"""
+        return NotImplemented
 
     def pick_best_class(self, y, n_best=None):
         """

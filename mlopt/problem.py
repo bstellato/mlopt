@@ -11,7 +11,7 @@ from cvxpy.constraints.nonpos import NonPos, Inequality
 from cvxpy.constraints.zero import Zero, Equality
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 # Progress bars
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 
 class Problem(object):

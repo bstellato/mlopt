@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import mlopt
 import mlopt.settings as stg
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 
 def args_norms(expr):

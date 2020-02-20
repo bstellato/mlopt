@@ -9,7 +9,7 @@ import logging
 
 import mlopt
 from mlopt.sampling import uniform_sphere_sample
-from mlopt.learners.pytorch.pytorch import PyTorchNeuralNet
+from mlopt.learners.pytorch.pytorch import PytorchNeuralNet
 from mlopt.utils import n_features, pandas2array
 ```
 
@@ -140,7 +140,7 @@ print(result_single_point)
 ```python
 y = m.y_train
 X = m.X_train
-learner = PyTorchNeuralNet(n_input=n_features(X),
+learner = PytorchNeuralNet(n_input=n_features(X),
                            n_classes=len(np.unique(y)),
                            n_best=3,
                            params=params)

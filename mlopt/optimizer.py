@@ -1,6 +1,6 @@
 from mlopt.problem import Problem, solve_with_strategy
 import mlopt.settings as stg
-from mlopt.learners import LEARNER_MAP
+from mlopt.learners import LEARNER_MAP, installed_learners
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.filter import Filter
@@ -19,7 +19,7 @@ import tempfile
 import tarfile
 import pickle as pkl
 from joblib import Parallel, delayed
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 import sys
 
 
@@ -322,6 +322,10 @@ class Optimizer(object):
                          filter_strategies=filter_strategies)
 
         # Define learner
+        if learner not in installed_learners():
+            raise ValueError("Learner specified not installed. Available learners are: " +
+                             installed_learners())
+
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
                                              n_classes=len(self.encoding),
                                              **learner_options)

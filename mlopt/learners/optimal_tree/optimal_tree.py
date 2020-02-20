@@ -1,4 +1,5 @@
 from mlopt.learners.learner import Learner
+import mlopt.learners.optimal_tree.settings as octstg
 import mlopt.settings as stg
 from mlopt.utils import pandas2array, get_n_processes
 import shutil
@@ -6,16 +7,6 @@ from subprocess import call
 import time
 import os
 import sys
-
-
-OPTIMAL_TREE_TRAINING_PARAMS = {
-    'max_depth': [5, 10, 15],
-    'minbucket': [1, 5, 10],
-    'hyperplanes': False,
-}
-
-RANDOM_SEED = 1
-
 
 class OptimalTree(Learner):
 
@@ -29,6 +20,9 @@ class OptimalTree(Learner):
         options : dict
             Learner options as a dictionary.
         """
+        if not OptimalTree.is_installed():
+            raise ValueError("Interpretable AI not installed")
+
         # Import julia and IAI module
         from interpretableai import iai
         self.iai = iai
@@ -48,9 +42,9 @@ class OptimalTree(Learner):
         self.options['parallel'] = options.pop('parallel_trees', True)
         self.options['cp'] = options.pop('cp', None)
         self.options['max_depth'] = options.pop('max_depth',
-                OPTIMAL_TREE_TRAINING_PARAMS['max_depth'])
+                octstg.DEFAULT_TRAINING_PARAMS['max_depth'])
         self.options['minbucket'] = options.pop('minbucket',
-                OPTIMAL_TREE_TRAINING_PARAMS['minbucket'])
+                octstg.DEFAULT_TRAINING_PARAMS['minbucket'])
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', stg.N_BEST),
                                      self.n_classes)
@@ -68,7 +62,7 @@ class OptimalTree(Learner):
             Distributed.addprocs((n_cpus - n_cur_procs))
 
         # Assign optimaltrees options
-        self.optimaltrees_options = {'random_seed': RANDOM_SEED}
+        self.optimaltrees_options = {'random_seed': 1}
         self.optimaltrees_options['max_depth'] = self.options['max_depth']
         self.optimaltrees_options['minbucket'] = self.options['minbucket']
         if self.options['hyperplanes']:
@@ -77,6 +71,14 @@ class OptimalTree(Learner):
 
         if self.options['cp']:
             self.optimaltrees_options['cp'] = self.options['cp']
+
+    @classmethod
+    def is_installed(cls):
+        try:
+            from interpretableai import iai
+        except ImportError:
+            return False
+        return True
 
     def train(self, X, y):
 
