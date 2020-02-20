@@ -34,20 +34,6 @@ DEFAULT_LEARNER = PYTORCH
 N_BEST = 10
 FRAC_TRAIN = 0.9  # Fraction dividing training and validation
 
-# Optimal Trees default parameters
-OPTIMAL_TREE_TRAINING_PARAMS = {
-    'max_depth': [5, 10, 15],
-    'minbucket': [1, 5, 10],
-    'hyperplanes': False,
-}
-
-# Neural network default parameters
-NET_TRAINING_PARAMS = {
-    'learning_rate': [1e-04, 1e-03, 1e-02],
-    'n_epochs': [20],
-    'batch_size': [32],
-    # 'n_layers': [5, 7, 10]
-}
 
 # Sampling
 SAMPLING_TOL = 5e-03

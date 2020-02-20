@@ -1,7 +1,7 @@
 from mlopt.learners.learner import Learner
 import mlopt.settings as stg
 import mlopt.learners.pytorch.utils as u
-from mlopt.learners.pytorch.model import Net
+from mlopt.learners.pytorch.model import Net, DEFAULT_TRAINING_PARAMS
 from tqdm.autonotebook import tqdm
 import os
 import torch                                            # Basic utilities
@@ -30,7 +30,7 @@ class PyTorchNeuralNet(Learner):
         self.n_classes = options.pop('n_classes')
 
         # Default params grid
-        default_params = stg.NET_TRAINING_PARAMS
+        default_params = DEFAULT_TRAINING_PARAMS
 
         # Unpack settings
         self.options = {}

@@ -12,13 +12,14 @@ nav:
       - OptimalTreees: learners/optimal_trees.md
       - Pytorch: learners/pytorch.md
 
-    - Examples:
-      - Knapsack: examples/knapsack.md
+  - Examples:
+    - Knapsack: examples/knapsack.md
+    - Inventory: examples/inventory.md
 
 theme:
   name: 'material'
   palette:
-    primary: 'blue grey'
+    primary: 'blue'
     accent: 'light blue'
 
 

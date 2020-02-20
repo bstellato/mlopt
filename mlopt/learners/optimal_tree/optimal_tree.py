@@ -8,6 +8,11 @@ import os
 import sys
 
 
+OPTIMAL_TREE_TRAINING_PARAMS = {
+    'max_depth': [5, 10, 15],
+    'minbucket': [1, 5, 10],
+    'hyperplanes': False,
+}
 
 RANDOM_SEED = 1
 
@@ -43,9 +48,9 @@ class OptimalTree(Learner):
         self.options['parallel'] = options.pop('parallel_trees', True)
         self.options['cp'] = options.pop('cp', None)
         self.options['max_depth'] = options.pop('max_depth',
-                stg.OPTIMAL_TREE_TRAINING_PARAMS['max_depth'])
+                OPTIMAL_TREE_TRAINING_PARAMS['max_depth'])
         self.options['minbucket'] = options.pop('minbucket',
-                stg.OPTIMAL_TREE_TRAINING_PARAMS['minbucket'])
+                OPTIMAL_TREE_TRAINING_PARAMS['minbucket'])
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', stg.N_BEST),
                                      self.n_classes)
@@ -61,59 +66,17 @@ class OptimalTree(Learner):
         if n_cur_procs < n_cpus and self.options['parallel']:
             # Add processors to match number of cpus
             Distributed.addprocs((n_cpus - n_cur_procs))
-            # self.jl.eval("addprocs(%d)" % (n_cpus - n_cur_procs))
-
-        # Add crypto library to path to check OptimalTrees license
-        # path_string = "push!(Base.DL_LOAD_PATH, " + \
-        #               "joinpath(dirname(Base.find_package(\"MbedTLS\")), " + \
-        #               "\"../deps/usr\", Sys.iswindows() ? \"bin\" : \"lib\"))"
-        # if n_cpus > 1 and sys.platform == 'darwin' and \
-        #         self.options['parallel']:
-        #     # Add @everywhere if we are on a multiprocess machine
-        #     # It seems necessary only on OSX
-        #     path_string = "@everywhere " + path_string
-        # self.jl.eval(path_string)
-        # # Reset random seed for repeatability
-        # self.jl.eval("using Random; Random.seed!(1)")
-        # Define functions needed
-        # self._array = self.jl.eval("Array")
-        # self._convert = self.jl.eval("convert")
-        # self._create_classifier = \
-        #     self.jl.eval("OptimalTrees.OptimalTreeClassifier")
-        # self._create_grid = \
-        #     self.jl.eval("OptimalTrees.GridSearch")
-        # self._fit = self.jl.eval("OptimalTrees.fit!")
-        # self._predict = self.jl.eval("OptimalTrees.predict_proba")
-        # self._write = self.jl.eval("OptimalTrees.writejson")
-        # self._writedot = self.jl.eval("OptimalTrees.writedot")
-        # self._read = self.jl.eval("OptimalTrees.readjson")
-        # # NB _open function defined separately
-        # to preserve consistency
-        # self._close = self.jl.eval("close")
 
         # Assign optimaltrees options
-        self.optimaltrees_options = {'random_seed': 1}
+        self.optimaltrees_options = {'random_seed': RANDOM_SEED}
         self.optimaltrees_options['max_depth'] = self.options['max_depth']
         self.optimaltrees_options['minbucket'] = self.options['minbucket']
         if self.options['hyperplanes']:
             self.optimaltrees_options['hyperplane_config'] = \
                 {'sparsity': 'all'}
-                # self.jl.eval('[[(sparsity=:all,)]]')
-            # Sparse hyperplanes
-            #  self.optimaltrees_options['hyperplane_config'] = \
-            #      self.jl.eval('[[(sparsity=2,)]]')
-            #  self.optimaltrees_options['fast_num_support_restarts'] = \
-            #      self.options['fast_num_support_restarts']
+
         if self.options['cp']:
             self.optimaltrees_options['cp'] = self.options['cp']
-
-    # def _open(self, file_name, option):
-    #     """
-    #     Define this function separately to keep consistency
-    #     of IOBuffer julia type.
-    #     """
-    #     return self.jl.eval("PyCall.pyjlwrap_new(open(\"%s\", \"%s\"))"
-    #                         % (file_name, option))
 
     def train(self, X, y):
 
@@ -131,24 +94,12 @@ class OptimalTree(Learner):
         # Start time
         start_time = time.time()
 
-        # Reset random seed
-        # self.jl.eval("using Random; Random.seed!(1)")
-
-        # Create classifier
-        # Set seed to 1 to make the validation reproducible
-        # self._lnr = \
-            # self._create_classifier(
-            #     ls_random_seed=self.optimaltrees_options['ls_random_seed']
-            # )
-
         # Create grid search
         self._grid = \
             self.iai.GridSearch(
                 self.iai.OptimalTreeClassifier(
                     random_seed=self.optimaltrees_options['random_seed']
                 ), **self.optimaltrees_options)
-
-        # self._create_grid(self._lnr, **self.optimaltrees_options)
 
         # Train classifier
         self._grid.fit(X, y,
@@ -157,40 +108,25 @@ class OptimalTree(Learner):
         # Extract learner
         self._lnr = self._grid.get_learner()
 
-        # self._fit(self._grid, X, y,
-        #           train_proportion=self.options['frac_train'])
-
         # End time
         end_time = time.time()
         stg.logger.info("Tree training time %.2f" % (end_time - start_time))
 
     def predict(self, X):
 
-        # Unroll pandas dataframes
-        # X = pandas2array(X)
-
         # Evaluate probabilities
-        # NB. They are returned as a DataFrame of DataFrames.jl
-        #     and we convert them to an array which in python
-        #     becomes a numpy array
-        # proba = self._predict(self._lnr, X)
-        # y = self._convert(self._array, proba)
         y = self._lnr.predict_proba(X)
         return self.pick_best_class(y.to_numpy())
 
     def save(self, file_name):
         # Save tree as json file
         self._lnr.write_json(file_name + ".json")
-        # io = self._open(file_name + ".json", "w")
-        # self._write(io, self._lnr)
-        # self._close(io)
 
         # Save tree to dot file and convert it to
         # pdf for visualization purposes
         if self.options['save_svg']:
             if shutil.which("dot") is not None:
                 self._lnr.write_dot(file_name + ".dot")
-                # self._writedot(file_name + ".dot", self._lnr)
                 call(["dot", "-Tsvg", "-o",
                       file_name + ".svg",
                       file_name + ".dot"])
@@ -205,7 +141,4 @@ class OptimalTree(Learner):
             raise ValueError(err)
 
         # Load tree from file
-        # io = self._open(file_name + ".json", "r")
-        # self._lnr = self._read(io)
         self._lnr = self.iai.read_json(file_name + ".json")
-        # self._close(io)
