@@ -84,23 +84,6 @@ class Filter(object):
             sample_idx = discarded_samples[i]
             self.y_train[sample_idx], degradation[i] = results[i]
 
-            # TODO check if we need to have the encoding variable shared
-
-            # # Share encoding between all processors
-            # encoding_id = ray.put(self.encoding)
-
-            # result_ids = []
-            # for i in discarded_samples:
-            #     result_ids.append(
-            #         best_strategy_ray.remote(self.X_train.iloc[i],
-            #                                  self.obj_train[i],
-            #                                  encoding_id,
-            #                                  self.problem))
-
-            # for i in tqdm(range(len(discarded_samples))):
-            #     self.y_train[discarded_samples[i]], degradation[i] = \
-            #         ray_get_and_free(result_ids[i])
-
         return degradation
 
     def select_strategies(self, samples_fraction):
@@ -110,7 +93,7 @@ class Filter(object):
         n_strategies = len(self.encoding)
         n_samples_selected = int(samples_fraction * n_samples)
 
-        logging.info("Selecting most frequent strategies")
+        stg.logger.info("Selecting most frequent strategies")
 
         # Select strategies with high frequency counts
         strategies, y_counts = np.unique(self.y_train, return_counts=True)
@@ -127,7 +110,7 @@ class Filter(object):
             if n_temp > n_samples_selected:
                 break
 
-        logging.info("Selected %d strategies" % len(selected_strategies))
+        stg.logger.info("Selected %d strategies" % len(selected_strategies))
 
         return selected_strategies
 
@@ -144,7 +127,7 @@ class Filter(object):
         selected_strategies = \
             self.select_strategies(samples_fraction=samples_fraction)
 
-        logging.info("Number of chosen strategies %d" %
+        stg.logger.info("Number of chosen strategies %d" %
                      len(selected_strategies))
 
         # Reassign encodings and labels
@@ -155,20 +138,20 @@ class Filter(object):
                                       if self.y_train[i]
                                       not in selected_strategies])
 
-        logging.info("Discarded strategies for %d samples (%.2f %%)" %
+        stg.logger.info("Discarded strategies for %d samples (%.2f %%)" %
                      (len(discarded_samples),
                       (100 * len(discarded_samples) / n_samples)))
 
-        logging.info("Reassign samples with discarded strategies")
+        stg.logger.info("Reassign samples with discarded strategies")
 
         # Reassign discarded samples to selected strategies
         degradation = self.assign_samples(discarded_samples,
                                           selected_strategies,
                                           parallel=parallel)
 
-        logging.info("Average cost degradation = %.2e %%" %
+        stg.logger.info("Average cost degradation = %.2e %%" %
                      (100 * np.mean(degradation)))
-        logging.info("Max cost degradation = %.2e %%" %
+        stg.logger.info("Max cost degradation = %.2e %%" %
                      (100 * np.max(degradation)))
 
         return self.y_train, self.encoding

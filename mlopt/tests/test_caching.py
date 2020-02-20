@@ -30,7 +30,8 @@ class TestCaching(unittest.TestCase):
         # Force mosek to be single threaded
         m = mlopt.Optimizer(cp.Minimize(cost),
                             constraints,
-                            log_level=logging.DEBUG)
+                            #  log_level=logging.DEBUG
+                            )
 
         '''
         Sample points
