@@ -118,7 +118,7 @@ class OptimalTree(Learner):
 
         # Evaluate probabilities
         y = self._lnr.predict_proba(X)
-        return self.pick_best_class(y.to_numpy())
+        return self.pick_best_class(y.to_numpy(), n_best=self.options['n_best'])
 
     def save(self, file_name):
         # Save tree as json file

@@ -28,6 +28,7 @@ DEFAULT_SOLVER_OPTIONS = {'Method': 1}  # Dual simplex
 PYTORCH = "pytorch"
 TENSORFLOW = "tensorflow"
 OPTIMAL_TREE = "optimaltree"
+XGBOOST = "xgboost"
 DEFAULT_LEARNER = PYTORCH
 
 # Learners settings

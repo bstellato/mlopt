@@ -9,6 +9,7 @@ nav:
 
   - Manual:
     - Learners:
+      - XGBoost: learners/xgboost.md
       - OptimalTreees: learners/optimal_trees.md
       - Pytorch: learners/pytorch.md
 

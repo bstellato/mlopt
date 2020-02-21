@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import numpy.testing as npt
-from mlopt import Optimizer
+from mlopt import Optimizer, installed_learners
 from mlopt.tests.settings import TEST_TOL as TOL
 from mlopt.sampling import uniform_sphere_sample
 import mlopt.settings as s
@@ -9,16 +9,6 @@ import tempfile
 import os
 import pandas as pd
 import cvxpy as cp
-
-
-#  def sample(theta_bar, radius, n=100):
-#
-#      # Sample points from multivariate ball
-#      X = uniform_sphere_sample(theta_bar, radius, n=n)
-#
-#      df = pd.DataFrame({'d': list(X)})
-#
-#      return df
 
 
 class TestSave(unittest.TestCase):
@@ -62,11 +52,11 @@ class TestSave(unittest.TestCase):
         self.optimizer = Optimizer(cp.Minimize(self.cost),
                                    self.constraints)
 
-        # Define learners
-        self.learners = [
-            #  s.OPTIMAL_TREE,  # Disable. Too slow
-            s.PYTORCH
-        ]
+        #  # Define learners
+        #  self.learners = [
+        #      #  s.OPTIMAL_TREE,  # Disable. Too slow
+        #      s.PYTORCH
+        #  ]
 
     def test_save_load_data(self):
         """Test save load data"""
@@ -78,7 +68,8 @@ class TestSave(unittest.TestCase):
                      'n_layers': [5]
                      }
 
-        for learner in self.learners:
+        #  for learner in installed_learners():
+        for learner in [s.XGBOOST]:
             with tempfile.TemporaryDirectory() as tmpdir:
                 data_file = os.path.join(tmpdir, "data.pkl")
 
@@ -87,9 +78,10 @@ class TestSave(unittest.TestCase):
                         #  sampling_fn=lambda n: sample(self.d_bar,
                         #                               self.radius,
                         #                               n),
-                        parallel=True,
+                        parallel=False,
                         learner=learner,
-                        params=nn_params)
+                        #  params=nn_params
+                        )
                 store_general, store_detail = m.performance(self.df_test,
                                                             parallel=True)
 

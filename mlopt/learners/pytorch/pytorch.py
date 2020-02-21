@@ -272,11 +272,9 @@ class PytorchNeuralNet(Learner):
         # Retrain network with best parameters over whole dataset
         self.train_instance(train_dl, valid_dl, self.best_params)
 
-    def predict(self, X, n_best=None):
+    def predict(self, X):
 
         # Disable gradients computation
-        n_best = n_best if (n_best is not None) else self.options['n_best']
-
         self.net.eval()  # Put layers in evaluation mode
         with self.torch.no_grad():
 
@@ -287,7 +285,7 @@ class PytorchNeuralNet(Learner):
             # NB. Removed softmax (unscaled probabilities)
             y = self.net(X).detach().cpu().numpy()
 
-        return self.pick_best_class(y, n_best=n_best)
+        return self.pick_best_class(y, n_best=self.options['n_best'])
 
     def save(self, file_name):
         # Save state dictionary to file

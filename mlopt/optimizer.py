@@ -323,9 +323,8 @@ class Optimizer(object):
 
         # Define learner
         if learner not in installed_learners():
-            raise ValueError("Learner specified not installed. Available learners are: " +
+            raise ValueError("Learner specified not installed. Available learners are: %s" %
                              installed_learners())
-
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
                                              n_classes=len(self.encoding),
                                              **learner_options)
