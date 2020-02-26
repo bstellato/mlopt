@@ -655,6 +655,7 @@ class Optimizer(object):
                                                       message="Compute " +
                                                       "tight constraints " +
                                                       "for test set")
+
         time_test = [r['time'] for r in results_test]
         cost_test = [r['cost'] for r in results_test]
 
@@ -673,6 +674,7 @@ class Optimizer(object):
         n_train = self._learner.n_train  # Number of training samples
         n_theta = n_features(theta)  # Number of parameters
         n_strategies = len(self.encoding)  # Number of strategies
+
 
         # Compute comparative statistics
         time_comp = np.array([time_test[i] / time_pred[i]

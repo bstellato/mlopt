@@ -68,8 +68,7 @@ class TestSave(unittest.TestCase):
                      'n_layers': [5]
                      }
 
-        #  for learner in installed_learners():
-        for learner in [s.XGBOOST]:
+        for learner in installed_learners():
             with tempfile.TemporaryDirectory() as tmpdir:
                 data_file = os.path.join(tmpdir, "data.pkl")
 
@@ -78,7 +77,7 @@ class TestSave(unittest.TestCase):
                         #  sampling_fn=lambda n: sample(self.d_bar,
                         #                               self.radius,
                         #                               n),
-                        parallel=False,
+                        parallel=True,
                         learner=learner,
                         #  params=nn_params
                         )

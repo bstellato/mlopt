@@ -140,6 +140,7 @@ def benchmark(m,  # Optimizer
                     hyperplanes=False,
                     save_svg=True)
             oct_general, oct_detail = m.performance(theta_test, parallel=True)
+            m.save(data_file + "_oct")
             add_details(oct_general, predictor="OCT", **dims)
             add_details(oct_detail, predictor="OCT", **dims)
 
@@ -158,6 +159,7 @@ def benchmark(m,  # Optimizer
                     save_svg=True)
             octh_general, octh_detail = m.performance(theta_test,
                                                       parallel=True)
+            m.save(data_file + "_octh")
             add_details(octh_general, predictor="OCT-H", **dims)
             add_details(octh_detail, predictor="OCT-H", **dims)
 
