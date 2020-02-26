@@ -1,5 +1,4 @@
 import numpy as np
-from multiprocessing import cpu_count
 import cvxpy as cp
 from cvxpy.constraints.zero import Zero, Equality
 import os
@@ -48,11 +47,8 @@ def get_n_processes(max_n=np.inf):
     float
         Number of processes to use.
     """
-    try:
-        # Check number of cpus if we are on a SLURM server
-        n_cpus = int(os.environ["SLURM_NPROCS"])
-    except KeyError:
-        n_cpus = cpu_count()
+    # https://docs.python.org/3/library/os.html#os.sched_getaffinity
+    n_cpus = len(os.sched_getaffinity(0))
     n_proc = min(max_n, n_cpus)
 
     return n_proc
