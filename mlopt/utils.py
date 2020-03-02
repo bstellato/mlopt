@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import mlopt.settings as stg
 from tqdm import tqdm
+import joblib
 
 
 def args_norms(expr):
@@ -46,8 +47,7 @@ def get_n_processes(max_n=np.inf):
     float
         Number of processes to use.
     """
-    # https://docs.python.org/3/library/os.html#os.sched_getaffinity
-    n_cpus = len(os.sched_getaffinity(0))
+    n_cpus = joblib.cpu_count()
     n_proc = min(max_n, n_cpus)
 
     return n_proc

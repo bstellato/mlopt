@@ -609,7 +609,7 @@ class Optimizer(object):
 
             # Assign strategies encoding
             optimizer.encoding = optimizer_dict['encoding']
-            optimizer._sampler = optimizer_dict['_sampler']
+            optimizer._sampler = optimizer_dict.get('_sampler', None)
 
             # Load learner
             learner_name = optimizer_dict['learner_name']
@@ -619,11 +619,6 @@ class Optimizer(object):
                                           n_classes=len(optimizer.encoding),
                                           **learner_options)
             optimizer._learner.load(os.path.join(tmpdir, "learner"))
-
-        # Compute Good turing estimates
-        optimizer._sampler = Sampler(optimizer._problem,
-                                     n_samples=len(optimizer.X_train))
-        optimizer._sampler.compute_good_turing(optimizer.y_train)
 
         return optimizer
 
