@@ -599,10 +599,7 @@ class Optimizer(object):
             with open(optimizer_file_name, "rb") as f:
                 optimizer_dict = pkl.load(f)
 
-            if haskey(optimizer_dict, 'name'):
-                name = optimizer_dict['name']
-            else:
-                name = 'problem'
+            name = optimizer_dict.get('name', default='problem')
 
             # Create optimizer using loaded dict
             problem = optimizer_dict['_problem'].cvxpy_problem
