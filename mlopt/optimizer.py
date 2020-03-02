@@ -596,15 +596,19 @@ class Optimizer(object):
             optimizer_file_name = os.path.join(tmpdir, "optimizer.pkl")
             if not optimizer_file_name:
                 raise ValueError("Optimizer pkl file does not exist.")
-            f = open(optimizer_file_name, "rb")
-            optimizer_dict = pkl.load(f)
-            f.close()
+            with open(optimizer_file_name, "rb") as f:
+                optimizer_dict = pkl.load(f)
+
+            if haskey(optimizer_dict, 'name'):
+                name = optimizer_dict['name']
+            else:
+                name = 'problem'
 
             # Create optimizer using loaded dict
             problem = optimizer_dict['_problem'].cvxpy_problem
             optimizer = cls(problem.objective,
                             problem.constraints,
-                            name=optimizer_dict['name'])
+                            name=name)
 
             # Assign strategies encoding
             optimizer.encoding = optimizer_dict['encoding']
