@@ -76,7 +76,7 @@ class OptimalTree(Learner):
     def is_installed(cls):
         try:
             from interpretableai import iai
-        except ImportError:
+        except:
             return False
         return True
 

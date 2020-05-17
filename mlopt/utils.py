@@ -53,7 +53,6 @@ def get_n_processes(max_n=np.inf):
     return n_proc
 
 
-
 def n_features(df):
     """
     Get number of features in dataframe
