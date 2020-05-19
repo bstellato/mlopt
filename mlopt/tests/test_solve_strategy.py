@@ -22,7 +22,8 @@ class TestSolveStrategy(unittest.TestCase):
             x[1] <= -0.5 * x[0] + 3.5,
             x[1] <= -5.0 * x[0] + 10,
         ]
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
@@ -71,7 +72,8 @@ class TestSolveStrategy(unittest.TestCase):
         constraints = [A1 * x <= b1, A2 * x <= b2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
@@ -121,7 +123,8 @@ class TestSolveStrategy(unittest.TestCase):
         ]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
@@ -170,7 +173,8 @@ class TestSolveStrategy(unittest.TestCase):
         #  cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
         results = problem.solve()
 
         #  int_vars = {}
@@ -237,7 +241,8 @@ class TestSolveStrategy(unittest.TestCase):
         constraints = [A1 * x - y <= b1, A2 * x + y <= b2, y >= 2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
@@ -284,7 +289,8 @@ class TestSolveStrategy(unittest.TestCase):
         constraints = [A1 * x - y <= b1, A2 * x + y <= b2, y >= 2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
         results = problem.solve()
 
         # Solve just with strategy
@@ -328,7 +334,8 @@ class TestSolveStrategy(unittest.TestCase):
         constraints = [A1 * x <= b1, A2 * x <= b2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
@@ -378,8 +385,8 @@ class TestSolveStrategy(unittest.TestCase):
         constraints = [A1 * x - y <= b1, A2 * x + y <= b2, y >= 2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints,
-                          tight_constraints=False)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem, tight_constraints=False)
 
         # Solve and compute strategy
         results = problem.solve()

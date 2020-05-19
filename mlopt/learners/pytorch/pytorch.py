@@ -3,6 +3,7 @@ import mlopt.settings as stg
 import mlopt.learners.pytorch.utils as u
 from mlopt.learners.pytorch.model import Net
 from mlopt.learners.pytorch.settings import DEFAULT_TRAINING_PARAMS
+import mlopt.error as e
 from tqdm import tqdm
 import os
 import numpy as np
@@ -24,7 +25,7 @@ class PytorchNeuralNet(Learner):
         """
 
         if not PytorchNeuralNet.is_installed():
-            raise ValueError("Pytorch not installed")
+            e.error("Pytorch not installed")
 
         # import torch
         import torch
@@ -295,9 +296,7 @@ class PytorchNeuralNet(Learner):
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".pkl"):
-            err = "Pytorch pkl file does not exist."
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Pytorch pkl file does not exist.")
 
         # Load state dictionary from file
         # https://pytorch.org/tutorials/beginner/saving_loading_models.html

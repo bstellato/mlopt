@@ -46,6 +46,7 @@ class TestParallel(unittest.TestCase):
         cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
+        cvxpy_problem = cp.Problem(cp.Maximize(cost), constraints)
         problem = Problem(cp.Minimize(cost), constraints)
 
         # Solve for all theta in serial
@@ -90,7 +91,8 @@ class TestParallel(unittest.TestCase):
         constraints = [cp.sum(x) == 1, x >= 0]
 
         # Define optimizer
-        m = Optimizer(cp.Minimize(cost), constraints, name="portfolio")
+        problem = cp.Problem(cp.Minimize(cost), constraints)
+        m = Optimizer(problem, name="portfolio")
 
         '''
         Sample points

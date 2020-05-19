@@ -99,7 +99,8 @@ class TestMatrixParams(unittest.TestCase):
             constraints += [cp.sum(w[t]) == 1.0]
 
         # Define optimizer
-        m = Optimizer(cp.Maximize(cost), constraints, name="portfolio")
+        problem = cp.Problem(cp.Maximize(cost), constraints)
+        m = Optimizer(problem, name="portfolio")
 
         # Sample parameters
         df_train = sample_portfolio(n, k, N=100)

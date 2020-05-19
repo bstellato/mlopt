@@ -23,11 +23,11 @@ class TestFilter(unittest.TestCase):
         x = cp.Variable(n)
         cost = - mu * x + gamma * cp.quad_form(x, Sigma) + .5 * cp.norm(x, 1)
         constraints = [cp.sum(x) == 1, x >= 0]
+        problem = cp.Problem(cp.Minimize(cost), constraints)
 
         # Define optimizer
         # Force mosek to be single threaded
-        m = mlopt.Optimizer(cp.Minimize(cost),
-                            constraints,
+        m = mlopt.Optimizer(problem,
                             #  log_level=logging.DEBUG,
                             )
 

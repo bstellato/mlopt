@@ -8,6 +8,9 @@ import cvxpy.interface as intf
 import cvxpy.settings as s
 import scipy.sparse as spa
 from cvxpy.reductions import Solution
+from cvxpy.constraints import Zero
+from cvxpy.reductions.cvx_attr2constr import convex_attributes
+from cvxpy.reductions.qp2quad_form.qp_matrix_stuffing import ParamQuadProg
 import numpy as np
 
 #  from pypardiso import spsolve
@@ -72,6 +75,8 @@ def factorize_kkt_matrix(KKT):
 class KKTSolver(QpSolver):
     """KKT solver for equality constrained QPs"""
 
+    SUPPORTED_CONSTRAINTS = [Zero]  # Support only equality constraints
+
     def name(self):
         return KKT
 
@@ -86,13 +91,10 @@ class KKTSolver(QpSolver):
         if status in s.SOLUTION_PRESENT:
             opt_val = solution['cost']
             primal_vars = {
-                list(inverse_data.id_map.keys())[0]:
+                KKTSolver.VAR_ID:
                 intf.DEFAULT_INTF.const_to_matrix(np.array(solution['x']))
             }
-            dual_vars = utilities.get_dual_values(
-                intf.DEFAULT_INTF.const_to_matrix(solution['y']),
-                utilities.extract_dual_value,
-                inverse_data.sorted_constraints)
+            dual_vars = {KKTSolver: solution['y']}
         else:
             primal_vars = None
             dual_vars = None
@@ -109,10 +111,12 @@ class KKTSolver(QpSolver):
 
         n_var = data['P'].shape[0]
         n_con = len(data['b'])
-        if data['F'].shape[0] > 0:
-            err = 'KKT supports only equality constrained QPs.'
-            stg.logger.error(err)
-            raise SolverError(err)
+
+        # TODO: This is no longer needed
+        #  if data['F'].shape[0] > 0:
+        #      err = 'KKT supports only equality constrained QPs.'
+        #      stg.logger.error(err)
+        #      raise SolverError(err)
 
         stg.logger.debug("Solving %d x %d linear system A x = b " %
                       (n_var + n_con, n_var + n_con))
@@ -166,6 +170,8 @@ class KKTSolver(QpSolver):
                 .5 * results['x'].T.dot(data['P'].dot(results['x'])) \
                 + data['q'].dot(results['x'])
         results['time'] = t_end - t_start
+
+
 
         return results
 

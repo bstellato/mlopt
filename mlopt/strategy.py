@@ -1,5 +1,6 @@
 import numpy as np
 import mlopt.settings as stg
+import mlopt.error as e
 
 
 class Strategy(object):
@@ -8,21 +9,25 @@ class Strategy(object):
 
     Parameters
     ----------
-    tight_constraints : dict of numpy int arrays
-        Set of tight constraints. The keys are the CVXPY constraint ids.
-        The values are numpy bool arrays (True/False for tight/non tight).
-    int_vars : dict of numpy int arrays
-        Value of the integer variables. The keys are CVXPY variable id.
-        The values are numpy int arrays.
+    tight_constraints : numpy bool array
+        Set of tight constraints. The values are numpy bool arrays
+        (True/False for tight/non tight).
+    int_vars : numpy bool array
+        Value of the integer variables. The values are numpy int arrays.
     """
 
-    def __init__(self, tight_constraints, int_vars):
+    def __init__(self, tight_constraints=np.array([]), int_vars=np.array([])):
+
+        if not np.array_equal(tight_constraints,
+                              tight_constraints.astype(bool)):
+            e.value_error("Tight constraints vector is not boolean")
+
         # Check tight constraints
-        for _, v in tight_constraints.items():
-            if np.any(np.logical_or(v < 0, v > 1)):
-                err = "Tight constraints vector is not boolean."
-                stg.logger.error(err)
-                raise ValueError(err)
+        #  for _, v in tight_constraints.items():
+        #      if np.any(np.logical_or(v < 0, v > 1)):
+        #          err = "Tight constraints vector is not boolean."
+        #          stg.logger.error(err)
+        #          raise ValueError(err)
 
         # Check that integer variables are non negative
         #  for _, v in int_vars.items():
@@ -34,35 +39,32 @@ class Strategy(object):
         self.tight_constraints = tight_constraints
         self.int_vars = int_vars
 
-    def _compare_arrays_dict(self, d1, d2):
-        """Compare dictionaries of numpy arrays"""
-        if len(d1) != len(d2):
-            return False
-        for key in d1.keys():
-            try:
-                isequal = np.array_equal(d1[key], d2[key])
-            except KeyError:
-                return False
-            if not isequal:
-                return False
-        return True
+    #  def _compare_arrays_dict(self, d1, d2):
+    #      """Compare dictionaries of numpy arrays"""
+    #      if len(d1) != len(d2):
+    #          return False
+    #      for key in d1.keys():
+    #          try:
+    #              isequal = np.array_equal(d1[key], d2[key])
+    #          except KeyError:
+    #              return False
+    #          if not isequal:
+    #              return False
+    #      return True
 
-    def __sprint_dict(self, d):
-        s = ""
-        for attribute, value in d.items():
-            s += '      {:>5}: {}\n'.format(attribute, value)
-        return s.rstrip()
+    #  def __sprint_dict(self, d):
+    #      s = ""
+    #      for attribute, value in d.items():
+    #          s += '      {:>5}: {}\n'.format(attribute, value)
+    #      return s.rstrip()
 
     def __repr__(self):
         string = "Strategy\n"
         string += "  - Tight constraints:\n"
-        string += "         id: elements\n"
-        string += self.__sprint_dict(self.tight_constraints)
-        string += "\n"
+        string += self.tight_constraints.__str__() + "\n"
         if len(self.int_vars) > 0:
             string += "  - Integer variables values:\n"
-            string += "         id: elements\n"
-            string += self.__sprint_dict(self.int_vars)
+            string += self.int_vars.__str__() + "\n"
         return string
 
     # TODO: Implement hash if unique list comparison starts getting slow
@@ -78,15 +80,14 @@ class Strategy(object):
 
             # Compare tight constraints
             same_tight_constraints = \
-                self._compare_arrays_dict(self.tight_constraints,
-                                          other.tight_constraints)
+                np.all(self.tight_constraints == other.tight_constraints)
 
             if not same_tight_constraints:
                 return False
 
             # Compare integer variables
-            same_int_vars = self._compare_arrays_dict(self.int_vars,
-                                                      other.int_vars)
+            same_int_vars = \
+                np.all(self.int_vars == other.int_vars)
 
             return same_tight_constraints and same_int_vars
         else:
@@ -114,7 +115,7 @@ def unique_strategies(strategies):
     unique = []
     # traverse for all elements
     for x in strategies:
-        # check if exists in unique_list or not
+        # check if x exists in unique_list or not
         if x not in unique:
             unique.append(x)
 
@@ -160,20 +161,7 @@ def encode_strategies(strategies):
 
 def strategy2array(s):
     """Convert strategy to array"""
-    if s.tight_constraints:
-        s_tight = np.concatenate(
-            [np.atleast_1d(v) for k, v in sorted(s.tight_constraints.items())]
-        )
-    else:
-        s_tight = np.array([])
-    if s.int_vars:
-        s_int = np.concatenate(
-            [np.atleast_1d(v) for k, v in sorted(s.int_vars.items())]
-        )
-    else:
-        s_int = np.array([])
-
-    return np.concatenate((s_tight, s_int))
+    return np.concatenate([s.tight_constraints, s.int_vars])
 
 
 def strategy_distance(a, b):

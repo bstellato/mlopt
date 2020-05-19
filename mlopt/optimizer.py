@@ -4,6 +4,7 @@ from mlopt.learners import LEARNER_MAP, installed_learners
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.filter import Filter
+import mlopt.error as e
 from mlopt.utils import n_features, accuracy, suboptimality
 import mlopt.utils as u
 from mlopt.kkt import KKT, create_kkt_matrix, factorize_kkt_matrix
@@ -29,7 +30,7 @@ class Optimizer(object):
     """
 
     def __init__(self,
-                 objective, constraints,
+                 cvxpy_problem,
                  name="problem",
                  log_level=None,
                  parallel=True,
@@ -40,10 +41,8 @@ class Optimizer(object):
 
         Parameters
         ----------
-        objective : cvxpy objective
-            Objective defined in CVXPY.
-        constraints : cvxpy constraints
-            Constraints defined in CVXPY.
+        problem : cvxpy.Problem
+            Problem in CVXPY format.
         name : str
             Problem name.
         solver_options : dict, optional
@@ -58,7 +57,7 @@ class Optimizer(object):
         # handler.setFormatter(formatter)
         # root.addHandler(handler)
 
-        self._problem = Problem(objective, constraints,
+        self._problem = Problem(cvxpy_problem,
                                 solver=stg.DEFAULT_SOLVER,
                                 tight_constraints=tight_constraints,
                                 **solver_options)
@@ -73,10 +72,8 @@ class Optimizer(object):
     def n_strategies(self):
         """Number of strategies."""
         if self.encoding is None:
-            err = "Model has been trained yet to " + \
-                "return the number of strategies."
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Model has been trained yet to " +
+                    "return the number of strategies.")
 
         return len(self.encoding)
 
@@ -84,9 +81,10 @@ class Optimizer(object):
         """Problem variables."""
         return self._problem.variables()
 
+    @property
     def parameters(self):
         """Problem parameters."""
-        return self._problem.parameters()
+        return self._problem.parameters
 
     @property
     def n_parameters(self):
@@ -141,10 +139,8 @@ class Optimizer(object):
                 os.remove(file_name)
 
         if not self.samples_present():
-            err = "You need to get the strategies " + \
-                "from the data first by training the model."
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("You need to get the strategies " +
+                    "from the data first by training the model.")
 
         # Save to file
         with open(file_name, 'wb') \
@@ -176,7 +172,7 @@ class Optimizer(object):
 
         # Check if file exists
         if not os.path.isfile(file_name):
-            raise ValueError("File %s does not exist." % file_name)
+            e.error("File %s does not exist." % file_name)
 
         # Load optimizer
         with open(file_name, "rb") as f:
@@ -207,14 +203,10 @@ class Optimizer(object):
 
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
-            err = "Not enough arguments to train the model"
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Not enough arguments to train the model")
 
         if X is not None and sampling_fn is not None:
-            err = "You can pass only one value between X and sampling_fn"
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("You can pass only one value between X and sampling_fn")
 
         # Check if data is passed, otherwise train
         #  if (X is not None) and not self.samples_present():
@@ -235,9 +227,7 @@ class Optimizer(object):
             not_feasible_points = {i: x for i, x in enumerate(results)
                                    if np.isnan(x['x']).any()}
             if not_feasible_points:
-                e = "Infeasible points found. Number of infeasible points %d" % len(not_feasible_points)
-                stg.logger.error(e)
-                raise ValueError(e)
+                e.error("Infeasible points found. Number of infeasible points %d" % len(not_feasible_points))
 
             self.obj_train = [r['cost'] for r in results]
             train_strategies = [r['strategy'] for r in results]
@@ -323,8 +313,8 @@ class Optimizer(object):
 
         # Define learner
         if learner not in installed_learners():
-            raise ValueError("Learner specified not installed. Available learners are: %s" %
-                             installed_learners())
+            e.error("Learner specified not installed. Available learners are: %s" %
+                    installed_learners())
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
                                              n_classes=len(self.encoding),
                                              **learner_options)
@@ -429,7 +419,7 @@ class Optimizer(object):
             elif self._problem.sense() == Maximize:
                 idx_pick = idx_filter[np.argmax(cost[idx_filter])]
             else:
-                raise ValueError('Objective type not understood')
+                e.error('Objective type not understood')
         else:
             # Case 2: No feasible points
             # -> Get solution with minimum infeasibility
@@ -471,14 +461,12 @@ class Optimizer(object):
         n_points = len(X)
 
         if use_cache and not self._solver_cache:
-            err = "Solver cache requested but the cache has not been" + \
-                "computed for this problem. Is it MIQP representable?"
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Solver cache requested but the cache has not been" +
+                    "computed for this problem. Is it MIQP representable?")
 
         # Change verbose setting
         if verbose:
-            self._problem.solver_options['verbose'] = True
+            self._problem.verbose = True
 
         # Define array of results to return
         results = []
@@ -523,8 +511,8 @@ class Optimizer(object):
             Defaults to False.
         """
         if self._learner is None:
-            raise ValueError("You cannot save the optimizer without " +
-                             "training it before.")
+            e.error("You cannot save the optimizer without " +
+                    "training it before.")
 
         # Add .tar.gz if the file has no extension
         if not file_name.endswith('.tar.gz'):
@@ -585,7 +573,7 @@ class Optimizer(object):
 
         # Check if file exists
         if not os.path.isfile(file_name):
-            raise ValueError("File %s does not exist." % file_name)
+            e.error("File %s does not exist." % file_name)
 
         # Extract file to temporary directory and read it
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -595,7 +583,7 @@ class Optimizer(object):
             # Load optimizer
             optimizer_file_name = os.path.join(tmpdir, "optimizer.pkl")
             if not optimizer_file_name:
-                raise ValueError("Optimizer pkl file does not exist.")
+                e.error("Optimizer pkl file does not exist.")
             with open(optimizer_file_name, "rb") as f:
                 optimizer_dict = pkl.load(f)
 
@@ -603,9 +591,7 @@ class Optimizer(object):
 
             # Create optimizer using loaded dict
             problem = optimizer_dict['_problem'].cvxpy_problem
-            optimizer = cls(problem.objective,
-                            problem.constraints,
-                            name=name)
+            optimizer = cls(problem, name=name)
 
             # Assign strategies encoding
             optimizer.encoding = optimizer_dict['encoding']
