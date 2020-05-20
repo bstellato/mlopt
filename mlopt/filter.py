@@ -1,13 +1,9 @@
 from joblib import Parallel, delayed
 import mlopt.settings as stg
 import numpy as np
-import mlopt.settings as stg
-from mlopt.problem import solve_with_strategy
 from mlopt.strategy import strategy_distance
 import mlopt.utils as u
-from mlopt.problem import Problem
 from tqdm import tqdm
-import os
 
 
 def best_strategy(theta, obj_train, encoding, problem):
@@ -16,8 +12,7 @@ def best_strategy(theta, obj_train, encoding, problem):
     problem.populate(theta)  # Populate parameters
 
     # Serial solution over the strategies
-    results = [solve_with_strategy(problem, strategy)
-               for strategy in encoding]
+    results = [problem.solve(strategy=strategy) for strategy in encoding]
 
     # Compute cost degradation
     degradation = []

@@ -4,7 +4,7 @@ import numpy as np
 import scipy.sparse as spa
 import numpy.testing as npt
 from mlopt.tests.settings import TEST_TOL as TOL
-from mlopt.problem import Problem, solve_with_strategy
+from mlopt.problem import Problem
 import cvxpy as cp
 
 
@@ -30,7 +30,7 @@ class TestSolveStrategy(unittest.TestCase):
         violation1 = problem.infeasibility()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
         violation2 = problem.infeasibility()
 
         # Verify both solutions are equal
@@ -79,7 +79,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -130,7 +130,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -190,7 +190,7 @@ class TestSolveStrategy(unittest.TestCase):
         #  strategy = Strategy(tight_constraints, int_vars)
 
         # Solve with strategy!
-        results_strategy = solve_with_strategy(problem, results["strategy"])
+        results_strategy = problem.solve(strategy=results["strategy"])
 
         # TODO: Solve issue!
         # Correct strategy but variable is infeasible for original problem.
@@ -248,7 +248,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -294,7 +294,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -341,7 +341,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -392,7 +392,7 @@ class TestSolveStrategy(unittest.TestCase):
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)

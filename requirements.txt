@@ -1,0 +1,33 @@
+cvxpy @ file:///Users/sidereus/Dropbox/research/code/projects/cvxpy
+ecos==2.0.7.post1
+flake8==3.8.1
+future==0.18.2
+greenlet==0.4.15
+joblib==0.15.1
+mccabe==0.6.1
+msgpack==1.0.0
+numpy==1.18.4
+osqp==0.6.1
+pycodestyle==2.6.0
+pyflakes==2.2.0
+pynvim==0.4.1
+scipy==1.4.1
+scs==2.1.2
+tqdm==4.46.0
+cvxpy @ file:///Users/sidereus/Dropbox/research/code/projects/cvxpy
+ecos==2.0.7.post1
+flake8==3.8.1
+future==0.18.2
+greenlet==0.4.15
+gurobipy==9.0.2
+joblib==0.15.1
+mccabe==0.6.1
+msgpack==1.0.0
+numpy==1.18.4
+osqp==0.6.1
+pycodestyle==2.6.0
+pyflakes==2.2.0
+pynvim==0.4.1
+scipy==1.4.1
+scs==2.1.2
+tqdm==4.46.0

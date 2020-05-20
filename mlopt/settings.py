@@ -6,7 +6,16 @@ import sys
 LOGGER_NAME = 'mlopt'
 logger = logging.getLogger(LOGGER_NAME)
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler(sys.stdout))
+
+# Stdout handler
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_formatter = logging.Formatter('%(message)s')
+logger.addHandler(stdout_handler)
+
+# Add file handler
+#  file_handler = logging.FileHandler('mlopt.log')
+#  file_handler.setLevel(logging.INFO)
+#  logger.addHandler(file_handler)
 
 # DEFAULT settings
 FILTER_STRATEGIES = False
@@ -29,7 +38,7 @@ PYTORCH = "pytorch"
 TENSORFLOW = "tensorflow"
 OPTIMAL_TREE = "optimaltree"
 XGBOOST = "xgboost"
-DEFAULT_LEARNER = PYTORCH
+DEFAULT_LEARNER = XGBOOST
 
 # Learners settings
 N_BEST = 10

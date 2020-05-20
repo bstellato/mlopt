@@ -1,4 +1,4 @@
-from mlopt.problem import Problem, solve_with_strategy
+from mlopt.problem import Problem
 import mlopt.settings as stg
 from mlopt.learners import LEARNER_MAP, installed_learners
 from mlopt.sampling import Sampler
@@ -10,9 +10,7 @@ import mlopt.utils as u
 from mlopt.kkt import KKT, create_kkt_matrix, factorize_kkt_matrix
 from mlopt.utils import pandas2array
 from cvxpy import Minimize, Maximize
-from time import time
 import cvxpy.settings as cps
-import pandas as pd
 import numpy as np
 import os
 from glob import glob
@@ -21,7 +19,6 @@ import tarfile
 import pickle as pkl
 from joblib import Parallel, delayed
 from tqdm import tqdm
-import sys
 
 
 class Optimizer(object):
@@ -51,11 +48,6 @@ class Optimizer(object):
 
         if log_level is not None:
             stg.logger.setLevel(log_level)
-        # handler = logging.StreamHandler(sys.stdout)
-        # handler.setLevel(logging.DEBUG)
-        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        # handler.setFormatter(formatter)
-        # root.addHandler(handler)
 
         self._problem = Problem(cvxpy_problem,
                                 solver=stg.DEFAULT_SOLVER,
@@ -386,19 +378,17 @@ class Optimizer(object):
         infeas = []
         cost = []
 
-        strategies = [self.encoding[l] for l in labels]
+        strategies = [self.encoding[label] for label in labels]
 
         # Cache is a list of solver caches to pass
         cache = [None] * n_best
         if self._solver_cache and use_cache:
-            cache = [self._solver_cache[l] for l in labels]
+            cache = [self._solver_cache[label] for label in labels]
 
         n_jobs = u.get_n_processes(n_best) if parallel else 1
 
         results = Parallel(n_jobs=n_jobs)(
-            delayed(solve_with_strategy)(self._problem,
-                                         strategies[j],
-                                         cache[j])
+            delayed(self._solve)(strategy=strategies[j], cache=cache[j])
             for j in range(n_best))
 
         x = [r["x"] for r in results]

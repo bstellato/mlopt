@@ -1,6 +1,8 @@
 import numpy as np
 import mlopt.settings as stg
 import mlopt.error as e
+import cvxpy.settings as cps
+import scipy.sparse as spa
 
 
 class Strategy(object):
@@ -15,6 +17,30 @@ class Strategy(object):
     int_vars : numpy bool array
         Value of the integer variables. The values are numpy int arrays.
     """
+
+    def __init(self, x, data):
+        """Initialize strategy from problem data."""
+
+        self.tight_constraints = self.tight_constraints(x, data)
+        self.int_vars = x[data[cps.INT_IDX]]
+
+    def tight_constraints(self, x, data):
+        """Compute tight constraints for solution x
+
+        Args:
+            data (TODO): TODO
+            x (TODO): TODO
+
+        Returns: TODO
+
+        """
+        # Check only inequalities
+        F, g = data['F'], data['g']
+
+        tight_constraints = (F.dot(x) - g) <= \
+            stg.TIGHT_CONSTRAINTS_TOL * (1 + np.linalg.norm(g, np.inf))
+
+        return tight_constraints
 
     def __init__(self, tight_constraints=np.array([]), int_vars=np.array([])):
 
@@ -92,6 +118,33 @@ class Strategy(object):
             return same_tight_constraints and same_int_vars
         else:
             return False
+
+    def parse_data(self, data):
+        """TODO: Docstring for parse_data.
+
+        Args:
+            data (TODO): TODO
+
+        Returns: TODO
+
+        """
+        n_var = data[cps.A].size(1)
+
+        # Edit data by increasing the dimension of A
+        # 1. Fix tight constraints: F_active x = g_active
+        F_active = data[cps.F][self.tight_constraints]
+        g_active = data[cps.G][self.tight_constraints]
+
+        # 2. Fix integer variables: F_fix x = g_fix
+        F_fix = spa.eye(n_var)[data[cps.INT_IDX]]
+        g_fix = self.int_vars
+
+        # Combine in A and b  # remove (F and g)
+        data[cps.A] = spa.vstack([data[cps.A], F_active, F_fix])
+        data[cps.B] = np.concatenate([data[cps.B], g_active, g_fix])
+
+        # Remove F and g (no longer have inequalities)
+        data[cps.F], data[cps.G] = spa.csr_matrix((0, n_var)), -np.array([])
 
 
 def unique_strategies(strategies):
