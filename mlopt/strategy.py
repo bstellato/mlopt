@@ -18,13 +18,13 @@ class Strategy(object):
         Value of the integer variables. The values are numpy int arrays.
     """
 
-    def __init(self, x, data):
+    def __init__(self, x, data):
         """Initialize strategy from problem data."""
 
-        self.tight_constraints = self.tight_constraints(x, data)
+        self.tight_constraints = self.get_tight_constraints(x, data)
         self.int_vars = x[data[cps.INT_IDX]]
 
-    def tight_constraints(self, x, data):
+    def get_tight_constraints(self, x, data):
         """Compute tight constraints for solution x
 
         Args:
@@ -35,54 +35,16 @@ class Strategy(object):
 
         """
         # Check only inequalities
-        F, g = data['F'], data['g']
+        F, g = data[cps.F], data[cps.G]
 
-        tight_constraints = (F.dot(x) - g) <= \
-            stg.TIGHT_CONSTRAINTS_TOL * (1 + np.linalg.norm(g, np.inf))
+        tight_constraints = np.array([])
+
+        # Constraint is tight if ||F * x - g|| <= eps (1 + rel_tol)
+        if F.size > 0:
+            tight_constraints = np.abs(F.dot(x) - g) <= \
+                stg.TIGHT_CONSTRAINTS_TOL * (1 + np.linalg.norm(g, np.inf))
 
         return tight_constraints
-
-    def __init__(self, tight_constraints=np.array([]), int_vars=np.array([])):
-
-        if not np.array_equal(tight_constraints,
-                              tight_constraints.astype(bool)):
-            e.value_error("Tight constraints vector is not boolean")
-
-        # Check tight constraints
-        #  for _, v in tight_constraints.items():
-        #      if np.any(np.logical_or(v < 0, v > 1)):
-        #          err = "Tight constraints vector is not boolean."
-        #          stg.logger.error(err)
-        #          raise ValueError(err)
-
-        # Check that integer variables are non negative
-        #  for _, v in int_vars.items():
-        #      if np.any(v < 0):
-        #          raise ValueError("Integer variables vector " +
-        #                           "has negative entries.")
-
-        # Check that tight constraints are not
-        self.tight_constraints = tight_constraints
-        self.int_vars = int_vars
-
-    #  def _compare_arrays_dict(self, d1, d2):
-    #      """Compare dictionaries of numpy arrays"""
-    #      if len(d1) != len(d2):
-    #          return False
-    #      for key in d1.keys():
-    #          try:
-    #              isequal = np.array_equal(d1[key], d2[key])
-    #          except KeyError:
-    #              return False
-    #          if not isequal:
-    #              return False
-    #      return True
-
-    #  def __sprint_dict(self, d):
-    #      s = ""
-    #      for attribute, value in d.items():
-    #          s += '      {:>5}: {}\n'.format(attribute, value)
-    #      return s.rstrip()
 
     def __repr__(self):
         string = "Strategy\n"
@@ -119,32 +81,65 @@ class Strategy(object):
         else:
             return False
 
-    def parse_data(self, data):
-        """TODO: Docstring for parse_data.
+    def accepts(self, data):
+        """Check if strategy is compatible with current problem.
+        If not, it raises an error.
+
+        TODO: Add check to see if we match problem type
 
         Args:
             data (TODO): TODO
 
+        """
+
+        if len(self.tight_constraints) != data['n_ineq']:
+            e.warn("Tight constraints not compatible with problem. " +
+                   "Different than the number of inequality constraints.")
+            return False
+
+        if len(self.int_vars) != len(data['int_vars_idx']):
+            e.warn("Integer variables not compatible " +
+                   "with problem. IDs not " +
+                   "matching an integer variable.")
+            return False
+
+        return True
+
+    def apply(self, data, inverse_data):
+        """TODO: Docstring for apply.
+
+        Args:
+            data (TODO): TODO
+            inverse_data (TODO): TODO
+
         Returns: TODO
 
         """
-        n_var = data[cps.A].size(1)
+        n_eq, n_var = data[cps.A].shape
+        n_ineq = data[cps.F].shape[0]
 
         # Edit data by increasing the dimension of A
         # 1. Fix tight constraints: F_active x = g_active
-        F_active = data[cps.F][self.tight_constraints]
-        g_active = data[cps.G][self.tight_constraints]
+        A_active = data[cps.F][self.tight_constraints]
+        b_active = data[cps.G][self.tight_constraints]
 
         # 2. Fix integer variables: F_fix x = g_fix
-        F_fix = spa.eye(n_var)[data[cps.INT_IDX]]
-        g_fix = self.int_vars
+        A_fix = spa.eye(n_var, format='csc')[data[cps.INT_IDX]]
+        b_fix = self.int_vars
 
         # Combine in A and b  # remove (F and g)
-        data[cps.A] = spa.vstack([data[cps.A], F_active, F_fix])
-        data[cps.B] = np.concatenate([data[cps.B], g_active, g_fix])
+        data[cps.A + "_red"] = spa.vstack([data[cps.A], A_active, A_fix])
+        data[cps.B + "_red"] = np.concatenate([data[cps.B], b_active, b_fix])
 
         # Remove F and g (no longer have inequalities)
-        data[cps.F], data[cps.G] = spa.csr_matrix((0, n_var)), -np.array([])
+        #  data[cps.F + "_red"] = spa.csr_matrix((0, n_var))
+        #  data[cps.G + "_red"] = -np.array([])
+
+        # Store inverse data
+        inverse_data['tight_constraints'] = self.tight_constraints
+        inverse_data['int_vars'] = self.int_vars
+        inverse_data['n_eq'] = n_eq
+        inverse_data['n_ineq'] = n_ineq
 
 
 def unique_strategies(strategies):
@@ -162,16 +157,16 @@ def unique_strategies(strategies):
         Unique strategies.
     """
     # Using set
-    #  unique = list(set(strategies))
+    unique = list(set(strategies))
 
     # Using list
-    unique = []
-    # traverse for all elements
-    for x in strategies:
-        # check if x exists in unique_list or not
-        if x not in unique:
-            unique.append(x)
-
+    #  unique = []
+    #  # traverse for all elements
+    #  for x in strategies:
+    #      # check if x exists in unique_list or not
+    #      if x not in unique:
+    #          unique.append(x)
+    #
     return unique
 
 

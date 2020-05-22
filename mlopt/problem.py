@@ -3,7 +3,7 @@ import numpy as np
 # Mlopt stuff
 from mlopt.strategy import Strategy
 import mlopt.settings as stg
-from mlopt.kkt import KKT
+from mlopt.kkt import KKTSolver
 import mlopt.utils as u
 import mlopt.error as e
 # Import cvxpy and constraint types
@@ -161,11 +161,14 @@ class Problem(object):
 
         """
 
-        A, b = data['A'], data['b']
-        F, g = data['F'], data['g']
+        A, b = data[cps.A], data[cps.B]
+        F, g = data[cps.F], data[cps.G]
 
-        eq_viol = np.linalg.norm(A.dot(x) - b, np.inf)
-        ineq_viol = np.linalg.norm(np.max(F.dot(x) - g, 0), np.inf)
+        eq_viol, ineq_viol = 0, 0
+        if A.size:
+            eq_viol = np.linalg.norm(A.dot(x) - b, np.inf)
+        if F.size:
+            ineq_viol = np.linalg.norm(np.maximum(F.dot(x) - g, 0), np.inf)
 
         return np.maximum(eq_viol, ineq_viol)
 
@@ -196,17 +199,27 @@ class Problem(object):
 
         """
 
-        if strategy is not None:
-            self._verify_strategy(strategy)
-
         data, inverse_data, solving_chain = self._get_problem_data()
 
         if strategy is not None:
-            strategy.parse_data(data)
+            if not strategy.accepts(data):
+                e.error("Strategy incompatible for current problem")
 
-        raw_solution = solving_chain.solver.solve_via_data(
+        if strategy is not None:
+            strategy.apply(data, inverse_data[-1])
+            solver = KKTSolver()
+            solving_chain.solver = solver
+            solving_chain.reductions[-1] = solver
+            solver_options = {}
+        else:
+            solver = solving_chain.solver
+            solver_options = self.solver_options
+            cache = self.cvxpy_problem._solver_cache
+
+        raw_solution = solver.solve_via_data(
             data, warm_start=True, verbose=self.verbose,
-            solver_opts=self.solver_options
+            solver_opts=solver_options,
+            solver_cache=cache
         )
 
         return self._parse_solution(raw_solution, data, self.cvxpy_problem,
@@ -245,41 +258,16 @@ class Problem(object):
             solver_solution = solver.invert(raw_solution, inverse_data[-1])
             x = solver_solution.primal_vars[solver.VAR_ID]
             results['x'] = x
-            results['cost'] = solver_solution.opt_val
+            results['cost'] = self.cvxpy_problem.objective.value
             results['infeasibility'] = self.infeasibility(x, data)
-
-            # Get strategy
-            # TODO: Construct in object-oriented way
-            tight_constraints = self.tight_constraints(x, data)
-            int_vars = x[data[cps.INT_IDX]]
-            results['strategy'] = Strategy(tight_constraints, int_vars)
+            results['strategy'] = Strategy(x, data)
         else:
             results['x'] = np.nan * np.ones(self.n_var)
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
-            results['strategy'] = Strategy()
+            results['strategy'] = None
 
         return results
-
-    def _verify_strategy(self, strategy):
-        """Verify that strategy is compatible with current problem.
-        If not, it raises an error.
-
-        TODO: Make it object-oriented.
-        Check that strategy type accepts problem type.
-
-        Args:
-            strategy (Strategy): Strategy to compare.
-
-        """
-        if len(strategy.tight_constrants) != self._data['n_ineq']:
-            e.error("Tight constraints not compatible with problem. " +
-                    "Different than the number of inequality constraints.")
-
-        if len(strategy.int_vars) != self._data['int_vars_idx']:
-            e.error("Integer variables not compatible " +
-                    "with problem. IDs not " +
-                    "matching an integer variable.")
 
     def populate_and_solve(self, theta):
         """Single function to populate the problem with

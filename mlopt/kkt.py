@@ -1,16 +1,17 @@
 # Define and solve equality constrained QP
 from cvxpy.reductions.solvers.qp_solvers.qp_solver import QpSolver
+import cvxpy.settings as cps
 from cvxpy.error import SolverError
-from cvxpy.reductions.solvers import utilities
-from cvxpy.reductions.solvers.defines import \
-    SOLVER_MAP_QP, QP_SOLVERS, INSTALLED_SOLVERS
+#  from cvxpy.reductions.solvers import utilities
+#  from cvxpy.reductions.solvers.defines import \
+    #  SOLVER_MAP_QP, QP_SOLVERS, INSTALLED_SOLVERS
 import cvxpy.interface as intf
 import cvxpy.settings as s
 import scipy.sparse as spa
 from cvxpy.reductions import Solution
 from cvxpy.constraints import Zero
-from cvxpy.reductions.cvx_attr2constr import convex_attributes
-from cvxpy.reductions.qp2quad_form.qp_matrix_stuffing import ParamQuadProg
+#  from cvxpy.reductions.cvx_attr2constr import convex_attributes
+#  from cvxpy.reductions.qp2quad_form.qp_matrix_stuffing import ParamQuadProg
 import numpy as np
 
 #  from pypardiso import spsolve
@@ -33,8 +34,11 @@ class CatchSingularMatrixWarnings(object):
     def __enter__(self):
         self.catcher.__enter__()
         warnings.simplefilter("ignore", UmfpackWarning)
-        warnings.filterwarnings("ignore",
-                                message="divide by zero encountered in double_scalars")
+#
+        warnings.filterwarnings(
+            "ignore",
+            message="divide by zero encountered in double_scalars"
+        )
 
     def __exit__(self, *args):
         self.catcher.__exit__()
@@ -42,19 +46,19 @@ class CatchSingularMatrixWarnings(object):
 
 def create_kkt_matrix(data):
     """Create KKT matrix from data."""
-    A_con = data['A']
+    A_con = data[cps.A + "_red"]
     n_con = A_con.shape[0]
     O_con = spa.csc_matrix((n_con, n_con))
 
     # Create KKT linear system
-    KKT = spa.vstack([spa.hstack([data['P'], A_con.T]),
+    KKT = spa.vstack([spa.hstack([data[cps.P], A_con.T]),
                       spa.hstack([A_con, O_con])], format='csc')
     return KKT
 
 
 def create_kkt_rhs(data):
     """Create KKT rhs from data."""
-    return np.concatenate((-data['q'], data['b']))
+    return np.concatenate((-data[cps.Q], data[cps.B + "_red"]))
 
 
 def create_kkt_system(data):
@@ -94,7 +98,20 @@ class KKTSolver(QpSolver):
                 KKTSolver.VAR_ID:
                 intf.DEFAULT_INTF.const_to_matrix(np.array(solution['x']))
             }
-            dual_vars = {KKTSolver: solution['y']}
+
+            # Build dual variables
+            n_eq, n_ineq = inverse_data['n_eq'], inverse_data['n_ineq']
+            # equalities
+            y_eq = solution['y'][:n_eq]
+            # only dual variables for inequalities (not integer variables)
+            y_ineq = np.zeros(n_ineq)
+
+            n_tight = np.sum(inverse_data['tight_constraints'])
+            y_ineq[inverse_data['tight_constraints']] = \
+                solution['y'][n_eq:n_eq + n_tight]
+            y = np.concatenate([y_eq, y_ineq])
+
+            dual_vars = {KKTSolver.DUAL_VAR_ID: y}
         else:
             primal_vars = None
             dual_vars = None
@@ -109,36 +126,20 @@ class KKTSolver(QpSolver):
 
         KKT_cache = solver_opts.get('KKT_cache', None)
 
-        n_var = data['P'].shape[0]
-        n_con = len(data['b'])
-
-        # TODO: This is no longer needed
-        #  if data['F'].shape[0] > 0:
-        #      err = 'KKT supports only equality constrained QPs.'
-        #      stg.logger.error(err)
-        #      raise SolverError(err)
+        n_var = data[cps.P].shape[0]
+        n_con = len(data[cps.B + "_red"])  # Only equality constraints
 
         stg.logger.debug("Solving %d x %d linear system A x = b " %
-                      (n_var + n_con, n_var + n_con))
+                         (n_var + n_con, n_var + n_con))
 
         if KKT_cache is None:
             stg.logger.debug("Not using KKT solver cache")
 
             KKT, rhs = create_kkt_system(data)
 
-            # DEBUG least squares
-            #  rhs = KKT.T.dot(rhs)
-            #  KKT = KKT.T.dot(KKT)
-
             t_start = time.time()
             with CatchSingularMatrixWarnings():
                 x = spsolve(KKT, rhs, use_umfpack=True)
-
-            #  x = spa.linalg.lsqr(KKT, rhs)[0]
-            #  try:
-            #      x = spsolve(KKT, rhs, use_umfpack=True)
-            #  except (UmfpackWarning, ValueError) as e:
-            #      x = np.full(n_var + n_con, np.nan)
             t_end = time.time()
 
         else:
@@ -150,11 +151,6 @@ class KKTSolver(QpSolver):
 
             with CatchSingularMatrixWarnings():
                 x = KKT_cache['factors'](rhs)
-            #  try:
-            #      x = KKT_cache['factors'](rhs)
-            #  except (RuntimeWarning, ValueError) as e:
-            #      print(e)
-            #      x = np.full(n_var + n_con, np.nan)
             t_end = time.time()
 
         # Get results
@@ -171,12 +167,10 @@ class KKTSolver(QpSolver):
                 + data['q'].dot(results['x'])
         results['time'] = t_end - t_start
 
-
-
         return results
 
 
-# Add solver to CVXPY solvers
-QP_SOLVERS.insert(0, KKT)
-SOLVER_MAP_QP[KKT] = KKTSolver()
-INSTALLED_SOLVERS.append(KKT)
+#  # Add solver to CVXPY solvers
+#  QP_SOLVERS.insert(0, KKT)
+#  SOLVER_MAP_QP[KKT] = KKTSolver()
+#  INSTALLED_SOLVERS.append(KKT)

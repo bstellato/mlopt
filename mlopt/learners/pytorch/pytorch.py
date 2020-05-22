@@ -1,7 +1,6 @@
 from mlopt.learners.learner import Learner
 import mlopt.settings as stg
 import mlopt.learners.pytorch.utils as u
-from mlopt.learners.pytorch.model import Net
 from mlopt.learners.pytorch.settings import DEFAULT_TRAINING_PARAMS
 import mlopt.error as e
 from tqdm import tqdm
@@ -79,6 +78,16 @@ class PytorchNeuralNet(Learner):
             return False
         return True
 
+    def get_dataloader(self, X, y, batch_size=1):
+        from torch.utils.data import TensorDataset, DataLoader
+        X = self.torch.tensor(X, dtype=torch.float)
+        y = self.torch.tensor(y, dtype=torch.long)
+
+        return DataLoader(TensorDataset(X, y),
+                          batch_size=batch_size,
+                          shuffle=False,
+                          )
+
     def train_epoch(self, dataloader):
 
         # Initialize loss average and summary
@@ -142,6 +151,7 @@ class PytorchNeuralNet(Learner):
         """
         Train single instance of the network for parameters in params
         """
+        from mlopt.learners.pytorch.model import Net
 
         # Create Pytorch Neural Network and port to to device
         self.net = Net(self.n_input,
@@ -154,7 +164,7 @@ class PytorchNeuralNet(Learner):
 
         # Define optimizer
         self.optimizer = self.torch.optim.Adam(self.net.parameters(),
-                                    lr=params['learning_rate'])
+                                               lr=params['learning_rate'])
 
         # Reset seed
         self.torch.manual_seed(1)

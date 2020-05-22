@@ -1,6 +1,6 @@
 import mlopt.settings as stg
 
 
-def value_error(err):
+def error(err, error_type=ValueError):
     stg.logger.error(err)
-    raise ValueError(err)
+    raise error_type(err)

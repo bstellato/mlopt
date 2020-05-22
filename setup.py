@@ -25,6 +25,8 @@ setup(name='mlopt',
                         "joblib",
                         "tqdm",
                         "xgboost",
+                        "torch",
+                        "torchvision",
                         "scikit-umfpack"],
       license='Apache License, Version 2.0',
       )
