@@ -82,3 +82,4 @@ class TestCaching(unittest.TestCase):
             npt.assert_array_almost_equal(caching[i]['cost'],
                                           no_caching[i]['cost'],
                                           decimal=TOL)
+
