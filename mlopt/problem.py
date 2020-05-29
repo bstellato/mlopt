@@ -47,6 +47,10 @@ class Problem(object):
 
         # Canonicalize problem
         self._canonicalize()
+
+        # Check if parameters in matrices (do it only once)
+        self._parameters_in_matrices = self.check_parameters_in_matrices()
+
         self._x = None   # Raw solution
 
         # Add default solver options to solver options
@@ -141,13 +145,65 @@ class Problem(object):
         """Is problem QP representable (LP/QP/MILP/MIQP)"""
         return self.cvxpy_problem.is_qp()
 
-    #  def params_in_vectors(self):
-    #      """Do the parameters affect only problem vectors?"""
-    #      # Use constr parameters()
-    #      #  for c in self.constraints:
-    #          # extract rhs
-    #
-    #          # check if parameters are there
+    @property
+    def parameters_in_matrices(self):
+        """Do we have problem parameters in matrices or only in vectors?
+        Returns: TODO
+
+        """
+        return self._parameters_in_matrices
+
+    def check_parameters_in_matrices(self):
+        """Check if parameters are in matrices.
+
+        Cvxpy works by applying a mapping to the parameter vector such that
+
+        .. code ::
+
+            M_A @ (theta, 1) = vec([A | b])
+            M_P @ (theta, 1) = vec(P)
+
+        Instead of calculating the full mapping :code:`M_A` and :code:`M_P`,
+        we use :code:`reduced_A` and :code:`reduced_P`. See `the cvxpy source
+        <https://stackoverflow.com/questions/13343705/
+        include-long-url-in-sphinx-documentation>`_.
+
+        We then reshape the results :code:`vec([A | b])` and :code:`vec(P)`
+        into :code:`[A | b]` and :code:`P` by using the indices and
+
+
+        Returns:
+            True if parameters appear in the matrices :code:`A` or :code:`P`.
+            False otherwise.
+
+        """
+
+        param_prog = self._cache.param_prog
+
+        # Check [A | b]
+        M_A = param_prog.A
+        n_row_A, n_col_A = M_A.shape
+
+        # -1 to ignore the (theta, 1) offset column
+        for idx in range(n_col_A - 1):
+            col_start = M_A.indptr[idx]
+            col_end = M_A.indptr[idx+1]
+            indices = M_A.indices[col_start:col_end]
+            if any(indices < n_row_A - 1):  # Allow only elements in last row
+                return True
+
+        # Check P
+        M_P = param_prog.P.tocsc()
+        n_row_P, n_col_P = M_P.shape
+        # -1 to ignore the (theta, 1) offset column
+        for idx in range(n_col_P - 1):
+            col_start = M_P.indptr[idx]
+            col_end = M_P.indptr[idx+1]
+            indices = M_P.indices[col_start:col_end]
+            if any(indices):  # Any element => parameters in P
+                return True
+
+        return False
 
     def infeasibility(self, x, data):
         """Compute infeasibility for variables given internally stored solution.
@@ -188,10 +244,11 @@ class Problem(object):
 
         return data, inverse_data, solving_chain
 
-    def solve(self, strategy=None, cache=None):
+    def solve(self, solver=None, strategy=None, cache=None):
         """Solve optimization problem.
 
         Kwargs:
+            solver (string): Solver to use. Defaults to
             strategy (Strategy): Strategy to apply. Default none.
             cache (dict): KKT solver cache
 

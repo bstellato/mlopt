@@ -1,3 +1,4 @@
+import pandas as pd
 from mlopt.problem import Problem
 import mlopt.settings as stg
 from mlopt.learners import LEARNER_MAP, installed_learners
@@ -7,10 +8,9 @@ from mlopt.filter import Filter
 import mlopt.error as e
 from mlopt.utils import n_features, accuracy, suboptimality
 import mlopt.utils as u
-from mlopt.kkt import KKT, create_kkt_matrix, factorize_kkt_matrix
+from mlopt.kkt import create_kkt_matrix, factorize_kkt_matrix
 from mlopt.utils import pandas2array
 from cvxpy import Minimize, Maximize
-import cvxpy.settings as cps
 import numpy as np
 import os
 from glob import glob
@@ -19,6 +19,7 @@ import tarfile
 import pickle as pkl
 from joblib import Parallel, delayed
 from tqdm import tqdm
+from time import time
 
 
 class Optimizer(object):
@@ -219,7 +220,8 @@ class Optimizer(object):
             not_feasible_points = {i: x for i, x in enumerate(results)
                                    if np.isnan(x['x']).any()}
             if not_feasible_points:
-                e.error("Infeasible points found. Number of infeasible points %d" % len(not_feasible_points))
+                e.error("Infeasible points found. Number of infeasible "
+                        "points %d" % len(not_feasible_points))
 
             self.obj_train = [r['cost'] for r in results]
             train_strategies = [r['strategy'] for r in results]
@@ -249,9 +251,10 @@ class Optimizer(object):
 
         # Add factorization faching if
         # 1. Problem is MIQP
-        # TODO: Add the second point!
-        # 2. Parameters enter only in the problem vectors
-        if (self._solver_cache is None) and self._problem.is_qp():
+        # 2. Parameters do not enter in matrices
+        if self._problem.is_qp() and \
+                (self._solver_cache is None) and \
+                not self._problem.parameters_in_matrices:
             self.cache_factors()
 
     def filter_strategies(self, parallel=False):
@@ -305,8 +308,8 @@ class Optimizer(object):
 
         # Define learner
         if learner not in installed_learners():
-            e.error("Learner specified not installed. Available learners are: %s" %
-                    installed_learners())
+            e.error("Learner specified not installed. "
+                    "Available learners are: %s" % installed_learners())
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
                                              n_classes=len(self.encoding),
                                              **learner_options)
@@ -321,7 +324,7 @@ class Optimizer(object):
         self._solver_cache = []
         stg.logger.info("Caching KKT solver factors for each strategy "
                         "(it works only for QP-representable problems "
-                        "with parameters only in constraints RHS)")
+                        "with parameters not in problem matrices)")
         for strategy_idx in tqdm(range(self.n_strategies)):
 
             # Get a parameter giving that strategy
@@ -329,27 +332,37 @@ class Optimizer(object):
             idx_param = np.where(self.y_train == strategy_idx)[0]
             theta = self.X_train.iloc[idx_param[0]]
 
+            # Populate
             self._problem.populate(theta)
 
-            self._problem._relax_disc_var()
+            # Get problem data
+            data, inverse_data, solving_chain = \
+                self._problem._get_problem_data()
 
-            reduced_problem = \
-                self._problem._construct_reduced_problem(strategy)
+            # Apply strategy
+            strategy.apply(data, inverse_data[-1])
 
-            data, full_chain, inv_data = \
-                reduced_problem.get_problem_data(solver=KKT)
+            # Old
+            #  self._problem.populate(theta)
+            #
+            #  self._problem._relax_disc_var()
+            #
+            #  reduced_problem = \
+            #      self._problem._construct_reduced_problem(strategy)
+            #
+            #  data, full_chain, inv_data = \
+            #      reduced_problem.get_problem_data(solver=KKT)
 
+            # Get KKT matrix
             KKT_mat = create_kkt_matrix(data)
             solve_kkt = factorize_kkt_matrix(KKT_mat)
 
             cache = {}
             cache['factors'] = solve_kkt
-            cache['inverse_data'] = inv_data
-            cache['chain'] = full_chain
+            #  cache['inverse_data'] = inverse_data
+            #  cache['chain'] = solving_chain
 
             self._solver_cache += [cache]
-
-            self._problem._restore_disc_var()
 
     def choose_best(self, labels, parallel=False, use_cache=True):
         """
@@ -388,7 +401,8 @@ class Optimizer(object):
         n_jobs = u.get_n_processes(n_best) if parallel else 1
 
         results = Parallel(n_jobs=n_jobs)(
-            delayed(self._solve)(strategy=strategies[j], cache=cache[j])
+            delayed(self._problem.solve)(strategy=strategies[j],
+                                         cache=cache[j])
             for j in range(n_best))
 
         x = [r["x"] for r in results]

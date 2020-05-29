@@ -40,8 +40,6 @@ def eval_metrics(outputs, labels, loss):
     return summary
 
 
-
-
 class RunningAverage():
     """A simple class that maintains the running average of a quantity
 

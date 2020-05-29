@@ -58,7 +58,7 @@ class PytorchNeuralNet(Learner):
         if self.torch.cuda.is_available():
             self.device = self.torch.device("cuda:0")
             stg.logger.info("Using CUDA GPU %s with Pytorch" %
-                         self.torch.cuda.get_device_name(self.device))
+                            self.torch.cuda.get_device_name(self.device))
         else:
             self.device = self.torch.device("cpu")
             stg.logger.info("Using CPU with Pytorch")
@@ -80,8 +80,8 @@ class PytorchNeuralNet(Learner):
 
     def get_dataloader(self, X, y, batch_size=1):
         from torch.utils.data import TensorDataset, DataLoader
-        X = self.torch.tensor(X, dtype=torch.float)
-        y = self.torch.tensor(y, dtype=torch.long)
+        X = self.torch.tensor(X, dtype=self.torch.float)
+        y = self.torch.tensor(y, dtype=self.torch.long)
 
         return DataLoader(TensorDataset(X, y),
                           batch_size=batch_size,
@@ -229,7 +229,7 @@ class PytorchNeuralNet(Learner):
         # Create validation data loader
         # Training data loader will be created when evaluating the model
         # which depends on the batch_size variable
-        valid_dl = u.get_dataloader(X_valid, y_valid)
+        valid_dl = self.get_dataloader(X_valid, y_valid)
 
         stg.logger.info("Split dataset in %d training and %d validation" %
                      (len(train_idx), len(valid_idx)))
@@ -258,7 +258,7 @@ class PytorchNeuralNet(Learner):
             for i in range(n_models):
 
                 # Create dataloader
-                train_dl = u.get_dataloader(X_train, y_train,
+                train_dl = self.get_dataloader(X_train, y_train,
                                             batch_size=params[i]['batch_size'])
 
                 accuracy_vec[i] = self.train_instance(train_dl, valid_dl,
@@ -276,7 +276,7 @@ class PytorchNeuralNet(Learner):
                          "just one set of parameters")
             self.best_params = params[0]
             train_dl = \
-                u.get_dataloader(X_train, y_train,
+                self.get_dataloader(X_train, y_train,
                                  batch_size=self.best_params['batch_size'])
 
         stg.logger.info(self.best_params)

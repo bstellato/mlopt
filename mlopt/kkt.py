@@ -1,17 +1,11 @@
 # Define and solve equality constrained QP
 from cvxpy.reductions.solvers.qp_solvers.qp_solver import QpSolver
 import cvxpy.settings as cps
-from cvxpy.error import SolverError
-#  from cvxpy.reductions.solvers import utilities
-#  from cvxpy.reductions.solvers.defines import \
-    #  SOLVER_MAP_QP, QP_SOLVERS, INSTALLED_SOLVERS
 import cvxpy.interface as intf
 import cvxpy.settings as s
 import scipy.sparse as spa
 from cvxpy.reductions import Solution
 from cvxpy.constraints import Zero
-#  from cvxpy.reductions.cvx_attr2constr import convex_attributes
-#  from cvxpy.reductions.qp2quad_form.qp_matrix_stuffing import ParamQuadProg
 import numpy as np
 
 #  from pypardiso import spsolve
@@ -34,7 +28,7 @@ class CatchSingularMatrixWarnings(object):
     def __enter__(self):
         self.catcher.__enter__()
         warnings.simplefilter("ignore", UmfpackWarning)
-#
+
         warnings.filterwarnings(
             "ignore",
             message="divide by zero encountered in double_scalars"
@@ -124,15 +118,13 @@ class KKTSolver(QpSolver):
                        solver_opts,
                        solver_cache=None):
 
-        KKT_cache = solver_opts.get('KKT_cache', None)
-
         n_var = data[cps.P].shape[0]
         n_con = len(data[cps.B + "_red"])  # Only equality constraints
 
         stg.logger.debug("Solving %d x %d linear system A x = b " %
                          (n_var + n_con, n_var + n_con))
 
-        if KKT_cache is None:
+        if solver_cache is None:
             stg.logger.debug("Not using KKT solver cache")
 
             KKT, rhs = create_kkt_system(data)
@@ -150,7 +142,7 @@ class KKTSolver(QpSolver):
             t_start = time.time()
 
             with CatchSingularMatrixWarnings():
-                x = KKT_cache['factors'](rhs)
+                x = solver_cache['factors'](rhs)
             t_end = time.time()
 
         # Get results

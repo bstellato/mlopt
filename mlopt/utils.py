@@ -68,7 +68,7 @@ def n_features(df):
     int
         Number of features.
     """
-    return np.sum(np.atleast_1d(x).size for x in df.iloc[0])
+    return sum(np.atleast_1d(x).size for x in df.iloc[0])
 
     #  n = 0
     #  for c in df.columns.values:

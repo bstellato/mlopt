@@ -77,7 +77,7 @@ class Strategy(object):
             same_int_vars = \
                 np.all(self.int_vars == other.int_vars)
 
-            return same_tight_constraints and same_int_vars
+            return same_int_vars
         else:
             return False
 
@@ -127,13 +127,9 @@ class Strategy(object):
         A_fix = spa.eye(n_var, format='csc')[data[cps.INT_IDX]]
         b_fix = self.int_vars
 
-        # Combine in A and b  # remove (F and g)
+        # Combine in A_ref and b_red
         data[cps.A + "_red"] = spa.vstack([data[cps.A], A_active, A_fix])
         data[cps.B + "_red"] = np.concatenate([data[cps.B], b_active, b_fix])
-
-        # Remove F and g (no longer have inequalities)
-        #  data[cps.F + "_red"] = spa.csr_matrix((0, n_var))
-        #  data[cps.G + "_red"] = -np.array([])
 
         # Store inverse data
         inverse_data['tight_constraints'] = self.tight_constraints
@@ -156,17 +152,17 @@ def unique_strategies(strategies):
     Strategy set :
         Unique strategies.
     """
-    # Using set
-    unique = list(set(strategies))
+    # Using set (we must define hash to use this)
+    #  unique = list(set(strategies))
 
     # Using list
-    #  unique = []
-    #  # traverse for all elements
-    #  for x in strategies:
-    #      # check if x exists in unique_list or not
-    #      if x not in unique:
-    #          unique.append(x)
-    #
+    unique = []
+    # traverse for all elements
+    for x in strategies:
+        # check if x exists in unique_list or not
+        if x not in unique:
+            unique.append(x)
+
     return unique
 
 
