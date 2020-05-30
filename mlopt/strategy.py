@@ -66,18 +66,13 @@ class Strategy(object):
         """Overrides the default equality implementation"""
         if isinstance(other, Strategy):
 
-            # Compare tight constraints
-            same_tight_constraints = \
-                np.all(self.tight_constraints == other.tight_constraints)
-
-            if not same_tight_constraints:
+            if np.any(self.tight_constraints != other.tight_constraints):
                 return False
 
-            # Compare integer variables
-            same_int_vars = \
-                np.all(self.int_vars == other.int_vars)
+            if np.any(self.int_vars != other.int_vars):
+                return False
 
-            return same_int_vars
+            return True
         else:
             return False
 

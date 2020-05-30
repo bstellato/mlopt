@@ -1,7 +1,6 @@
 from joblib import Parallel, delayed
 import mlopt.settings as stg
 import numpy as np
-from mlopt.strategy import strategy_distance
 import mlopt.utils as u
 from tqdm import tqdm
 
@@ -122,9 +121,6 @@ class Filter(object):
         selected_strategies = \
             self.select_strategies(samples_fraction=samples_fraction)
 
-        stg.logger.info("Number of chosen strategies %d" %
-                     len(selected_strategies))
-
         # Reassign encodings and labels
         self.encoding = [self.encoding[i] for i in selected_strategies]
 
@@ -134,8 +130,8 @@ class Filter(object):
                                       not in selected_strategies])
 
         stg.logger.info("Discarded strategies for %d samples (%.2f %%)" %
-                     (len(discarded_samples),
-                      (100 * len(discarded_samples) / n_samples)))
+                        (len(discarded_samples),
+                         (100 * len(discarded_samples) / n_samples)))
 
         stg.logger.info("Reassign samples with discarded strategies")
 
@@ -145,8 +141,8 @@ class Filter(object):
                                           parallel=parallel)
 
         stg.logger.info("Average cost degradation = %.2e %%" %
-                     (100 * np.mean(degradation)))
+                        (100 * np.mean(degradation)))
         stg.logger.info("Max cost degradation = %.2e %%" %
-                     (100 * np.max(degradation)))
+                        (100 * np.max(degradation)))
 
         return self.y_train, self.encoding

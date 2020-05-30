@@ -5,7 +5,6 @@ import mlopt
 from mlopt.sampling import uniform_sphere_sample
 import pandas as pd
 import numpy.testing as npt
-import logging
 from mlopt.tests.settings import TEST_TOL as TOL
 
 
@@ -82,4 +81,3 @@ class TestCaching(unittest.TestCase):
             npt.assert_array_almost_equal(caching[i]['cost'],
                                           no_caching[i]['cost'],
                                           decimal=TOL)
-

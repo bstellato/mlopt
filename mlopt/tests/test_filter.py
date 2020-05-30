@@ -4,7 +4,7 @@ import mlopt
 from mlopt.sampling import uniform_sphere_sample
 import pandas as pd
 import cvxpy as cp
-import logging
+from mlopt.settings import logger
 
 
 class TestFilter(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestFilter(unittest.TestCase):
         gamma = 1.0
         mu = cp.Parameter(n, name='mu')
         x = cp.Variable(n)
-        cost = - mu * x + gamma * cp.quad_form(x, Sigma) + .5 * cp.norm(x, 1)
+        cost = - mu @ x + gamma * cp.quad_form(x, Sigma) + .5 * cp.norm(x, 1)
         constraints = [cp.sum(x) == 1, x >= 0]
         problem = cp.Problem(cp.Minimize(cost), constraints)
 
@@ -70,19 +70,19 @@ class TestFilter(unittest.TestCase):
 
         self.m.get_samples(self.df_train, parallel=True,
                            filter_strategies=False)
-        logging.info("Number of original strategies %d" %
-                     len(self.m.encoding))
+        logger.info("Number of original strategies %d" %
+                    len(self.m.encoding))
         self.m.filter_strategies(parallel=True)
-        logging.info("Number of condensed strategies (parallel): %d" %
-                     len(self.m.encoding))
+        logger.info("Number of condensed strategies (parallel): %d" %
+                    len(self.m.encoding))
         n_filter_parallel = len(self.m.encoding)
 
-        logging.info("Recompute samples to cleanup filtered ones")
+        logger.info("Recompute samples to cleanup filtered ones")
         self.m.get_samples(self.df_train, parallel=False,
                            filter_strategies=False)
         self.m.filter_strategies(parallel=False)
-        logging.info("Number of condensed strategies (serial): %d" %
-                     len(self.m.encoding))
+        logger.info("Number of condensed strategies (serial): %d" %
+                    len(self.m.encoding))
         n_filter_serial = len(self.m.encoding)
 
         assert len(self.m._filter.encoding_full) >= n_filter_parallel

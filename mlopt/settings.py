@@ -11,6 +11,7 @@ logger.setLevel(logging.INFO)
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_formatter = logging.Formatter('%(message)s')
 logger.addHandler(stdout_handler)
+logger.propagate = False   # Disable double logging
 
 # Add file handler
 #  file_handler = logging.FileHandler('mlopt.log')
