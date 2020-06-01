@@ -10,13 +10,13 @@ from mlopt.sampling import uniform_sphere_sample
 def sample_portfolio(n, k, T=5, N=100):
     """Sample portfolio parameters."""
 
-    rad = 0.001
+    rad = 0.01
 
     # mean values
     np.random.seed(0)
-    F_bar = np.random.randn(n, k)
+    SigmaF_FT_bar = np.random.randn(k, n)
     sqrt_D_bar = np.random.rand(n)
-    Sigma_F_diag_bar = np.random.rand(k)
+    #  Sigma_F_diag_bar = np.random.rand(k)
     hat_r_bar = np.random.rand(n)
     w_init_bar = np.random.rand(n)
     w_init_bar /= np.sum(w_init_bar)
@@ -27,14 +27,15 @@ def sample_portfolio(n, k, T=5, N=100):
         w_init = uniform_sphere_sample(w_init_bar, rad).flatten()
         w_init /= np.sum(w_init)
 
-        F = uniform_sphere_sample(F_bar.flatten(), rad).reshape(n, k)
-        Sigma_F = np.diag(uniform_sphere_sample(Sigma_F_diag_bar, rad)[0])
+        SigmaF_FT = uniform_sphere_sample(SigmaF_FT_bar.flatten(),
+                                          rad).reshape(k, n)
+        #  Sigma_F = np.diag(uniform_sphere_sample(Sigma_F_diag_bar, rad)[0])
 
         x = pd.Series(
             {
-                "F": F,
+                #  "F": F,
                 "sqrt_D": uniform_sphere_sample(sqrt_D_bar, rad).flatten(),
-                "Sigma_F": Sigma_F,
+                "SigmaF_FT": SigmaF_FT,
                 "w_init": w_init,
             }
         )
@@ -68,8 +69,8 @@ class TestMatrixParams(unittest.TestCase):
             cp.Parameter(n, name="hat_r_%s" % str(t)) for t in range(1, T + 1)
         ]
         w_init = cp.Parameter(n, name="w_init")
-        F = cp.Parameter((n, k), name="F")
-        Sigma_F = cp.Parameter((k, k), PSD=True, name="Sigma_F")
+        #  F = cp.Parameter((n, k), name="F")
+        sqrt_SigmaF_FT = cp.Parameter((k, n), name="SigmaF_FT")
         sqrt_D = cp.Parameter(n, name="sqrt_D")
 
         # Formulate problem
@@ -81,8 +82,9 @@ class TestMatrixParams(unittest.TestCase):
         for t in range(1, T + 1):
 
             risk_cost = lam["risk"] * (
-                cp.quad_form(F.T * w[t], Sigma_F)
-                + cp.sum_squares(cp.multiply(sqrt_D, w[t]))
+                #  cp.quad_form(F.T * w[t], Sigma_F)
+                cp.sum_squares(sqrt_SigmaF_FT @ w[t]) +
+                cp.sum_squares(cp.multiply(sqrt_D, w[t]))
             )
 
             holding_cost = lam["borrow"] * cp.sum(borrow_cost * cp.neg(w[t]))
@@ -90,7 +92,7 @@ class TestMatrixParams(unittest.TestCase):
             transaction_cost = lam["norm1_trade"] * cp.norm(w[t] - w[t - 1], 1)
 
             cost += (
-                hat_r[t - 1] * w[t]
+                hat_r[t - 1] @ w[t]
                 - risk_cost
                 - holding_cost
                 - transaction_cost
@@ -100,7 +102,9 @@ class TestMatrixParams(unittest.TestCase):
 
         # Define optimizer
         problem = cp.Problem(cp.Maximize(cost), constraints)
-        m = Optimizer(problem, name="portfolio")
+        m = Optimizer(problem)
+
+        self.assertTrue(m._problem.parameters_in_matrices)
 
         # Sample parameters
         df_train = sample_portfolio(n, k, N=100)
@@ -126,7 +130,7 @@ class TestMatrixParams(unittest.TestCase):
             "n_epochs": [10],
         }
         # TODO: Fix parallel=True. It crashes joblib
-        m.train(df_train, parallel=False, learner=PYTORCH, params=params)
+        m.train(df_train, parallel=True, learner=PYTORCH, params=params)
 
         # Assert fewer strategies than training samples
         self.assertTrue(len(m.encoding) < len(df_train))
