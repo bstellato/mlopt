@@ -661,7 +661,6 @@ class Optimizer(object):
         n_theta = n_features(theta)  # Number of parameters
         n_strategies = len(self.encoding)  # Number of strategies
 
-
         # Compute comparative statistics
         time_comp = np.array([time_test[i] / time_pred[i]
                               for i in range(n_test)])

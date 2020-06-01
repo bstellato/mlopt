@@ -10,6 +10,7 @@ import mlopt.error as e
 import cvxpy as cp
 import cvxpy.settings as cps
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
+from cvxpy.reductions.solvers.solving_chain import SolvingChain
 # Progress bars
 from tqdm import tqdm
 
@@ -39,6 +40,9 @@ class Problem(object):
         self.verbose = verbose
 
         # Define problem
+        if not cvxpy_problem.is_dcp():
+            e.value_error("CVXPY Problem is not DCP")
+
         if not cvxpy_problem.is_qp():
             e.value_error("MLOPT supports only MIQP-based problems " +
                           "LP/QP/MILP/MIQP")
@@ -264,16 +268,16 @@ class Problem(object):
 
         if strategy is not None:
             strategy.apply(data, inverse_data[-1])
-            solver = KKTSolver()
-            solving_chain.solver = solver
-            solving_chain.reductions[-1] = solver
+            solving_chain = \
+                SolvingChain(problem=self.cvxpy_problem,
+                             reductions=solving_chain.reductions[:-1] +
+                             [KKTSolver()])
             solver_options = {}
         else:
-            solver = solving_chain.solver
             solver_options = self.solver_options
             cache = self.cvxpy_problem._solver_cache
 
-        raw_solution = solver.solve_via_data(
+        raw_solution = solving_chain.solver.solve_via_data(
             data, warm_start=True, verbose=self.verbose,
             solver_opts=solver_options,
             solver_cache=cache

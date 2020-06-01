@@ -46,8 +46,8 @@ class TestParallel(unittest.TestCase):
         cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        cvxpy_problem = cp.Problem(cp.Maximize(cost), constraints)
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve for all theta in serial
         results_serial = problem.solve_parametric(df,
@@ -87,7 +87,7 @@ class TestParallel(unittest.TestCase):
         gamma = 1.0
         mu = cp.Parameter(n, name='mu')
         x = cp.Variable(n)
-        cost = - mu * x + gamma * cp.quad_form(x, Sigma)
+        cost = - mu @ x + gamma * cp.quad_form(x, Sigma)
         constraints = [cp.sum(x) == 1, x >= 0]
 
         # Define optimizer
@@ -192,7 +192,3 @@ class TestParallel(unittest.TestCase):
     #                                        parallel[i]['cost'],
     #                                        decimal=TOL)
     #
-
-
-if __name__ == '__main__':
-    unittest.main()

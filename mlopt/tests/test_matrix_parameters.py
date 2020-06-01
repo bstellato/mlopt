@@ -29,7 +29,6 @@ def sample_portfolio(n, k, T=5, N=100):
 
         SigmaF_FT = uniform_sphere_sample(SigmaF_FT_bar.flatten(),
                                           rad).reshape(k, n)
-        #  Sigma_F = np.diag(uniform_sphere_sample(Sigma_F_diag_bar, rad)[0])
 
         x = pd.Series(
             {
@@ -109,27 +108,12 @@ class TestMatrixParams(unittest.TestCase):
         # Sample parameters
         df_train = sample_portfolio(n, k, N=100)
 
-        # DEBUG: Compare strategy and samples
-        # Populate and solve and againj
-        #  res = []
-        #  m._problem.populate(df_train.iloc[0])
-        #  res.append(m._problem.solve())
-        #  m._problem.populate(df_train.iloc[0])
-        #  res.append(m._problem.solve())
-        #  print(res[0]['strategy'] == res[1]['strategy'])
-        #  for c in df_train.columns:
-        #      print("%s" % (c), (df_train.iloc[0][c] == df_train.iloc[5][c]).all())
-        # Populate and solve again
-        #  import ipdb; ipdb.set_trace()
-
-        #
-        #  # Train and test using pytorch
+        # Train and test using pytorch
         params = {
             "learning_rate": [0.001],
             "batch_size": [64],
             "n_epochs": [10],
         }
-        # TODO: Fix parallel=True. It crashes joblib
         m.train(df_train, parallel=True, learner=PYTORCH, params=params)
 
         # Assert fewer strategies than training samples
