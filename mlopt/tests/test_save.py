@@ -49,8 +49,8 @@ class TestSave(unittest.TestCase):
         self.cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        self.optimizer = Optimizer(cp.Minimize(self.cost),
-                                   self.constraints)
+        problem = cp.Minimize(self.cost), self.constraints
+        self.optimizer = Optimizer(problem)
 
         #  # Define learners
         #  self.learners = [
@@ -89,8 +89,9 @@ class TestSave(unittest.TestCase):
 
                 # Create new optimizer, load data, train and
                 # evaluate performance
-                self.optimizer = Optimizer(cp.Minimize(self.cost),
-                                           self.constraints)
+                problem = cp.Minimize(self.cost), self.constraints
+                self.optimizer = Optimizer(problem)
+
                 m = self.optimizer
                 m.load_training_data(data_file)
                 m.train(parallel=True,

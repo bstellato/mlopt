@@ -1,6 +1,4 @@
 import numpy as np
-import torch
-from torch.utils.data import TensorDataset, DataLoader
 import mlopt.settings as stg
 
 
@@ -40,16 +38,6 @@ def eval_metrics(outputs, labels, loss):
     summary['loss'] = loss.item()
 
     return summary
-
-
-def get_dataloader(X, y, batch_size=1):
-    X = torch.tensor(X, dtype=torch.float)
-    y = torch.tensor(y, dtype=torch.long)
-
-    return DataLoader(TensorDataset(X, y),
-                      batch_size=batch_size,
-                      shuffle=False,
-                      )
 
 
 class RunningAverage():

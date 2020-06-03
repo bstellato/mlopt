@@ -1,8 +1,8 @@
 from mlopt.learners.learner import Learner
 import mlopt.settings as stg
 import mlopt.learners.pytorch.utils as u
-from mlopt.learners.pytorch.model import Net
 from mlopt.learners.pytorch.settings import DEFAULT_TRAINING_PARAMS
+import mlopt.error as e
 from tqdm import tqdm
 import os
 import numpy as np
@@ -24,7 +24,7 @@ class PytorchNeuralNet(Learner):
         """
 
         if not PytorchNeuralNet.is_installed():
-            raise ValueError("Pytorch not installed")
+            e.error("Pytorch not installed")
 
         # import torch
         import torch
@@ -58,7 +58,7 @@ class PytorchNeuralNet(Learner):
         if self.torch.cuda.is_available():
             self.device = self.torch.device("cuda:0")
             stg.logger.info("Using CUDA GPU %s with Pytorch" %
-                         self.torch.cuda.get_device_name(self.device))
+                            self.torch.cuda.get_device_name(self.device))
         else:
             self.device = self.torch.device("cpu")
             stg.logger.info("Using CPU with Pytorch")
@@ -77,6 +77,16 @@ class PytorchNeuralNet(Learner):
         except ImportError:
             return False
         return True
+
+    def get_dataloader(self, X, y, batch_size=1):
+        from torch.utils.data import TensorDataset, DataLoader
+        X = self.torch.tensor(X, dtype=self.torch.float)
+        y = self.torch.tensor(y, dtype=self.torch.long)
+
+        return DataLoader(TensorDataset(X, y),
+                          batch_size=batch_size,
+                          shuffle=False,
+                          )
 
     def train_epoch(self, dataloader):
 
@@ -141,6 +151,7 @@ class PytorchNeuralNet(Learner):
         """
         Train single instance of the network for parameters in params
         """
+        from mlopt.learners.pytorch.model import Net
 
         # Create Pytorch Neural Network and port to to device
         self.net = Net(self.n_input,
@@ -153,7 +164,7 @@ class PytorchNeuralNet(Learner):
 
         # Define optimizer
         self.optimizer = self.torch.optim.Adam(self.net.parameters(),
-                                    lr=params['learning_rate'])
+                                               lr=params['learning_rate'])
 
         # Reset seed
         self.torch.manual_seed(1)
@@ -218,7 +229,7 @@ class PytorchNeuralNet(Learner):
         # Create validation data loader
         # Training data loader will be created when evaluating the model
         # which depends on the batch_size variable
-        valid_dl = u.get_dataloader(X_valid, y_valid)
+        valid_dl = self.get_dataloader(X_valid, y_valid)
 
         stg.logger.info("Split dataset in %d training and %d validation" %
                      (len(train_idx), len(valid_idx)))
@@ -247,7 +258,7 @@ class PytorchNeuralNet(Learner):
             for i in range(n_models):
 
                 # Create dataloader
-                train_dl = u.get_dataloader(X_train, y_train,
+                train_dl = self.get_dataloader(X_train, y_train,
                                             batch_size=params[i]['batch_size'])
 
                 accuracy_vec[i] = self.train_instance(train_dl, valid_dl,
@@ -265,7 +276,7 @@ class PytorchNeuralNet(Learner):
                          "just one set of parameters")
             self.best_params = params[0]
             train_dl = \
-                u.get_dataloader(X_train, y_train,
+                self.get_dataloader(X_train, y_train,
                                  batch_size=self.best_params['batch_size'])
 
         stg.logger.info(self.best_params)
@@ -295,9 +306,7 @@ class PytorchNeuralNet(Learner):
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".pkl"):
-            err = "Pytorch pkl file does not exist."
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Pytorch pkl file does not exist.")
 
         # Load state dictionary from file
         # https://pytorch.org/tutorials/beginner/saving_loading_models.html

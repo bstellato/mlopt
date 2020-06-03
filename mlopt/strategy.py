@@ -1,5 +1,8 @@
 import numpy as np
 import mlopt.settings as stg
+import mlopt.error as e
+import cvxpy.settings as cps
+import scipy.sparse as spa
 
 
 class Strategy(object):
@@ -8,61 +11,48 @@ class Strategy(object):
 
     Parameters
     ----------
-    tight_constraints : dict of numpy int arrays
-        Set of tight constraints. The keys are the CVXPY constraint ids.
-        The values are numpy bool arrays (True/False for tight/non tight).
-    int_vars : dict of numpy int arrays
-        Value of the integer variables. The keys are CVXPY variable id.
-        The values are numpy int arrays.
+    tight_constraints : numpy bool array
+        Set of tight constraints. The values are numpy bool arrays
+        (True/False for tight/non tight).
+    int_vars : numpy bool array
+        Value of the integer variables. The values are numpy int arrays.
     """
 
-    def __init__(self, tight_constraints, int_vars):
-        # Check tight constraints
-        for _, v in tight_constraints.items():
-            if np.any(np.logical_or(v < 0, v > 1)):
-                err = "Tight constraints vector is not boolean."
-                stg.logger.error(err)
-                raise ValueError(err)
+    def __init__(self, x, data):
+        """Initialize strategy from problem data."""
 
-        # Check that integer variables are non negative
-        #  for _, v in int_vars.items():
-        #      if np.any(v < 0):
-        #          raise ValueError("Integer variables vector " +
-        #                           "has negative entries.")
+        self.tight_constraints = self.get_tight_constraints(x, data)
+        self.int_vars = x[data[cps.INT_IDX]]
 
-        # Check that tight constraints are not
-        self.tight_constraints = tight_constraints
-        self.int_vars = int_vars
+    def get_tight_constraints(self, x, data):
+        """Compute tight constraints for solution x
 
-    def _compare_arrays_dict(self, d1, d2):
-        """Compare dictionaries of numpy arrays"""
-        if len(d1) != len(d2):
-            return False
-        for key in d1.keys():
-            try:
-                isequal = np.array_equal(d1[key], d2[key])
-            except KeyError:
-                return False
-            if not isequal:
-                return False
-        return True
+        Args:
+            data (TODO): TODO
+            x (TODO): TODO
 
-    def __sprint_dict(self, d):
-        s = ""
-        for attribute, value in d.items():
-            s += '      {:>5}: {}\n'.format(attribute, value)
-        return s.rstrip()
+        Returns: TODO
+
+        """
+        # Check only inequalities
+        F, g = data[cps.F], data[cps.G]
+
+        tight_constraints = np.array([], dtype=np.bool)
+
+        # Constraint is tight if ||F * x - g|| <= eps (1 + rel_tol)
+        if F.size > 0:
+            tight_constraints = np.abs(F.dot(x) - g) <= \
+                stg.TIGHT_CONSTRAINTS_TOL * (1 + np.linalg.norm(g, np.inf))
+
+        return tight_constraints
 
     def __repr__(self):
         string = "Strategy\n"
         string += "  - Tight constraints:\n"
-        string += "         id: elements\n"
-        string += self.__sprint_dict(self.tight_constraints)
-        string += "\n"
+        string += self.tight_constraints.__str__() + "\n"
         if len(self.int_vars) > 0:
             string += "  - Integer variables values:\n"
-            string += "         id: elements\n"
-            string += self.__sprint_dict(self.int_vars)
+            string += self.int_vars.__str__() + "\n"
         return string
 
     # TODO: Implement hash if unique list comparison starts getting slow
@@ -76,21 +66,71 @@ class Strategy(object):
         """Overrides the default equality implementation"""
         if isinstance(other, Strategy):
 
-            # Compare tight constraints
-            same_tight_constraints = \
-                self._compare_arrays_dict(self.tight_constraints,
-                                          other.tight_constraints)
-
-            if not same_tight_constraints:
+            if np.any(self.tight_constraints != other.tight_constraints):
                 return False
 
-            # Compare integer variables
-            same_int_vars = self._compare_arrays_dict(self.int_vars,
-                                                      other.int_vars)
+            if np.any(self.int_vars != other.int_vars):
+                return False
 
-            return same_tight_constraints and same_int_vars
+            return True
         else:
             return False
+
+    def accepts(self, data):
+        """Check if strategy is compatible with current problem.
+        If not, it raises an error.
+
+        TODO: Add check to see if we match problem type
+
+        Args:
+            data (TODO): TODO
+
+        """
+
+        if len(self.tight_constraints) != data['n_ineq']:
+            e.warn("Tight constraints not compatible with problem. " +
+                   "Different than the number of inequality constraints.")
+            return False
+
+        if len(self.int_vars) != len(data['int_vars_idx']):
+            e.warn("Integer variables not compatible " +
+                   "with problem. IDs not " +
+                   "matching an integer variable.")
+            return False
+
+        return True
+
+    def apply(self, data, inverse_data):
+        """TODO: Docstring for apply.
+
+        Args:
+            data (TODO): TODO
+            inverse_data (TODO): TODO
+
+        Returns: TODO
+
+        """
+        n_eq, n_var = data[cps.A].shape
+        n_ineq = data[cps.F].shape[0]
+
+        # Edit data by increasing the dimension of A
+        # 1. Fix tight constraints: F_active x = g_active
+        A_active = data[cps.F][self.tight_constraints]
+        b_active = data[cps.G][self.tight_constraints]
+
+        # 2. Fix integer variables: F_fix x = g_fix
+        A_fix = spa.eye(n_var, format='csc')[data[cps.INT_IDX]]
+        b_fix = self.int_vars
+
+        # Combine in A_ref and b_red
+        data[cps.A + "_red"] = spa.vstack([data[cps.A], A_active, A_fix])
+        data[cps.B + "_red"] = np.concatenate([data[cps.B], b_active, b_fix])
+
+        # Store inverse data
+        inverse_data['tight_constraints'] = self.tight_constraints
+        inverse_data['int_vars'] = self.int_vars
+        inverse_data['n_eq'] = n_eq
+        inverse_data['n_ineq'] = n_ineq
 
 
 def unique_strategies(strategies):
@@ -107,14 +147,14 @@ def unique_strategies(strategies):
     Strategy set :
         Unique strategies.
     """
-    # Using set
+    # Using set (we must define hash to use this)
     #  unique = list(set(strategies))
 
     # Using list
     unique = []
     # traverse for all elements
     for x in strategies:
-        # check if exists in unique_list or not
+        # check if x exists in unique_list or not
         if x not in unique:
             unique.append(x)
 
@@ -160,20 +200,7 @@ def encode_strategies(strategies):
 
 def strategy2array(s):
     """Convert strategy to array"""
-    if s.tight_constraints:
-        s_tight = np.concatenate(
-            [np.atleast_1d(v) for k, v in sorted(s.tight_constraints.items())]
-        )
-    else:
-        s_tight = np.array([])
-    if s.int_vars:
-        s_int = np.concatenate(
-            [np.atleast_1d(v) for k, v in sorted(s.int_vars.items())]
-        )
-    else:
-        s_int = np.array([])
-
-    return np.concatenate((s_tight, s_int))
+    return np.concatenate([s.tight_constraints, s.int_vars])
 
 
 def strategy_distance(a, b):

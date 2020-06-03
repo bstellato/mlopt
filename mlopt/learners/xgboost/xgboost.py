@@ -2,6 +2,7 @@ from mlopt.learners.learner import Learner
 import mlopt.learners.xgboost.settings as xgbstg
 import mlopt.settings as stg
 from mlopt.utils import get_n_processes
+import mlopt.error as e
 import numpy as np
 import os
 import time
@@ -20,7 +21,7 @@ class XGBoost(Learner):
             Learner options as a dictionary.
         """
         if not XGBoost.is_installed():
-            raise ValueError("XGBoost not installed")
+            e.error("XGBoost not installed")
 
         # Import julia and IAI module
         from xgboost.sklearn import XGBClassifier

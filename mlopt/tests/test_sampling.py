@@ -58,8 +58,8 @@ class TestSampling(unittest.TestCase):
         self.cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        self.optimizer = Optimizer(cp.Minimize(self.cost),
-                                   self.constraints)
+        problem = cp.Minimize(self.cost), self.constraints
+        self.optimizer = Optimizer(problem)
 
         # Test set
         self.df_test = sampling_function(n_test)

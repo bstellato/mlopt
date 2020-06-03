@@ -5,7 +5,6 @@ import mlopt
 from mlopt.sampling import uniform_sphere_sample
 import pandas as pd
 import numpy.testing as npt
-import logging
 from mlopt.tests.settings import TEST_TOL as TOL
 
 
@@ -23,13 +22,12 @@ class TestCaching(unittest.TestCase):
         gamma = 1.0
         mu = cp.Parameter(n, name='mu')
         x = cp.Variable(n)
-        cost = - mu * x + gamma * cp.quad_form(x, Sigma) + .5 * cp.norm(x, 1)
+        cost = - mu @ x + gamma * cp.quad_form(x, Sigma) + .5 * cp.norm(x, 1)
         constraints = [cp.sum(x) == 1, x >= 0]
+        problem = cp.Problem(cp.Minimize(cost), constraints)
 
         # Define optimizer
-        # Force mosek to be single threaded
-        m = mlopt.Optimizer(cp.Minimize(cost),
-                            constraints,
+        m = mlopt.Optimizer(problem,
                             #  log_level=logging.DEBUG
                             )
 
@@ -37,7 +35,7 @@ class TestCaching(unittest.TestCase):
         Sample points
         '''
         theta_bar = 10 * np.random.rand(n)
-        radius = 1.0
+        radius = 10.0
 
         '''
         Train and solve
@@ -83,4 +81,3 @@ class TestCaching(unittest.TestCase):
             npt.assert_array_almost_equal(caching[i]['cost'],
                                           no_caching[i]['cost'],
                                           decimal=TOL)
-

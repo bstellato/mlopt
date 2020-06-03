@@ -1,17 +1,16 @@
-from mlopt.problem import Problem, solve_with_strategy
+import pandas as pd
+from mlopt.problem import Problem
 import mlopt.settings as stg
 from mlopt.learners import LEARNER_MAP, installed_learners
 from mlopt.sampling import Sampler
 from mlopt.strategy import encode_strategies
 from mlopt.filter import Filter
+import mlopt.error as e
 from mlopt.utils import n_features, accuracy, suboptimality
 import mlopt.utils as u
-from mlopt.kkt import KKT, create_kkt_matrix, factorize_kkt_matrix
+from mlopt.kkt import create_kkt_matrix, factorize_kkt_matrix
 from mlopt.utils import pandas2array
 from cvxpy import Minimize, Maximize
-from time import time
-import cvxpy.settings as cps
-import pandas as pd
 import numpy as np
 import os
 from glob import glob
@@ -20,7 +19,7 @@ import tarfile
 import pickle as pkl
 from joblib import Parallel, delayed
 from tqdm import tqdm
-import sys
+from time import time
 
 
 class Optimizer(object):
@@ -29,7 +28,7 @@ class Optimizer(object):
     """
 
     def __init__(self,
-                 objective, constraints,
+                 cvxpy_problem,
                  name="problem",
                  log_level=None,
                  parallel=True,
@@ -40,10 +39,8 @@ class Optimizer(object):
 
         Parameters
         ----------
-        objective : cvxpy objective
-            Objective defined in CVXPY.
-        constraints : cvxpy constraints
-            Constraints defined in CVXPY.
+        problem : cvxpy.Problem
+            Problem in CVXPY format.
         name : str
             Problem name.
         solver_options : dict, optional
@@ -52,13 +49,8 @@ class Optimizer(object):
 
         if log_level is not None:
             stg.logger.setLevel(log_level)
-        # handler = logging.StreamHandler(sys.stdout)
-        # handler.setLevel(logging.DEBUG)
-        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        # handler.setFormatter(formatter)
-        # root.addHandler(handler)
 
-        self._problem = Problem(objective, constraints,
+        self._problem = Problem(cvxpy_problem,
                                 solver=stg.DEFAULT_SOLVER,
                                 tight_constraints=tight_constraints,
                                 **solver_options)
@@ -73,10 +65,8 @@ class Optimizer(object):
     def n_strategies(self):
         """Number of strategies."""
         if self.encoding is None:
-            err = "Model has been trained yet to " + \
-                "return the number of strategies."
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Model has been trained yet to " +
+                    "return the number of strategies.")
 
         return len(self.encoding)
 
@@ -84,9 +74,10 @@ class Optimizer(object):
         """Problem variables."""
         return self._problem.variables()
 
+    @property
     def parameters(self):
         """Problem parameters."""
-        return self._problem.parameters()
+        return self._problem.parameters
 
     @property
     def n_parameters(self):
@@ -141,10 +132,8 @@ class Optimizer(object):
                 os.remove(file_name)
 
         if not self.samples_present():
-            err = "You need to get the strategies " + \
-                "from the data first by training the model."
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("You need to get the strategies " +
+                    "from the data first by training the model.")
 
         # Save to file
         with open(file_name, 'wb') \
@@ -176,7 +165,7 @@ class Optimizer(object):
 
         # Check if file exists
         if not os.path.isfile(file_name):
-            raise ValueError("File %s does not exist." % file_name)
+            e.error("File %s does not exist." % file_name)
 
         # Load optimizer
         with open(file_name, "rb") as f:
@@ -207,14 +196,10 @@ class Optimizer(object):
 
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
-            err = "Not enough arguments to train the model"
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Not enough arguments to train the model")
 
         if X is not None and sampling_fn is not None:
-            err = "You can pass only one value between X and sampling_fn"
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("You can pass only one value between X and sampling_fn")
 
         # Check if data is passed, otherwise train
         #  if (X is not None) and not self.samples_present():
@@ -235,9 +220,8 @@ class Optimizer(object):
             not_feasible_points = {i: x for i, x in enumerate(results)
                                    if np.isnan(x['x']).any()}
             if not_feasible_points:
-                e = "Infeasible points found. Number of infeasible points %d" % len(not_feasible_points)
-                stg.logger.error(e)
-                raise ValueError(e)
+                e.error("Infeasible points found. Number of infeasible "
+                        "points %d" % len(not_feasible_points))
 
             self.obj_train = [r['cost'] for r in results]
             train_strategies = [r['strategy'] for r in results]
@@ -267,9 +251,10 @@ class Optimizer(object):
 
         # Add factorization faching if
         # 1. Problem is MIQP
-        # TODO: Add the second point!
-        # 2. Parameters enter only in the problem vectors
-        if (self._solver_cache is None) and self._problem.is_qp():
+        # 2. Parameters do not enter in matrices
+        if self._problem.is_qp() and \
+                (self._solver_cache is None) and \
+                not self._problem.parameters_in_matrices:
             self.cache_factors()
 
     def filter_strategies(self, parallel=False):
@@ -323,8 +308,8 @@ class Optimizer(object):
 
         # Define learner
         if learner not in installed_learners():
-            raise ValueError("Learner specified not installed. Available learners are: %s" %
-                             installed_learners())
+            e.error("Learner specified not installed. "
+                    "Available learners are: %s" % installed_learners())
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
                                              n_classes=len(self.encoding),
                                              **learner_options)
@@ -339,7 +324,7 @@ class Optimizer(object):
         self._solver_cache = []
         stg.logger.info("Caching KKT solver factors for each strategy "
                         "(it works only for QP-representable problems "
-                        "with parameters only in constraints RHS)")
+                        "with parameters not in problem matrices)")
         for strategy_idx in tqdm(range(self.n_strategies)):
 
             # Get a parameter giving that strategy
@@ -347,27 +332,37 @@ class Optimizer(object):
             idx_param = np.where(self.y_train == strategy_idx)[0]
             theta = self.X_train.iloc[idx_param[0]]
 
+            # Populate
             self._problem.populate(theta)
 
-            self._problem._relax_disc_var()
+            # Get problem data
+            data, inverse_data, solving_chain = \
+                self._problem._get_problem_data()
 
-            reduced_problem = \
-                self._problem._construct_reduced_problem(strategy)
+            # Apply strategy
+            strategy.apply(data, inverse_data[-1])
 
-            data, full_chain, inv_data = \
-                reduced_problem.get_problem_data(solver=KKT)
+            # Old
+            #  self._problem.populate(theta)
+            #
+            #  self._problem._relax_disc_var()
+            #
+            #  reduced_problem = \
+            #      self._problem._construct_reduced_problem(strategy)
+            #
+            #  data, full_chain, inv_data = \
+            #      reduced_problem.get_problem_data(solver=KKT)
 
+            # Get KKT matrix
             KKT_mat = create_kkt_matrix(data)
             solve_kkt = factorize_kkt_matrix(KKT_mat)
 
             cache = {}
             cache['factors'] = solve_kkt
-            cache['inverse_data'] = inv_data
-            cache['chain'] = full_chain
+            #  cache['inverse_data'] = inverse_data
+            #  cache['chain'] = solving_chain
 
             self._solver_cache += [cache]
-
-            self._problem._restore_disc_var()
 
     def choose_best(self, labels, parallel=False, use_cache=True):
         """
@@ -396,19 +391,18 @@ class Optimizer(object):
         infeas = []
         cost = []
 
-        strategies = [self.encoding[l] for l in labels]
+        strategies = [self.encoding[label] for label in labels]
 
         # Cache is a list of solver caches to pass
         cache = [None] * n_best
         if self._solver_cache and use_cache:
-            cache = [self._solver_cache[l] for l in labels]
+            cache = [self._solver_cache[label] for label in labels]
 
         n_jobs = u.get_n_processes(n_best) if parallel else 1
 
         results = Parallel(n_jobs=n_jobs)(
-            delayed(solve_with_strategy)(self._problem,
-                                         strategies[j],
-                                         cache[j])
+            delayed(self._problem.solve)(strategy=strategies[j],
+                                         cache=cache[j])
             for j in range(n_best))
 
         x = [r["x"] for r in results]
@@ -429,7 +423,7 @@ class Optimizer(object):
             elif self._problem.sense() == Maximize:
                 idx_pick = idx_filter[np.argmax(cost[idx_filter])]
             else:
-                raise ValueError('Objective type not understood')
+                e.error('Objective type not understood')
         else:
             # Case 2: No feasible points
             # -> Get solution with minimum infeasibility
@@ -471,14 +465,12 @@ class Optimizer(object):
         n_points = len(X)
 
         if use_cache and not self._solver_cache:
-            err = "Solver cache requested but the cache has not been" + \
-                "computed for this problem. Is it MIQP representable?"
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Solver cache requested but the cache has not been" +
+                    "computed for this problem. Is it MIQP representable?")
 
         # Change verbose setting
         if verbose:
-            self._problem.solver_options['verbose'] = True
+            self._problem.verbose = True
 
         # Define array of results to return
         results = []
@@ -523,8 +515,8 @@ class Optimizer(object):
             Defaults to False.
         """
         if self._learner is None:
-            raise ValueError("You cannot save the optimizer without " +
-                             "training it before.")
+            e.error("You cannot save the optimizer without " +
+                    "training it before.")
 
         # Add .tar.gz if the file has no extension
         if not file_name.endswith('.tar.gz'):
@@ -585,7 +577,7 @@ class Optimizer(object):
 
         # Check if file exists
         if not os.path.isfile(file_name):
-            raise ValueError("File %s does not exist." % file_name)
+            e.error("File %s does not exist." % file_name)
 
         # Extract file to temporary directory and read it
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -595,7 +587,7 @@ class Optimizer(object):
             # Load optimizer
             optimizer_file_name = os.path.join(tmpdir, "optimizer.pkl")
             if not optimizer_file_name:
-                raise ValueError("Optimizer pkl file does not exist.")
+                e.error("Optimizer pkl file does not exist.")
             with open(optimizer_file_name, "rb") as f:
                 optimizer_dict = pkl.load(f)
 
@@ -603,9 +595,7 @@ class Optimizer(object):
 
             # Create optimizer using loaded dict
             problem = optimizer_dict['_problem'].cvxpy_problem
-            optimizer = cls(problem.objective,
-                            problem.constraints,
-                            name=name)
+            optimizer = cls(problem, name=name)
 
             # Assign strategies encoding
             optimizer.encoding = optimizer_dict['encoding']
@@ -670,7 +660,6 @@ class Optimizer(object):
         n_train = self._learner.n_train  # Number of training samples
         n_theta = n_features(theta)  # Number of parameters
         n_strategies = len(self.encoding)  # Number of strategies
-
 
         # Compute comparative statistics
         time_comp = np.array([time_test[i] / time_pred[i]

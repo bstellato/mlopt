@@ -2,6 +2,7 @@ from mlopt.learners.learner import Learner
 import mlopt.learners.optimal_tree.settings as octstg
 import mlopt.settings as stg
 from mlopt.utils import pandas2array, get_n_processes
+import mlopt.error as e
 import shutil
 from subprocess import call
 import time
@@ -21,7 +22,7 @@ class OptimalTree(Learner):
             Learner options as a dictionary.
         """
         if not OptimalTree.is_installed():
-            raise ValueError("Interpretable AI not installed")
+            e.error("Interpretable AI not installed")
 
         # Import julia and IAI module
         from interpretableai import iai
@@ -138,9 +139,7 @@ class OptimalTree(Learner):
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".json"):
-            err = "Optimal Tree json file does not exist."
-            stg.logger.error(err)
-            raise ValueError(err)
+            e.error("Optimal Tree json file does not exist.")
 
         # Load tree from file
         self._lnr = self.iai.read_json(file_name + ".json")

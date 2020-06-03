@@ -57,7 +57,7 @@ class TestProblem(unittest.TestCase):
         cvxpy_problem.solve(solver=DEFAULT_SOLVER)
         x_cvxpy = deepcopy(x.value)
         cost_cvxpy = cost.value
-        problem = Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
         problem.solve()
         x_problem = x.value
         cost_problem = cost.value

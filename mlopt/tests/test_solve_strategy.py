@@ -4,7 +4,7 @@ import numpy as np
 import scipy.sparse as spa
 import numpy.testing as npt
 from mlopt.tests.settings import TEST_TOL as TOL
-from mlopt.problem import Problem, solve_with_strategy
+from mlopt.problem import Problem
 import cvxpy as cp
 
 
@@ -14,30 +14,32 @@ class TestSolveStrategy(unittest.TestCase):
 
         # Define problem
         c = np.array([-1, -2])
-        x = cp.Variable(2, boolean=True)
+        x = cp.Variable(2, integer=True)
         #  x = cp.Variable(2)
-        cost = c * x
+        cost = c @ x
         constraints = [
             x[1] <= 0.5 * x[0] + 1.5,
             x[1] <= -0.5 * x[0] + 3.5,
             x[1] <= -5.0 * x[0] + 10,
+            x >= 0, x <= 1,
         ]
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
-        violation1 = problem.infeasibility()
+        #  violation1 = problem.infeasibility()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
-        violation2 = problem.infeasibility()
+        results_new = problem.solve(strategy=results["strategy"])
+        #  violation2 = problem.infeasibility()
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
         npt.assert_almost_equal(
             results["cost"], results_new["cost"], decimal=TOL
         )
-        self.assertTrue(abs(violation1 - violation2) <= TOL)
+        #  self.assertTrue(abs(violation1 - violation2) <= TOL)
 
     def test_random_cont(self):
         """Test random continuous LP test"""
@@ -65,69 +67,20 @@ class TestSolveStrategy(unittest.TestCase):
         # Cost
         c = np.random.rand(n)
         x = cp.Variable(n)  # Variable
-        cost = c * x
+        cost = c @ x
 
         # Define constraints
-        constraints = [A1 * x <= b1, A2 * x <= b2]
+        constraints = [A1 @ x <= b1, A2 @ x <= b2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
-
-        # Verify both solutions are equal
-        npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
-        npt.assert_almost_equal(
-            results["cost"], results_new["cost"], decimal=TOL
-        )
-
-    def test_random_boolean(self):
-        """Mixed-boolean random LP test"""
-
-        # Seed for reproducibility
-        np.random.seed(1)
-
-        # Define problem
-        n = 20
-        m = 70
-
-        # Define constraints
-        v = np.random.rand(n)  # Solution
-        A = spa.random(
-            m, n, density=0.8, data_rvs=np.random.randn, format="csc"
-        )
-        b = A.dot(v) + 10 * np.random.rand(m)
-
-        # Split in 2 parts
-        A1 = A[: int(m / 2), :]
-        b1 = b[: int(m / 2)]
-        A2 = A[int(m / 2):, :]
-        b2 = b[int(m / 2):]
-
-        # Cost
-        c = np.random.rand(n)
-        x = cp.Variable(n)  # Variable
-        y = cp.Variable(m, boolean=True)  # Variable
-        cost = c * x - cp.sum(y) + 3 * y[7]
-
-        # Define constraints
-        constraints = [
-            A1 * x + y[: int(m / 2)] <= b1,
-            A2 * x + y[int(m / 2):] <= b2,
-        ]
-
-        # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
-
-        # Solve and compute strategy
-        results = problem.solve()
-
-        # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -166,30 +119,14 @@ class TestSolveStrategy(unittest.TestCase):
 
         # Objective
         cost = cp.sum(t) + c * cp.sum(u)
-        # TODO: Check if regularization is needed
-        #  cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
         results = problem.solve()
 
-        #  int_vars = {}
-        #  tight_constraints = {constraints[0].id: np.array([1]),
-        #                         constraints[1].id: np.array([1]),
-        #                         constraints[2].id: np.array([1]),
-        #                         constraints[3].id: np.array([1]),
-        #                         constraints[4].id: np.array([1]),
-        #                         constraints[5].id: np.array([1]),
-        #                         constraints[6].id: np.array([0, 0, 0, 0, 0]),
-        #                         constraints[7].id: np.array([1, 1, 1, 1, 0])
-        #                         }
-        #  strategy = Strategy(tight_constraints, int_vars)
-
         # Solve with strategy!
-        results_strategy = solve_with_strategy(problem, results["strategy"])
-
-        # TODO: Solve issue!
-        # Correct strategy but variable is infeasible for original problem.
+        results_strategy = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(
@@ -198,11 +135,6 @@ class TestSolveStrategy(unittest.TestCase):
         npt.assert_almost_equal(
             results["cost"], results_strategy["cost"], decimal=TOL
         )
-
-        #  # Need to rethink how we choose the strategy!
-        #  self.assertTrue(problem.infeasibility() >= 0) self.assertTrue(problem.infeasibility() <= TOL)
-        #  self.assertTrue(abs(results['cost'] - results_strategy['cost']) <= TOL)
-        #
 
     def test_random_integer(self):
         """Mixed-integer random LP test"""
@@ -231,19 +163,20 @@ class TestSolveStrategy(unittest.TestCase):
         c = np.random.rand(n)
         x = cp.Variable(n)  # Variable
         y = cp.Variable(integer=True)  # Variable
-        cost = c * x - cp.sum(y) + y
+        cost = c @ x - cp.sum(y) + y
 
         # Define constraints
-        constraints = [A1 * x - y <= b1, A2 * x + y <= b2, y >= 2]
+        constraints = [A1 @ x - y <= b1, A2 @ x + y <= b2, y >= 2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -278,17 +211,18 @@ class TestSolveStrategy(unittest.TestCase):
         c = np.random.rand(n)
         x = cp.Variable(n)  # Variable
         y = cp.Variable(integer=True)  # Variable
-        cost = c * x - cp.sum(y) + y + 0.1 * cp.sum(cp.pos(x))
+        cost = c @ x - cp.sum(y) + y + 0.1 * cp.sum(cp.pos(x))
 
         # Define constraints
-        constraints = [A1 * x - y <= b1, A2 * x + y <= b2, y >= 2]
+        constraints = [A1 @ x - y <= b1, A2 @ x + y <= b2, y >= 2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
@@ -322,80 +256,26 @@ class TestSolveStrategy(unittest.TestCase):
         # Cost
         c = np.random.rand(n)
         x = cp.Variable(n)  # Variable
-        cost = cp.sum_squares(c * x) + cp.norm(x, 1)
+        cost = cp.sum_squares(c @ x) + cp.norm(x, 1)
 
         # Define constraints
-        constraints = [A1 * x <= b1, A2 * x <= b2]
+        constraints = [A1 @ x <= b1, A2 @ x <= b2]
 
         # Problem
-        problem = Problem(cp.Minimize(cost), constraints)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
+        problem = Problem(cvxpy_problem)
 
         # Solve and compute strategy
         results = problem.solve()
 
         # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
+        results_new = problem.solve(strategy=results["strategy"])
 
         # Verify both solutions are equal
         npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
         npt.assert_almost_equal(
             results["cost"], results_new["cost"], decimal=TOL
         )
-
-    def test_ignore_tight_constraints(self):
-        """
-        Mixed-integer random LP test ignoring active constraints.
-        Strategy consists only on the integer variables.
-        """
-
-        # Seed for reproducibility
-        np.random.seed(1)
-
-        # Define problem
-        n = 20
-        m = 70
-
-        # Define constraints
-        v = np.random.rand(n)  # Solution
-        A = spa.random(
-            m, n, density=0.8, data_rvs=np.random.randn, format="csc"
-        )
-        b = A.dot(v) + 10 * np.random.rand(m)
-
-        # Split in 2 parts
-        A1 = A[: int(m / 2), :]
-        b1 = b[: int(m / 2)]
-        A2 = A[int(m / 2):, :]
-        b2 = b[int(m / 2):]
-
-        # Cost
-        c = np.random.rand(n)
-        x = cp.Variable(n)  # Variable
-        y = cp.Variable(integer=True)  # Variable
-        cost = c * x - cp.sum(y) + y
-
-        # Define constraints
-        constraints = [A1 * x - y <= b1, A2 * x + y <= b2, y >= 2]
-
-        # Problem
-        problem = Problem(cp.Minimize(cost), constraints,
-                          tight_constraints=False)
-
-        # Solve and compute strategy
-        results = problem.solve()
-
-        # Solve just with strategy
-        results_new = solve_with_strategy(problem, results["strategy"])
-
-        # Verify both solutions are equal
-        npt.assert_almost_equal(results["x"], results_new["x"], decimal=TOL)
-        npt.assert_almost_equal(
-            results["cost"], results_new["cost"], decimal=TOL
-        )
-
-        # Assert empty tight constraints dictionaries
-        assert not results['strategy'].tight_constraints
-        assert not results_new['strategy'].tight_constraints
 
 
 if __name__ == "__main__":

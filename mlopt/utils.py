@@ -8,30 +8,30 @@ from tqdm import tqdm
 import joblib
 
 
-def args_norms(expr):
-    """Calculate norm of the arguments in a cvxpy expression"""
-    if expr.args:
-        norms = []
-        # Expression contains arguments
-        for arg in expr.args:
-            #  norms += args_norms(arg)
-            norms += [cp.norm(arg, np.inf).value]
-    else:
-        norms = [0.]
-    return norms
+#  def args_norms(expr):
+#      """Calculate norm of the arguments in a cvxpy expression"""
+#      if expr.args:
+#          norms = []
+#          # Expression contains arguments
+#          for arg in expr.args:
+#              #  norms += args_norms(arg)
+#              norms += [cp.norm(arg, np.inf).value]
+#      else:
+#          norms = [0.]
+#      return norms
 
 
-def tight_components(con):
-    """Return which components are tight in the constraints."""
-    #  rel_norm = np.amax([np.linalg.norm(np.atleast_1d(a.value), np.inf)
-    #                      for a in con.expr.args])
-    # If Equality Constraint => all tight
-    if type(con) in [Equality, Zero]:
-        return np.full(con.shape, True)
-
-    # Otherwise return violation
-    rel_norm = 1.0
-    return np.abs(con.expr.value) <= stg.TIGHT_CONSTRAINTS_TOL * (1 + rel_norm)
+#  def tight_components(con):
+#      """Return which components are tight in the constraints."""
+#      #  rel_norm = np.amax([np.linalg.norm(np.atleast_1d(a.value), np.inf)
+#      #                      for a in con.expr.args])
+#      # If Equality Constraint => all tight
+#      if type(con) in [Equality, Zero]:
+#          return np.full(con.shape, True)
+#
+#      # Otherwise return violation
+#      rel_norm = 1.0
+#      return np.abs(con.expr.value) <= stg.TIGHT_CONSTRAINTS_TOL * (1 + rel_norm)
 
 
 def get_n_processes(max_n=np.inf):
@@ -68,7 +68,7 @@ def n_features(df):
     int
         Number of features.
     """
-    return np.sum(np.atleast_1d(x).size for x in df.iloc[0])
+    return sum(np.atleast_1d(x).size for x in df.iloc[0])
 
     #  n = 0
     #  for c in df.columns.values:
@@ -95,8 +95,6 @@ def pandas2array(X):
         # get number of datapoints
         n_data = len(X)
 
-        # Unroll
-        # TODO: Speedup this process
         x_temp_list = []
         for i in tqdm(range(n_data),
                       desc="Converting dataframe to array"):
@@ -118,7 +116,7 @@ def suboptimality(cost_pred, cost_test, sense):
 
     if sense == cp.Minimize:
         return (cost_pred - cost_test)/cost_norm
-    else: # Maximize
+    else:  # Maximize
         return (cost_test - cost_pred)/cost_norm
 
 
@@ -158,11 +156,8 @@ def accuracy(results_pred, results_test, sense):
             # Check feasibility
             if r_pred['infeasibility'] <= stg.INFEAS_TOL:
                 # Check cost function value
-                subopt = suboptimality(r_pred['cost'], r_test['cost'],
-                                       sense)
+                subopt = suboptimality(r_pred['cost'], r_test['cost'], sense)
                 if np.abs(subopt) <= stg.SUBOPT_TOL:
                     idx_correct[i] = 1
 
     return np.sum(idx_correct) / n_points, idx_correct
-
-
