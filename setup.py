@@ -19,14 +19,17 @@ setup(name='mlopt',
                 'mlopt.learners',
                 'mlopt.tests'],
       install_requires=["cvxpy",
+                        "optuna",
                         "numpy",
                         "scipy",
                         "pandas",
                         "joblib",
                         "tqdm",
+                        # TODO: Choose a default one to keep
                         "xgboost",
                         "torch",
                         "torchvision",
-                        "scikit-umfpack"],
+                        "scikit-umfpack"
+                        ],
       license='Apache License, Version 2.0',
       )
