@@ -16,7 +16,7 @@ class XGBoostObjective(object):
         self.dtrain = dtrain
 
     def __call__(self, trial):
-        params = xgbs.DEFAULT_PARAMETERS
+        params = xgbs.PARAMETERS
         params.update({
             'objective': 'multi:softprob',
             'eval_metric': 'mlogloss',
@@ -48,11 +48,12 @@ class XGBoostObjective(object):
 
 
 class XGBoost(Learner):
+    """XGBoost Learner class. """
 
     def __init__(self,
                  **options):
         """
-        Initialize OptimalTrees class.
+        Initialize XGBoost Learner class.
 
         Parameters
         ----------
@@ -71,15 +72,13 @@ class XGBoost(Learner):
         self.options = {}
 
         self.options['bounds'] = options.pop(
-            'bounds', xgbs.DEFAULT_PARAMETER_BOUNDS)
+            'bounds', xgbs.PARAMETER_BOUNDS)
 
         not_specified_bounds = \
-            [x for x in xgbs.DEFAULT_PARAMETER_BOUNDS.keys()
+            [x for x in xgbs.PARAMETER_BOUNDS.keys()
              if x not in self.options['bounds'].keys()]
         for p in not_specified_bounds:  # Assign remaining keys
-            self.options['bounds'][p] = xgbs.DEFAULT_PARAMETER_BOUNDS[p]
-
-        self.options['n_folds'] = options.pop('n_folds', xgbs.N_FOLDS)
+            self.options['bounds'][p] = xgbs.PARAMETER_BOUNDS[p]
 
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', stg.N_BEST),
@@ -112,7 +111,7 @@ class XGBoost(Learner):
         objective = XGBoostObjective(dtrain, self.options['bounds'],
                                      self.n_classes)
 
-        sampler = optuna.samplers.TPESampler(seed=10)  # Deterministic
+        sampler = optuna.samplers.TPESampler(seed=0)  # Deterministic
         pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
         study = optuna.create_study(sampler=sampler, pruner=pruner,
                                     direction="minimize")
@@ -137,7 +136,7 @@ class XGBoost(Learner):
 
         # Train again
         stg.logger.info("Train with best parameters")
-        params = xgbs.DEFAULT_PARAMETERS
+        params = xgbs.PARAMETERS  # Fixed parameters
         params.update({k: v for k, v in self.best_params.items()
                        if k != 'n_boost_round'})
         self.bst = self.xgb.train(

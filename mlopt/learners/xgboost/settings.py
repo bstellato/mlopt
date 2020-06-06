@@ -11,13 +11,13 @@
 #      #  'enable_experimental_json_serialization': [True]
 #      }
 
-DEFAULT_PARAMETERS = {
+PARAMETERS = {
     'objective': 'multi:softprob',
     'eval_metric': 'mlogloss',
     'booster': 'gbtree',
 }
 
-DEFAULT_PARAMETER_BOUNDS = {
+PARAMETER_BOUNDS = {
     'lambda': [1e-8, 2.0],
     'alpha': [1e-9, 2.0],
     'max_depth': [1, 15],
@@ -25,6 +25,3 @@ DEFAULT_PARAMETER_BOUNDS = {
     'gamma': [1e-8, 2.0],
     'n_boost_round': [50, 400],
 }
-
-
-N_FOLDS = 5

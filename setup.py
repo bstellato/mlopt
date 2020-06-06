@@ -25,6 +25,7 @@ setup(name='mlopt',
                         "pandas",
                         "joblib",
                         "tqdm",
+                        "scikit-learn",
                         # TODO: Choose a default one to keep
                         "xgboost",
                         "torch",
