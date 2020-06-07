@@ -1,6 +1,6 @@
 import mlopt.settings as stg
 import mlopt.learners.pytorch.settings as pts
-from pytorch_lightning.callbacks import PyTorchLightningPruningCallback
+from optuna.integration import PyTorchLightningPruningCallback
 from pytorch_lightning import Trainer
 from mlopt.learners.pytorch.lightning import LightningNet
 from pytorch_lightning import Callback
@@ -9,6 +9,8 @@ from mlopt.learners.learner import Learner
 from sklearn.model_selection import train_test_split
 import optuna
 from time import time
+import os
+import logging
 
 
 class MetricsCallback(Callback):
@@ -27,9 +29,9 @@ class PytorchObjective(object):
     def __init__(self, data, bounds, n_input, n_classes, use_gpu=False):
         self.use_gpu = use_gpu
         self.bounds = bounds
-        self.n_classes = n_classes
-        self.n_input = n_input
         self.data = data
+        self.n_input = n_input
+        self.n_classes = n_classes
 
     def __call__(self, trial):
 
@@ -40,22 +42,40 @@ class PytorchObjective(object):
         # validation step.
         metrics_callback = MetricsCallback()
 
-        max_epochs = trial.suggest_int(
-            'max_epochs', *self.bounds['max_epochs'])
+        # Define parameters
+        parameters = {
+            'n_input': self.n_input,
+            'n_classes': self.n_classes,
+            'n_layers': trial.suggest_int('n_layers',
+                                          *self.bounds['n_layers']),
+            'dropout': trial.suggest_uniform('dropout',
+                                             *self.bounds['dropout']),
+            'batch_size': trial.suggest_int('batch_size',
+                                            *self.bounds['batch_size']),
+            'learning_rate': trial.suggest_float('learning_rate',
+                                                 *self.bounds['learning_rate'],
+                                                 log=True),
+            'max_epochs': trial.suggest_int('max_epochs',
+                                            *self.bounds['max_epochs'])
+        }
+        for i in range(parameters['n_layers']):
+            parameters['n_units_l{}'.format(i)] = trial.suggest_int(
+                'n_units_l{}'.format(i), *self.bounds['n_units_l'], log=True)
 
+        # Construct trainer object and train
         trainer = Trainer(
-            logger=False,  # ??
-            #  val_percent_check=PERCENT_VALID_EXAMPLES, # ??
-            #  checkpoint_callback=checkpoint_callback,
-            max_epochs=max_epochs,
+            logger=False,
+            checkpoint_callback=False,
+            distributed_backend='dp',
+            max_epochs=parameters['max_epochs'],
+            verbose=False,
             gpus=-1 if self.use_gpu else None,
             callbacks=[metrics_callback],
             early_stop_callback=PyTorchLightningPruningCallback(
                 trial, monitor="val_loss"),
         )
 
-        model = LightningNet(self.data, self.bounds, self.n_input,
-                             self.n_classes, trial)
+        model = LightningNet(self.data, parameters)
         trainer.fit(model)
 
         return metrics_callback.metrics[-1]["val_loss"]
@@ -73,11 +93,15 @@ class PytorchNeuralNet(Learner):
             Learner options as a dictionary.
         """
         if not PytorchNeuralNet.is_installed():
-            e.error("Pytorch not installed")
+            e.value_error("Pytorch not installed")
 
         # import torch
         import torch
         self.torch = torch
+
+        # Disable logging
+        log = logging.getLogger("lightning")
+        log.setLevel(logging.ERROR)
 
         self.name = stg.PYTORCH
         self.n_input = options.pop('n_input')
@@ -145,12 +169,15 @@ class PytorchNeuralNet(Learner):
         stg.logger.info("Split dataset in %d training and %d validation" %
                         (len(y_train), len(y_valid)))
 
-        start_time = time.time()
+        start_time = time()
         objective = PytorchObjective(data, self.options['bounds'],
-             self.n_input, self.n_classes, self.use_gpu)
+                                     self.n_input, self.n_classes,
+                                     self.use_gpu)
 
         sampler = optuna.samplers.TPESampler(seed=0)  # Deterministic
-        pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
+        pruner = optuna.pruners.MedianPruner(
+            #  n_warmup_steps=5
+        )
         study = optuna.create_study(sampler=sampler, pruner=pruner,
                                     direction="minimize")
         study.optimize(objective,
@@ -158,5 +185,61 @@ class PytorchNeuralNet(Learner):
                        #  show_progress_bar=True
                        )
 
+        # DEBUG
+        #  fig = optuna.visualization.plot_intermediate_values(study)
+        #  fig.show()
 
-        # TODO: Continue from here
+        self.best_params = study.best_trial.params
+        self.best_params['n_input'] = self.n_input
+        self.best_params['n_classes'] = self.n_classes
+
+        self.print_trial_stats(study)
+
+        # Train again
+        stg.logger.info("Train with best parameters")
+
+        self.trainer = Trainer(
+            checkpoint_callback=False,
+            distributed_backend='dp',
+            logger=False,  # ??
+            max_epochs=self.best_params['max_epochs'],
+            gpus=-1 if self.use_gpu else None,
+        )
+        self.model = LightningNet(data, self.best_params)
+        self.trainer.fit(self.model)
+
+        # Print timing
+        end_time = time()
+        stg.logger.info("Training time %.2f" % (end_time - start_time))
+
+    def predict(self, X):
+
+        # Disable gradients computation
+        self.model.eval()  # Put layers in evaluation mode
+        with self.torch.no_grad():  # Needed?
+
+            # TODO: Perform forward step on gpu?
+            X = self.torch.tensor(X, dtype=self.torch.float)
+            y = self.model(X).detach().cpu().numpy()
+
+        return self.pick_best_class(y, n_best=self.options['n_best'])
+
+    def save(self, file_name):
+        self.trainer.save_checkpoint(file_name + ".ckpt")
+
+        #  # Save state dictionary to file
+        #  # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        #  self.torch.save(self.model.state_dict(), file_name + ".pkl")
+
+    def load(self, file_name):
+        path = file_name + ".ckpt"
+        # Check if file name exists
+        if not os.path.isfile(path):
+            e.value_error("Pytorch checkpoint file does not exist.")
+
+        self.model = PytorchNeuralNet.load_from_checkpoint(path)
+        #  self.model.eval()  # Necessary to set the model to evaluation mode
+
+        #  # Load state dictionary from file
+        #  # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        #  self.model.load_state_dict(self.torch.load(file_name + ".pkl"))

@@ -22,7 +22,7 @@ class OptimalTree(Learner):
             Learner options as a dictionary.
         """
         if not OptimalTree.is_installed():
-            e.error("Interpretable AI not installed")
+            e.value_error("Interpretable AI not installed")
 
         # Import julia and IAI module
         from interpretableai import iai
@@ -139,7 +139,7 @@ class OptimalTree(Learner):
     def load(self, file_name):
         # Check if file name exists
         if not os.path.isfile(file_name + ".json"):
-            e.error("Optimal Tree json file does not exist.")
+            e.value_error("Optimal Tree json file does not exist.")
 
         # Load tree from file
         self._lnr = self.iai.read_json(file_name + ".json")

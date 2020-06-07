@@ -22,9 +22,9 @@ class TestSave(unittest.TestCase):
         c = 1.
         p = 1.
         x_init = 2.
-        self.radius = 3.
-        n = 2000   # Number of points
-        n_test = 10
+        self.radius = 2.
+        n = 1000   # Number of points
+        n_test = 100
 
         # Define problem
         x = cp.Variable(T+1)
@@ -32,7 +32,7 @@ class TestSave(unittest.TestCase):
 
         # Define parameter and sampling points
         d = cp.Parameter(T, nonneg=True, name="d")
-        self.d_bar = 3. * np.ones(T)
+        self.d_bar = 2. * np.ones(T)
         X_d = uniform_sphere_sample(self.d_bar, self.radius, n=n)
         X_d_test = uniform_sphere_sample(self.d_bar, self.radius, n=n_test)
         self.df = pd.DataFrame({'d': list(X_d)})
@@ -49,7 +49,7 @@ class TestSave(unittest.TestCase):
         self.cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        problem = cp.Minimize(self.cost), self.constraints
+        problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
         self.optimizer = Optimizer(problem)
 
         #  # Define learners
@@ -62,12 +62,6 @@ class TestSave(unittest.TestCase):
         """Test save load data"""
         m = self.optimizer
 
-        nn_params = {'learning_rate': [0.01],
-                     'batch_size': [32],
-                     'n_epochs': [10],
-                     'n_layers': [5]
-                     }
-
         for learner in installed_learners():
             with tempfile.TemporaryDirectory() as tmpdir:
                 data_file = os.path.join(tmpdir, "data.pkl")
@@ -77,28 +71,28 @@ class TestSave(unittest.TestCase):
                         #  sampling_fn=lambda n: sample(self.d_bar,
                         #                               self.radius,
                         #                               n),
+                        filter_strategies=True,
                         parallel=True,
                         learner=learner,
+                        n_train_trials=10,
                         #  params=nn_params
                         )
-                store_general, store_detail = m.performance(self.df_test,
-                                                            parallel=True)
+                store_general, store_detail = m.performance(self.df_test)
 
                 # Save datafile
                 m.save_training_data(data_file, delete_existing=True)
 
                 # Create new optimizer, load data, train and
                 # evaluate performance
-                problem = cp.Minimize(self.cost), self.constraints
+                problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
                 self.optimizer = Optimizer(problem)
 
                 m = self.optimizer
                 m.load_training_data(data_file)
                 m.train(parallel=True,
                         learner=learner,
-                        params=nn_params)
-                load_general, load_detail = m.performance(self.df_test,
-                                                          parallel=True)
+                        n_train_trials=10)
+                load_general, load_detail = m.performance(self.df_test)
 
                 # test same things
                 npt.assert_almost_equal(store_general['max_infeas'],

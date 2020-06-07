@@ -68,6 +68,9 @@ class Filter(object):
 
         n_jobs = u.get_n_processes() if parallel else 1
 
+        stg.logger.info("Assign samples to selected strategies (n_jobs = %d)"
+                        % n_jobs)
+
         results = Parallel(n_jobs=n_jobs)(
             delayed(best_strategy)(self.X_train.iloc[i], self.obj_train[i],
                                    self.encoding, self.problem)
@@ -132,8 +135,6 @@ class Filter(object):
         stg.logger.info("Discarded strategies for %d samples (%.2f %%)" %
                         (len(discarded_samples),
                          (100 * len(discarded_samples) / n_samples)))
-
-        stg.logger.info("Reassign samples with discarded strategies")
 
         # Reassign discarded samples to selected strategies
         degradation = self.assign_samples(discarded_samples,

@@ -65,7 +65,7 @@ class Optimizer(object):
     def n_strategies(self):
         """Number of strategies."""
         if self.encoding is None:
-            e.error("Model has been trained yet to " +
+            e.value_error("Model has been trained yet to " +
                     "return the number of strategies.")
 
         return len(self.encoding)
@@ -132,8 +132,8 @@ class Optimizer(object):
                 os.remove(file_name)
 
         if not self.samples_present():
-            e.error("You need to get the strategies " +
-                    "from the data first by training the model.")
+            e.value_error("You need to get the strategies " +
+                          "from the data first by training the model.")
 
         # Save to file
         with open(file_name, 'wb') \
@@ -165,7 +165,7 @@ class Optimizer(object):
 
         # Check if file exists
         if not os.path.isfile(file_name):
-            e.error("File %s does not exist." % file_name)
+            e.value_error("File %s does not exist." % file_name)
 
         # Load optimizer
         with open(file_name, "rb") as f:
@@ -196,10 +196,11 @@ class Optimizer(object):
 
         # Assert we have data to train or already trained
         if X is None and sampling_fn is None and not self.samples_present():
-            e.error("Not enough arguments to train the model")
+            e.value_error("Not enough arguments to train the model")
 
         if X is not None and sampling_fn is not None:
-            e.error("You can pass only one value between X and sampling_fn")
+            e.value_error("You can pass only one value between X "
+                          "and sampling_fn")
 
         # Check if data is passed, otherwise train
         #  if (X is not None) and not self.samples_present():
@@ -220,7 +221,7 @@ class Optimizer(object):
             not_feasible_points = {i: x for i, x in enumerate(results)
                                    if np.isnan(x['x']).any()}
             if not_feasible_points:
-                e.error("Infeasible points found. Number of infeasible "
+                e.value_error("Infeasible points found. Number of infeasible "
                         "points %d" % len(not_feasible_points))
 
             self.obj_train = [r['cost'] for r in results]
@@ -308,8 +309,8 @@ class Optimizer(object):
 
         # Define learner
         if learner not in installed_learners():
-            e.error("Learner specified not installed. "
-                    "Available learners are: %s" % installed_learners())
+            e.value_error("Learner specified not installed. "
+                          "Available learners are: %s" % installed_learners())
         self._learner = LEARNER_MAP[learner](n_input=n_features(self.X_train),
                                              n_classes=len(self.encoding),
                                              **learner_options)
@@ -322,9 +323,7 @@ class Optimizer(object):
         """Cache linear system solver factorizations"""
 
         self._solver_cache = []
-        stg.logger.info("Caching KKT solver factors for each strategy "
-                        "(it works only for QP-representable problems "
-                        "with parameters not in problem matrices)")
+        stg.logger.info("Caching KKT solver factors for each strategy ")
         for strategy_idx in tqdm(range(self.n_strategies)):
 
             # Get a parameter giving that strategy
@@ -423,7 +422,7 @@ class Optimizer(object):
             elif self._problem.sense() == Maximize:
                 idx_pick = idx_filter[np.argmax(cost[idx_filter])]
             else:
-                e.error('Objective type not understood')
+                e.value_error('Objective type not understood')
         else:
             # Case 2: No feasible points
             # -> Get solution with minimum infeasibility
@@ -465,8 +464,9 @@ class Optimizer(object):
         n_points = len(X)
 
         if use_cache and not self._solver_cache:
-            e.error("Solver cache requested but the cache has not been" +
-                    "computed for this problem. Is it MIQP representable?")
+            e.value_error("Solver cache requested but the cache has "
+                          "not been computed for this problem. Is it "
+                          "MIQP representable?")
 
         # Change verbose setting
         if verbose:
@@ -515,8 +515,8 @@ class Optimizer(object):
             Defaults to False.
         """
         if self._learner is None:
-            e.error("You cannot save the optimizer without " +
-                    "training it before.")
+            e.value_error("You cannot save the optimizer without " +
+                          "training it before.")
 
         # Add .tar.gz if the file has no extension
         if not file_name.endswith('.tar.gz'):
@@ -577,7 +577,7 @@ class Optimizer(object):
 
         # Check if file exists
         if not os.path.isfile(file_name):
-            e.error("File %s does not exist." % file_name)
+            e.value_error("File %s does not exist." % file_name)
 
         # Extract file to temporary directory and read it
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -587,7 +587,7 @@ class Optimizer(object):
             # Load optimizer
             optimizer_file_name = os.path.join(tmpdir, "optimizer.pkl")
             if not optimizer_file_name:
-                e.error("Optimizer pkl file does not exist.")
+                e.value_error("Optimizer pkl file does not exist.")
             with open(optimizer_file_name, "rb") as f:
                 optimizer_dict = pkl.load(f)
 

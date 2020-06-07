@@ -35,30 +35,22 @@ class TestCaching(unittest.TestCase):
         Sample points
         '''
         theta_bar = 10 * np.random.rand(n)
-        radius = 3.0
+        radius = 1.0
 
         '''
         Train and solve
         '''
 
         # Training and testing data
-        n_train = 100
+        n_train = 300
         n_test = 10
 
         # Sample points from multivariate ball
         X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
         df = pd.DataFrame({'mu': list(X_d)})
 
-        # Train and test using pytorch
-        #  params = {
-        #      'learning_rate': [0.01],
-        #      'batch_size': [100],
-        #      'n_epochs': [20],
-        #      'n_layers': [5]
-        #  }
-
-        #  m.train(df, parallel=False, learner=mlopt.PYTORCH, params=params)
-        m.train(df, parallel=False, learner=mlopt.XGBOOST, n_train_trials=10)
+        m.train(df, filter_strategies=True, parallel=False, learner=mlopt.PYTORCH, n_train_trials=10)
+        #  m.train(df, parallel=False, learner=mlopt.XGBOOST, n_train_trials=10)
 
         # Testing data
         X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)

@@ -18,7 +18,7 @@ PARAMETER_BOUNDS = {
     'n_units_l': [4, 128],
     'learning_rate': [1e-05, 1e1],
     'dropout': [0.1, 0.5],
-    'n_epochs': [5, 30],
+    'max_epochs': [5, 30],
     'batch_size': [32, 256],
 }
 

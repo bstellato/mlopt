@@ -116,23 +116,11 @@ class XGBoost(Learner):
         study = optuna.create_study(sampler=sampler, pruner=pruner,
                                     direction="minimize")
         study.optimize(objective, n_trials=self.options['n_train_trials'],
-                       show_progress_bar=True)
-
-        pruned_trials = [t for t in study.trials
-                         if t.state == optuna.trial.TrialState.PRUNED]
-        complete_trials = [t for t in study.trials
-                           if t.state == optuna.trial.TrialState.COMPLETE]
-
-        stg.logger.info("Study statistics: ")
-        stg.logger.info("  Number of finished trials: %d" % len(study.trials))
-        stg.logger.info("  Number of pruned trials: %d" % len(pruned_trials))
-        stg.logger.info("  Number of complete trials: %d" %
-                        len(complete_trials))
-
+                       #  show_progress_bar=True
+                       )
         self.best_params = study.best_trial.params
-        stg.logger.info("Best parameters")
-        for key, value in self.best_params.items():
-            print("    {}: {}".format(key, value))
+
+        self.print_trial_stats(study)
 
         # Train again
         stg.logger.info("Train with best parameters")
@@ -147,7 +135,7 @@ class XGBoost(Learner):
 
         # Print timing
         end_time = time.time()
-        stg.logger.info("Tree training time %.2f" % (end_time - start_time))
+        stg.logger.info("Training time %.2f" % (end_time - start_time))
 
     def predict(self, X):
         y = self.bst.predict(self.xgb.DMatrix(X))

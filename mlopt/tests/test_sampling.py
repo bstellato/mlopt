@@ -58,7 +58,7 @@ class TestSampling(unittest.TestCase):
         self.cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
 
         # Define problem
-        problem = cp.Minimize(self.cost), self.constraints
+        problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
         self.optimizer = Optimizer(problem)
 
         # Test set
@@ -70,10 +70,7 @@ class TestSampling(unittest.TestCase):
         # Train optimizer
         self.optimizer.train(sampling_fn=sampling_function,
                              learner=PYTORCH,
-                             params={'learning_rate': [0.01],
-                                     'batch_size': [32],
-                                     'n_epochs': [20],
-                                     'n_layers': [5]})
+                             n_train_trials=10)
 
         # Check tolerance
         self.assertTrue(self.optimizer._sampler.good_turing_smooth
