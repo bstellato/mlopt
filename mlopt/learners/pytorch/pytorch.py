@@ -131,9 +131,11 @@ class PytorchNeuralNet(Learner):
         # Define device
         self.use_gpu = self.torch.cuda.is_available()
         if self.use_gpu:
+            self.device = self.torch.device("cuda:0")
             stg.logger.info("Using CUDA GPU %s with Pytorch" %
                             self.torch.cuda.get_device_name(self.device))
         else:
+            self.device = self.torch.device("cpu")
             stg.logger.info("Using CPU with Pytorch")
 
     @classmethod
@@ -219,7 +221,7 @@ class PytorchNeuralNet(Learner):
         with self.torch.no_grad():  # Needed?
 
             # TODO: Perform forward step on gpu?
-            X = self.torch.tensor(X, dtype=self.torch.float)
+            X = self.torch.tensor(X, dtype=self.torch.float).to(self.device)
             y = self.model(X).detach().cpu().numpy()
 
         return self.pick_best_class(y, n_best=self.options['n_best'])

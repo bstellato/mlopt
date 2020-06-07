@@ -26,10 +26,12 @@ setup(name='mlopt',
                         "joblib",
                         "tqdm",
                         "scikit-learn",
+                        "gurobipy",
                         # TODO: Choose a default one to keep
                         "xgboost",
                         "torch",
                         "torchvision",
+                        "pytorch-lightning",
                         "scikit-umfpack"
                         ],
       license='Apache License, Version 2.0',

@@ -258,7 +258,7 @@ class Optimizer(object):
                 not self._problem.parameters_in_matrices:
             self.cache_factors()
 
-    def filter_strategies(self, parallel=False):
+    def filter_strategies(self, parallel=True):
         # Store full non filtered strategies
 
         self.encoding_full = self.encoding

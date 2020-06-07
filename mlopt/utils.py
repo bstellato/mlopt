@@ -47,7 +47,13 @@ def get_n_processes(max_n=np.inf):
     float
         Number of processes to use.
     """
-    n_cpus = joblib.cpu_count()
+
+    try:
+        # Check number of cpus if we are on a SLURM server
+        n_cpus = int(os.environ["SLURM_NPROCS"])
+    except KeyError:
+        n_cpus = joblib.cpu_count()
+
     n_proc = min(max_n, n_cpus)
 
     return n_proc
