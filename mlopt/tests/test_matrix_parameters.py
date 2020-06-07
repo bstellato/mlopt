@@ -106,15 +106,11 @@ class TestMatrixParams(unittest.TestCase):
         self.assertTrue(m._problem.parameters_in_matrices)
 
         # Sample parameters
-        df_train = sample_portfolio(n, k, N=100)
+        df_train = sample_portfolio(n, k, N=1000)
 
         # Train and test using pytorch
-        params = {
-            "learning_rate": [0.001],
-            "batch_size": [64],
-            "n_epochs": [10],
-        }
-        m.train(df_train, parallel=True, learner=PYTORCH, params=params)
+        m.train(df_train, filter_strategies=True, parallel=True,
+                learner=PYTORCH)
 
         # Assert fewer strategies than training samples
         self.assertTrue(len(m.encoding) < len(df_train))

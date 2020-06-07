@@ -24,19 +24,17 @@ class TestProblem(unittest.TestCase):
         c = np.random.randn(n)
         A = np.random.randn(m, n)
         b = np.random.randn(m)
-        mlprob = Problem(cp.Minimize(c * x), [A * x <= b])
+        prob_cvxpy = cp.Problem(cp.Minimize(c @ x), [A @ x <= b])
+        mlprob = Problem(prob_cvxpy)
+        data, _, _ = prob_cvxpy.get_problem_data(solver=DEFAULT_SOLVER)
 
         # Set variable value
         x_val = 10 * np.random.randn(n)
         x.value = x_val
 
         # Check violation
-        viol_cvxpy = mlprob.infeasibility()
-        viol_manual_rel = np.amax(
-            [np.linalg.norm(A.dot(x_val), np.inf), np.linalg.norm(b, np.inf)]
-        )
-        viol_manual_vec = np.maximum(A.dot(x_val) - b, 0) / viol_manual_rel
-        viol_manual = np.linalg.norm(viol_manual_vec, np.inf)
+        viol_cvxpy = mlprob.infeasibility(x_val, data)
+        viol_manual = np.linalg.norm(np.maximum(A.dot(x_val) - b, 0), np.inf)
 
         self.assertTrue(abs(viol_cvxpy - viol_manual) <= TOL)
 
@@ -50,8 +48,8 @@ class TestProblem(unittest.TestCase):
         c = np.random.randn(n)
         A = np.random.randn(m, n)
         b = np.random.randn(m)
-        cost = c * x
-        constraints = [A * x <= b]
+        cost = c @ x
+        constraints = [A @ x <= b]
 
         cvxpy_problem = cp.Problem(cp.Minimize(cost), constraints)
         cvxpy_problem.solve(solver=DEFAULT_SOLVER)

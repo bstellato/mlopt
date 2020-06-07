@@ -1,199 +1,149 @@
-from mlopt.learners.learner import Learner
 import mlopt.settings as stg
-import mlopt.learners.pytorch.utils as u
-from mlopt.learners.pytorch.settings import DEFAULT_TRAINING_PARAMS
+import mlopt.learners.pytorch.settings as pts
+from optuna.integration import PyTorchLightningPruningCallback
+from pytorch_lightning import Trainer
+from mlopt.learners.pytorch.lightning import LightningNet
+from pytorch_lightning import Callback
 import mlopt.error as e
-from tqdm import tqdm
+from mlopt.learners.learner import Learner
+from sklearn.model_selection import train_test_split
+import optuna
+from time import time
 import os
-import numpy as np
+import logging
+
+
+class MetricsCallback(Callback):
+    """PyTorch Lightning metric callback."""
+
+    def __init__(self):
+        super().__init__()
+        self.metrics = []
+
+    def on_validation_end(self, trainer, pl_module):
+        self.metrics.append(trainer.callback_metrics)
+
+
+class PytorchObjective(object):
+
+    def __init__(self, data, bounds, n_input, n_classes, use_gpu=False):
+        self.use_gpu = use_gpu
+        self.bounds = bounds
+        self.data = data
+        self.n_input = n_input
+        self.n_classes = n_classes
+
+    def __call__(self, trial):
+
+        # The default logger in PyTorch Lightning writes to event files
+        # to be consumed by TensorBoard. We don't use any logger here as
+        # it requires us to implement several abstract methods. Instead
+        # we setup a simple callback, that saves metrics from each
+        # validation step.
+        metrics_callback = MetricsCallback()
+
+        # Define parameters
+        parameters = {
+            'n_input': self.n_input,
+            'n_classes': self.n_classes,
+            'n_layers': trial.suggest_int('n_layers',
+                                          *self.bounds['n_layers']),
+            'dropout': trial.suggest_uniform('dropout',
+                                             *self.bounds['dropout']),
+            'batch_size': trial.suggest_int('batch_size',
+                                            *self.bounds['batch_size']),
+            'learning_rate': trial.suggest_float('learning_rate',
+                                                 *self.bounds['learning_rate'],
+                                                 log=True),
+            'max_epochs': trial.suggest_int('max_epochs',
+                                            *self.bounds['max_epochs'])
+        }
+        for i in range(parameters['n_layers']):
+            parameters['n_units_l{}'.format(i)] = trial.suggest_int(
+                'n_units_l{}'.format(i), *self.bounds['n_units_l'], log=True)
+
+        # Construct trainer object and train
+        trainer = Trainer(
+            logger=False,
+            checkpoint_callback=False,
+            distributed_backend='dp',
+            max_epochs=parameters['max_epochs'],
+            verbose=False,
+            gpus=-1 if self.use_gpu else None,
+            callbacks=[metrics_callback],
+            early_stop_callback=PyTorchLightningPruningCallback(
+                trial, monitor="val_loss"),
+        )
+
+        model = LightningNet(self.data, parameters)
+        trainer.fit(model)
+
+        return metrics_callback.metrics[-1]["val_loss"]
 
 
 class PytorchNeuralNet(Learner):
-    """
-    Pytorch Neural Network learner.
-    """
+    """Pytorch Learner class. """
 
     def __init__(self, **options):
-        """
-        Initialize Pytorch neural network class.
+        """Initialize Pytorch Learner class.
 
         Parameters
         ----------
         options : dict
             Learner options as a dictionary.
         """
-
         if not PytorchNeuralNet.is_installed():
-            e.error("Pytorch not installed")
+            e.value_error("Pytorch not installed")
 
         # import torch
         import torch
         self.torch = torch
 
-        # Define learner name
+        # Disable logging
+        log = logging.getLogger("lightning")
+        log.setLevel(logging.ERROR)
+
         self.name = stg.PYTORCH
         self.n_input = options.pop('n_input')
         self.n_classes = options.pop('n_classes')
-
-        # Default params grid
-        default_params = DEFAULT_TRAINING_PARAMS
-
-        # Unpack settings
         self.options = {}
-        self.options['params'] = options.pop('params', default_params)
-        not_specified_params = [x for x in default_params.keys()
-                                if x not in self.options['params'].keys()]
-        # Assign remaining keys
-        for p in not_specified_params:
-            self.options['params'][p] = default_params[p]
-        if 'n_hidden' not in self.options['params'].keys():
-            self.options['params']['n_hidden'] = \
-                [int((self.n_classes + self.n_input)/2)]
 
-        # Get fraction between training and validation
-        self.options['frac_train'] = options.pop('frac_train', stg.FRAC_TRAIN)
+        self.options['bounds'] = options.pop(
+            'bounds', pts.PARAMETER_BOUNDS)
 
-        # Define device
-        self.device = self.torch.device("cpu")
-        if self.torch.cuda.is_available():
-            self.device = self.torch.device("cuda:0")
-            stg.logger.info("Using CUDA GPU %s with Pytorch" %
-                            self.torch.cuda.get_device_name(self.device))
-        else:
-            self.device = self.torch.device("cpu")
-            stg.logger.info("Using CPU with Pytorch")
+        not_specified_bounds = \
+            [x for x in pts.PARAMETER_BOUNDS.keys()
+             if x not in self.options['bounds'].keys()]
+        for p in not_specified_bounds:  # Assign remaining keys
+            self.options['bounds'][p] = pts.PARAMETER_BOUNDS[p]
 
         # Pick minimum between n_best and n_classes
         self.options['n_best'] = min(options.pop('n_best', stg.N_BEST),
                                      self.n_classes)
 
-        # Define loss
-        self.loss = self.torch.nn.CrossEntropyLoss()
+        # Pick number of hyperopt_trials
+        self.options['n_train_trials'] = options.pop('n_train_trials',
+                                                     stg.N_TRAIN_TRIALS)
+
+        # Mute optuna
+        optuna.logging.set_verbosity(optuna.logging.INFO)
+
+        # Define device
+        self.use_gpu = self.torch.cuda.is_available()
+        if self.use_gpu:
+            stg.logger.info("Using CUDA GPU %s with Pytorch" %
+                            self.torch.cuda.get_device_name(self.device))
+        else:
+            stg.logger.info("Using CPU with Pytorch")
 
     @classmethod
     def is_installed(cls):
         try:
             import torch
+            torch
         except ImportError:
             return False
         return True
-
-    def get_dataloader(self, X, y, batch_size=1):
-        from torch.utils.data import TensorDataset, DataLoader
-        X = self.torch.tensor(X, dtype=self.torch.float)
-        y = self.torch.tensor(y, dtype=self.torch.long)
-
-        return DataLoader(TensorDataset(X, y),
-                          batch_size=batch_size,
-                          shuffle=False,
-                          )
-
-    def train_epoch(self, dataloader):
-
-        # Initialize loss average and summary
-        metrics = []
-        loss_avg = u.RunningAverage()
-
-        with tqdm(total=len(dataloader)) as t_epoch:
-            for i, (inputs, labels) in enumerate(dataloader):
-
-                # Move to CUDA if selected
-                inputs, labels = \
-                    inputs.to(self.device), labels.to(self.device)
-
-                self.optimizer.zero_grad()                   # zero grad
-                outputs = self.net(inputs)                   # forward
-                loss = self.loss(outputs, labels)            # loss
-                loss.backward()                              # backward
-                self.optimizer.step()                        # optimizer
-
-                # Update average loss
-                loss_avg.update(loss.item())
-                t_epoch.set_postfix(loss='{:05.3f}'.format(loss_avg()))
-                t_epoch.update()
-
-                # Evaluate metrics only once in a while
-                if i % 100 == 0:
-                    metrics.append(u.eval_metrics(outputs,
-                                                  labels,
-                                                  loss))
-
-        return u.log_metrics(metrics, string="Train")
-
-    def evaluate(self, dataloader):
-
-        metrics = []
-
-        # set model to evaluation mode
-        self.net.eval()
-
-        with self.torch.no_grad():  # Disable gradients
-
-            # compute metrics over the dataset
-            for inputs, labels in dataloader:
-
-                # Move to CUDA if selected
-                inputs, labels = \
-                    inputs.to(self.device), labels.to(self.device)
-
-                # compute model output
-                outputs = self.net(inputs)
-                loss = self.loss(outputs, labels)
-
-                metrics.append(u.eval_metrics(outputs, labels, loss))
-
-        return u.log_metrics(metrics, string="Eval")
-
-    def train_instance(self,
-                       train_dl,
-                       valid_dl,
-                       params):
-        """
-        Train single instance of the network for parameters in params
-        """
-        from mlopt.learners.pytorch.model import Net
-
-        # Create Pytorch Neural Network and port to to device
-        self.net = Net(self.n_input,
-                       self.n_classes,
-                       params['n_hidden']).to(self.device)
-
-        info_str = "Learning Neural Network with parameters: "
-        info_str += str(params)
-        stg.logger.info(info_str)
-
-        # Define optimizer
-        self.optimizer = self.torch.optim.Adam(self.net.parameters(),
-                                               lr=params['learning_rate'])
-
-        # Reset seed
-        self.torch.manual_seed(1)
-        if self.torch.cuda.is_available():
-            self.torch.cuda.manual_seed(1)
-
-        # Set network in training mode (not evaluation)
-        self.net.train()
-
-        # TODO: Add best validaiton accuracy check and checkpoint
-        # store/load
-        # best_valid_accuracy = 0.0
-
-        for epoch in range(params['n_epochs']):  # loop over dataset multiple times
-
-            stg.logger.info("Epoch {}/{}".format(epoch + 1, params['n_epochs']))
-
-            train_metrics = self.train_epoch(train_dl)
-            valid_metrics = self.evaluate(valid_dl)
-
-            valid_accuracy = valid_metrics['accuracy']
-
-
-            # is_best = valid_accuracy >= best_valid_accuracy
-            # if is_best:
-            #     stg.logger.info("- Found new best accuracy")
-            #     best_valid_accuracy = valid_accuracy
-
-        return valid_accuracy
 
     def train(self, X, y):
         """
@@ -209,106 +159,87 @@ class PytorchNeuralNet(Learner):
 
         self.n_train = len(X)
 
-        # Convert X dataframe to numpy array
-        # TODO: Move outside
-        # X = pandas2array(X)
+        # Split train and validation
+        X_train, X_valid, y_train, y_valid = train_test_split(X, y, stratify=y,
+                                                              test_size=0.1,
+                                                              random_state=0)
 
-        # # Normalize data
-
-        # Shuffle data, split in train and validation and create dataloader here
-        np.random.seed(0)
-        idx_pick = np.arange(self.n_train)
-        np.random.shuffle(idx_pick)
-
-        split_valid = int(self.options['frac_train'] * len(idx_pick))
-        train_idx = idx_pick[:split_valid]
-        valid_idx = idx_pick[split_valid:]
-        X_train, y_train = X[train_idx], y[train_idx]
-        X_valid, y_valid = X[valid_idx], y[valid_idx]
-
-        # Create validation data loader
-        # Training data loader will be created when evaluating the model
-        # which depends on the batch_size variable
-        valid_dl = self.get_dataloader(X_valid, y_valid)
-
+        data = {'X_train': X_train, 'y_train': y_train,
+                'X_valid': X_valid, 'y_valid': y_valid}
         stg.logger.info("Split dataset in %d training and %d validation" %
-                     (len(train_idx), len(valid_idx)))
+                        (len(y_train), len(y_valid)))
 
-        # Create parameter vector
-        params = [{
-            'learning_rate': learning_rate,
-            'batch_size': batch_size,
-            'n_epochs': n_epochs,
-            'n_hidden': n_hidden}
-            for learning_rate in self.options['params']['learning_rate']
-            for batch_size in self.options['params']['batch_size']
-            for n_epochs in self.options['params']['n_epochs']
-            for n_hidden in self.options['params']['n_hidden']
-        ]
-        n_models = len(params)
+        start_time = time()
+        objective = PytorchObjective(data, self.options['bounds'],
+                                     self.n_input, self.n_classes,
+                                     self.use_gpu)
 
-        stg.logger.info("Train Neural Network with %d " % n_models +
-                     "sets of parameters, " +
-                     "%d inputs, %d outputs" % (self.n_input, self.n_classes))
+        sampler = optuna.samplers.TPESampler(seed=0)  # Deterministic
+        pruner = optuna.pruners.MedianPruner(
+            #  n_warmup_steps=5
+        )
+        study = optuna.create_study(sampler=sampler, pruner=pruner,
+                                    direction="minimize")
+        study.optimize(objective,
+                       n_trials=self.options['n_train_trials'],
+                       #  show_progress_bar=True
+                       )
 
-        # Create vector of results
-        accuracy_vec = np.zeros(n_models)
+        # DEBUG
+        #  fig = optuna.visualization.plot_intermediate_values(study)
+        #  fig.show()
 
-        if n_models > 1:
-            for i in range(n_models):
+        self.best_params = study.best_trial.params
+        self.best_params['n_input'] = self.n_input
+        self.best_params['n_classes'] = self.n_classes
 
-                # Create dataloader
-                train_dl = self.get_dataloader(X_train, y_train,
-                                            batch_size=params[i]['batch_size'])
+        self.print_trial_stats(study)
 
-                accuracy_vec[i] = self.train_instance(train_dl, valid_dl,
-                                                      params[i])
+        # Train again
+        stg.logger.info("Train with best parameters")
 
-            # Pick best parameters
-            self.best_params = params[np.argmax(accuracy_vec)]
-            stg.logger.info("Best parameters")
-            stg.logger.info(str(self.best_params))
-            stg.logger.info("Train neural network with best parameters")
+        self.trainer = Trainer(
+            checkpoint_callback=False,
+            distributed_backend='dp',
+            logger=False,  # ??
+            max_epochs=self.best_params['max_epochs'],
+            gpus=-1 if self.use_gpu else None,
+        )
+        self.model = LightningNet(data, self.best_params)
+        self.trainer.fit(self.model)
 
-        else:
-
-            stg.logger.info("Train neural network with "
-                         "just one set of parameters")
-            self.best_params = params[0]
-            train_dl = \
-                self.get_dataloader(X_train, y_train,
-                                 batch_size=self.best_params['batch_size'])
-
-        stg.logger.info(self.best_params)
-        # Retrain network with best parameters over whole dataset
-        self.train_instance(train_dl, valid_dl, self.best_params)
+        # Print timing
+        end_time = time()
+        stg.logger.info("Training time %.2f" % (end_time - start_time))
 
     def predict(self, X):
 
         # Disable gradients computation
-        self.net.eval()  # Put layers in evaluation mode
-        with self.torch.no_grad():
+        self.model.eval()  # Put layers in evaluation mode
+        with self.torch.no_grad():  # Needed?
 
-            # Convert pandas df to array (unroll tuples)
-            X = self.torch.tensor(X, dtype=self.torch.float).to(self.device)
-
-            # Evaluate classes
-            # NB. Removed softmax (unscaled probabilities)
-            y = self.net(X).detach().cpu().numpy()
+            # TODO: Perform forward step on gpu?
+            X = self.torch.tensor(X, dtype=self.torch.float)
+            y = self.model(X).detach().cpu().numpy()
 
         return self.pick_best_class(y, n_best=self.options['n_best'])
 
     def save(self, file_name):
-        # Save state dictionary to file
-        # https://pytorch.org/tutorials/beginner/saving_loading_models.html
-        self.torch.save(self.net.state_dict(), file_name + ".pkl")
+        self.trainer.save_checkpoint(file_name + ".ckpt")
+
+        #  # Save state dictionary to file
+        #  # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        #  self.torch.save(self.model.state_dict(), file_name + ".pkl")
 
     def load(self, file_name):
+        path = file_name + ".ckpt"
         # Check if file name exists
-        if not os.path.isfile(file_name + ".pkl"):
-            e.error("Pytorch pkl file does not exist.")
+        if not os.path.isfile(path):
+            e.value_error("Pytorch checkpoint file does not exist.")
 
-        # Load state dictionary from file
-        # https://pytorch.org/tutorials/beginner/saving_loading_models.html
-        self.net.load_state_dict(self.torch.load(file_name + ".pkl"))
-        self.net.eval()  # Necessary to set the model to evaluation mode
+        self.model = PytorchNeuralNet.load_from_checkpoint(path)
+        #  self.model.eval()  # Necessary to set the model to evaluation mode
+
+        #  # Load state dictionary from file
+        #  # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        #  self.model.load_state_dict(self.torch.load(file_name + ".pkl"))

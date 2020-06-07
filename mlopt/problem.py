@@ -93,7 +93,7 @@ class Problem(object):
     def solver(self, s):
         """Set internal solver."""
         if s not in INSTALLED_SOLVERS:
-            e.error('Solver %s not installed.' % s)
+            e.value_error('Solver %s not installed.' % s)
         self._solver = s
 
     @property
@@ -187,13 +187,15 @@ class Problem(object):
         # Check [A | b]
         M_A = param_prog.A
         n_row_A, n_col_A = M_A.shape
+        n_con = param_prog.constr_size
 
         # -1 to ignore the (theta, 1) offset column
         for idx in range(n_col_A - 1):
             col_start = M_A.indptr[idx]
             col_end = M_A.indptr[idx+1]
             indices = M_A.indices[col_start:col_end]
-            if any(indices < n_row_A - 1):  # Allow only elements in last row
+            # Allow only elements in last row representing constraint vector
+            if any(indices < n_row_A - n_con):
                 return True
 
         # Check P
@@ -264,7 +266,7 @@ class Problem(object):
 
         if strategy is not None:
             if not strategy.accepts(data):
-                e.error("Strategy incompatible for current problem")
+                e.value_error("Strategy incompatible for current problem")
 
         if strategy is not None:
             strategy.apply(data, inverse_data[-1])

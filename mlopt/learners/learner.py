@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
+import optuna
+import mlopt.settings as stg
 
 
 class Learner(ABC):
@@ -65,3 +67,30 @@ class Learner(ABC):
             idx_probs[i, :] = np.argsort(y[i, :])[-n_best:]
 
         return idx_probs
+
+    def print_trial_stats(self, study):
+        """TODO: Docstring for print_trial_stats.
+
+        Args:
+            arg1 (TODO): TODO
+
+        Returns: TODO
+
+        """
+        best_params = study.best_trial.params
+
+        pruned_trials = [t for t in study.trials
+                         if t.state == optuna.trial.TrialState.PRUNED]
+        complete_trials = [t for t in study.trials
+                           if t.state == optuna.trial.TrialState.COMPLETE]
+
+        stg.logger.info("Study statistics: ")
+        stg.logger.info("  Number of finished trials: %d" % len(study.trials))
+        stg.logger.info("  Number of pruned trials: %d" % len(pruned_trials))
+        stg.logger.info("  Number of complete trials: %d" %
+                        len(complete_trials))
+
+        stg.logger.info("Best loss value: %.4f" % study.best_trial.value)
+        stg.logger.info("Best parameters")
+        for key, value in best_params.items():
+            print("    {}: {}".format(key, value))

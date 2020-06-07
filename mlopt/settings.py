@@ -43,6 +43,7 @@ DEFAULT_LEARNER = XGBOOST
 
 # Learners settings
 N_BEST = 10
+N_TRAIN_TRIALS = 100
 FRAC_TRAIN = 0.9  # Fraction dividing training and validation
 
 

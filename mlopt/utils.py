@@ -96,8 +96,9 @@ def pandas2array(X):
         n_data = len(X)
 
         x_temp_list = []
-        for i in tqdm(range(n_data),
-                      desc="Converting dataframe to array"):
+        #  for i in tqdm(range(n_data),
+        #                desc="Converting dataframe to array"):
+        for i in range(n_data):
             x_temp_list.append(
                 np.concatenate([np.atleast_1d(v).flatten()
                                 for v in X.iloc[i].values])

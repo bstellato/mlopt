@@ -24,7 +24,7 @@ class TestParallel(unittest.TestCase):
         p = 1.
         x_init = 2.
         radius = 2.
-        n_train = 100   # Number of samples
+        n_train = 1000   # Number of samples
 
         # Define problem
         x = cp.Variable(T+1)
@@ -114,16 +114,10 @@ class TestParallel(unittest.TestCase):
         df_test = pd.DataFrame({'mu': list(X_d_test)})
 
         # Train and test using pytorch
-        params = {
-            'learning_rate': [0.01],
-            'batch_size': [32],
-            'n_epochs': [20],
-            'n_layers': [5]
-        }
         m.train(df,
                 parallel=True,
-                learner=PYTORCH,
-                params=params)
+                filter_strategies=True,
+                learner=PYTORCH)
         m.performance(df_test, parallel=True)
 
         # Run parallel loop again to enforce instability
