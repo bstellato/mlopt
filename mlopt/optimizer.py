@@ -481,9 +481,14 @@ class Optimizer(object):
         classes = self._learner.predict(X_pred)
         t_predict = (time() - t_start) / n_points  # Average predict time
 
-        stg.logger.info(message)
+        if n_points > 1:
+            stg.logger.info(message)
+            ran = tqdm(range(n_points))
+        else:
+            # Do not print anything if just one point
+            ran = range(n_points)
 
-        for i in tqdm(range(n_points)):
+        for i in ran:
 
             # Populate problem with i-th data point
             self._problem.populate(X.iloc[i])
