@@ -18,8 +18,6 @@ logger.propagate = False   # Disable double logging
 #  file_handler.setLevel(logging.INFO)
 #  logger.addHandler(file_handler)
 
-# DEFAULT settings
-FILTER_STRATEGIES = False
 
 # Define constants
 INFEAS_TOL = 1e-04
@@ -51,5 +49,6 @@ FRAC_TRAIN = 0.9  # Fraction dividing training and validation
 SAMPLING_TOL = 5e-03
 
 # Filtering
+FILTER_STRATEGIES = True
 FILTER_STRATEGIES_SAMPLES_FRACTION = 0.98
 FILTER_SUBOPT = 2e-01

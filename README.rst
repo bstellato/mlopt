@@ -1,3 +1,0 @@
-Machine Learning Optimizer
-==========================
-

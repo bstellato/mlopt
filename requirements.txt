@@ -1,7 +1,7 @@
 appnope==0.1.0
 autopep8==1.5.2
 backcall==0.1.0
-cvxpy @ file:///Users/sidereus/Dropbox/research/code/projects/cvxpy
+cvxpy==1.1.1
 decorator==4.4.2
 ecos==2.0.7.post1
 flake8==3.8.1

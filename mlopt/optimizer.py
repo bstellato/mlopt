@@ -280,7 +280,7 @@ class Optimizer(object):
               sampling_fn=None,
               parallel=True,
               learner=stg.DEFAULT_LEARNER,
-              filter_strategies=False,
+              filter_strategies=stg.FILTER_STRATEGIES,
               **learner_options):
         """
         Train optimizer using parameter X.

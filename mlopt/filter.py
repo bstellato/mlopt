@@ -141,9 +141,10 @@ class Filter(object):
                                           selected_strategies,
                                           parallel=parallel)
 
-        stg.logger.info("Average cost degradation = %.2e %%" %
-                        (100 * np.mean(degradation)))
-        stg.logger.info("Max cost degradation = %.2e %%" %
-                        (100 * np.max(degradation)))
+        if any(degradation):
+            stg.logger.info("Average cost degradation = %.2e %%" %
+                            (100 * np.mean(degradation)))
+            stg.logger.info("Max cost degradation = %.2e %%" %
+                            (100 * np.max(degradation)))
 
         return self.y_train, self.encoding
