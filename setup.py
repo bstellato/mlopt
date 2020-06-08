@@ -9,7 +9,7 @@ def readme():
 
 
 setup(name='mlopt',
-      version='0.0.1',
+      version='0.0.2',
       description='The Machine Learning Optimizer',
       long_description=readme(),
       author='Bartolomeo Stellato, Dimitris Bertsimas',
