@@ -1,10 +1,8 @@
 import numpy as np
 import cvxpy as cp
-from cvxpy.constraints.zero import Zero, Equality
 import os
 import pandas as pd
 import mlopt.settings as stg
-from tqdm import tqdm
 import joblib
 
 
@@ -102,8 +100,6 @@ def pandas2array(X):
         n_data = len(X)
 
         x_temp_list = []
-        #  for i in tqdm(range(n_data),
-        #                desc="Converting dataframe to array"):
         for i in range(n_data):
             x_temp_list.append(
                 np.concatenate([np.atleast_1d(v).flatten()

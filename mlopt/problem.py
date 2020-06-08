@@ -12,7 +12,7 @@ import cvxpy.settings as cps
 from cvxpy.reductions.solvers.defines import INSTALLED_SOLVERS
 from cvxpy.reductions.solvers.solving_chain import SolvingChain
 # Progress bars
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 class Problem(object):

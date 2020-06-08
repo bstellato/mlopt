@@ -2,7 +2,7 @@ from joblib import Parallel, delayed
 import mlopt.settings as stg
 import numpy as np
 import mlopt.utils as u
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def best_strategy(theta, obj_train, encoding, problem):

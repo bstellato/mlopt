@@ -18,7 +18,7 @@ import tempfile
 import tarfile
 import pickle as pkl
 from joblib import Parallel, delayed
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from time import time
 
 
@@ -178,6 +178,9 @@ class Optimizer(object):
         self._problem = data_dict['_problem']
         self.encoding = data_dict['encoding']
 
+        stg.logger.info("Loaded %d points with %d strategies" %
+                        (len(self.y_train), len(self.encoding)))
+
         if ('_solver_cache' in data_dict):
             self._solver_cache = data_dict['_solver_cache']
 
@@ -222,7 +225,7 @@ class Optimizer(object):
                                    if np.isnan(x['x']).any()}
             if not_feasible_points:
                 e.value_error("Infeasible points found. Number of infeasible "
-                        "points %d" % len(not_feasible_points))
+                              "points %d" % len(not_feasible_points))
 
             self.obj_train = [r['cost'] for r in results]
             train_strategies = [r['strategy'] for r in results]
@@ -375,7 +378,7 @@ class Optimizer(object):
             Perform `n_best` strategies evaluation in parallel.
             True by default.
         use_cache : bool, optional
-            Use solver cache? True by default.
+            Use solver cache if available. True by default.
 
         Returns
         -------
@@ -464,9 +467,9 @@ class Optimizer(object):
         n_points = len(X)
 
         if use_cache and not self._solver_cache:
-            e.value_error("Solver cache requested but the cache has "
-                          "not been computed for this problem. Is it "
-                          "MIQP representable?")
+            e.warning("Solver cache requested but the cache has "
+                      "not been computed for this problem. "
+                      "Possibly parameters in proble matrices.")
 
         # Change verbose setting
         if verbose:
