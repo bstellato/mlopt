@@ -1,8 +1,8 @@
 # Machine Learning Optimizer
 
-`mlopt` is a package to learn how to solve numerical optimization problems from data. It relies on [CVXPY](https://cvxpy.org) for modeling and [GUROBI](https://www.gurobi.com/) for solving the problem offline.
+`mlopt` is a package to learn how to solve numerical optimization problems from data. It relies on [cvxpy](https://cvxpy.org) for modeling and [gurobi](https://www.gurobi.com/) for solving the problem offline.
 
-`mlopt` learns how to solve programs using [Pytorch](https://pytorch.org/), [XGBoost](https://xgboost.readthedocs.io/en/latest/) or [OptimalTrees](https://docs.interpretable.ai/stable). The machine learning hyperparameter optimization is performed using [optuna](https://optuna.org/).
+`mlopt` learns how to solve programs using [pytorch](https://pytorch.org/) ([pytorch-lightning](https://github.com/PyTorchLightning/pytorch-lightning)), [xgboost](https://xgboost.readthedocs.io/en/latest/) or [optimaltrees](https://docs.interpretable.ai/stable). The machine learning hyperparameter optimization is performed using [optuna](https://optuna.org/).
 
 Online, `mlopt` only requires to predict the strategy and solve a linear system using [scikit-umfpack](https://github.com/scikit-umfpack/scikit-umfpack).
 

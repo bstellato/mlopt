@@ -243,15 +243,19 @@ class Optimizer(object):
             self._sampler = Sampler(self._problem, n_samples=len(self.X_train))
             self._sampler.compute_good_turing(self.y_train)
 
+            # Condense strategies
+            if filter_strategies:
+                self.filter_strategies(parallel=parallel)
+
         elif sampling_fn is not None and not self.samples_present():
             stg.logger.info("Use iterative sampling")
             # Create X_train, y_train and encoding from
             # sampling function
             self.sample(sampling_fn, parallel=parallel)
 
-        # Condense strategies
-        if filter_strategies:
-            self.filter_strategies(parallel=parallel)
+            # Condense strategies
+            if filter_strategies:
+                self.filter_strategies(parallel=parallel)
 
         # Add factorization faching if
         # 1. Problem is MIQP
