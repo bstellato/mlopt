@@ -36,10 +36,18 @@ If you use `mlopt` for research, please cite the following papers:
   @article{stellato2019a,
     author = {{Bertsimas}, D. and {Stellato}, B.},
     title = {Online Mixed-Integer Optimization in Milliseconds},
-    journal = {INFORMS Journal on Computing (major revision)},
+    journal = {arXiv e-prints},
     year = {2019},
     month = jul,
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/2019arXiv190702206B},
+    archiveprefix = {arXiv},
+    eprint = {1907.02206},
+    keywords = {Mathematics - Optimization and Control},
+    pdf = {https://arxiv.org/pdf/1907.02206.pdf},
+    primaryclass = {math.OC},
   }
+
   ```
 
 
