@@ -7,7 +7,7 @@ from torch.optim import Adam
 
 
 class LightningNet(LightningModule):
-    def __init__(self, data, options):
+    def __init__(self, options, data=None):
         super(LightningNet, self).__init__()
         self.options = options
         self.data = data

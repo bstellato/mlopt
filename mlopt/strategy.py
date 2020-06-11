@@ -46,14 +46,14 @@ class Strategy(object):
 
         return tight_constraints
 
-    def __repr__(self):
-        string = "Strategy\n"
-        string += "  - Tight constraints:\n"
-        string += self.tight_constraints.__str__() + "\n"
-        if len(self.int_vars) > 0:
-            string += "  - Integer variables values:\n"
-            string += self.int_vars.__str__() + "\n"
-        return string
+    #  def __repr__(self):
+    #      string = "Strategy\n"
+    #      string += "  - Tight constraints:\n"
+    #      string += self.tight_constraints.__str__() + "\n"
+    #      if len(self.int_vars) > 0:
+    #          string += "  - Integer variables values:\n"
+    #          string += self.int_vars.__str__() + "\n"
+    #      return string
 
     # TODO: Implement hash if unique list comparison starts getting slow
     #  def __hash__(self):

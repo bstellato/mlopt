@@ -75,7 +75,7 @@ class PytorchObjective(object):
                 trial, monitor="val_loss"),
         )
 
-        model = LightningNet(self.data, parameters)
+        model = LightningNet(parameters, self.data)
         trainer.fit(model)
 
         return metrics_callback.metrics[-1]["val_loss"]
@@ -207,7 +207,7 @@ class PytorchNeuralNet(Learner):
             max_epochs=self.best_params['max_epochs'],
             gpus=-1 if self.use_gpu else None,
         )
-        self.model = LightningNet(data, self.best_params)
+        self.model = LightningNet(self.best_params, data)
         self.trainer.fit(self.model)
 
         # Print timing
@@ -217,10 +217,9 @@ class PytorchNeuralNet(Learner):
     def predict(self, X):
 
         # Disable gradients computation
-        self.model.eval()  # Put layers in evaluation mode
+        #  self.model.eval()  # Put layers in evaluation mode
         with self.torch.no_grad():  # Needed?
 
-            # TODO: Perform forward step on gpu?
             X = self.torch.tensor(X, dtype=self.torch.float).to(self.device)
             y = self.model(X).detach().cpu().numpy()
 
@@ -229,8 +228,8 @@ class PytorchNeuralNet(Learner):
     def save(self, file_name):
         self.trainer.save_checkpoint(file_name + ".ckpt")
 
-        #  # Save state dictionary to file
-        #  # https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        # Save state dictionary to file
+        # https://pytorch.org/tutorials/beginner/saving_loading_models.html
         #  self.torch.save(self.model.state_dict(), file_name + ".pkl")
 
     def load(self, file_name):
@@ -239,9 +238,11 @@ class PytorchNeuralNet(Learner):
         if not os.path.isfile(path):
             e.value_error("Pytorch checkpoint file does not exist.")
 
-        self.model = PytorchNeuralNet.load_from_checkpoint(path)
-        #  self.model.eval()  # Necessary to set the model to evaluation mode
+        self.model = LightningNet.load_from_checkpoint(path, self.best_params).to(self.device)
+        self.model.eval()  # Necessary to set the model to evaluation mode
+        self.model.freeze()  # Necessary to set the model to evaluation mode
 
         #  # Load state dictionary from file
         #  # https://pytorch.org/tutorials/beginner/saving_loading_models.html
         #  self.model.load_state_dict(self.torch.load(file_name + ".pkl"))
+        #  self.model.eval()  # Necessary to set the model to evaluation mode

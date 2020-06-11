@@ -46,7 +46,7 @@ class TestSave(unittest.TestCase):
         self.constraints = constraints
 
         # Objective
-        self.cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum(u)
+        self.cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum_squares(u)
 
         # Define problem
         problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
@@ -108,44 +108,44 @@ class TestSave(unittest.TestCase):
                                         load_general['avg_subopt'],
                                         decimal=1e-8)
 #
-    #  def test_save_load(self):
-    #      """Test save load"""
-    #
-    #      for learner in self.learners:
-    #
-    #          # Train optimizer
-    #          self.optimizer.train(self.df, learner=learner)
-    #
-    #          # Create temporary directory where
-    #          # to do stuff
-    #          with tempfile.TemporaryDirectory() as tmpdir:
-    #
-    #              # Archive name
-    #              file_name = os.path.join(tmpdir, learner + ".tar.gz")
-    #
-    #              # Save optimizer
-    #              self.optimizer.save(file_name)
-    #
-    #              # Create new optimizer and load
-    #              new_optimizer = Optimizer.from_file(file_name)
-    #
-    #              # Predict with optimizer
-    #              res = self.optimizer.solve(self.df_test)
-    #
-    #              # Predict with new_optimizer
-    #              res_new = new_optimizer.solve(self.df_test)
-    #
-    #              # Make sure predictions match
-    #              for i in range(len(self.df_test)):
-    #                  npt.assert_almost_equal(res[i]['x'],
-    #                                          res_new[i]['x'],
-    #                                          decimal=TOL)
-    #                  npt.assert_almost_equal(res[i]['cost'],
-    #                                          res_new[i]['cost'],
-    #                                          decimal=TOL)
-    #                  self.assertTrue(res[i]['strategy'] ==
-    #                                  res_new[i]['strategy'])
-    #
-    #
-if __name__ == '__main__':
-    unittest.main()
+    def test_save_load(self):
+        """Test save load"""
+
+        for learner in installed_learners():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                data_file = os.path.join(tmpdir, "data.pkl")
+
+                # Train optimizer
+                self.optimizer.train(self.df,
+                                     n_train_trials=10,
+                                     learner=learner)
+
+                # Create temporary directory where
+                # to do stuff
+                with tempfile.TemporaryDirectory() as tmpdir:
+
+                    # Archive name
+                    file_name = os.path.join(tmpdir, learner + ".tar.gz")
+
+                    # Save optimizer
+                    self.optimizer.save(file_name)
+
+                    # Create new optimizer and load
+                    new_optimizer = Optimizer.from_file(file_name)
+
+                    # Predict with optimizer
+                    res = self.optimizer.solve(self.df_test)
+
+                    # Predict with new_optimizer
+                    res_new = new_optimizer.solve(self.df_test)
+
+                    # Make sure predictions match
+                    for i in range(len(self.df_test)):
+                        npt.assert_almost_equal(res[i]['x'],
+                                                res_new[i]['x'],
+                                                decimal=TOL)
+                        npt.assert_almost_equal(res[i]['cost'],
+                                                res_new[i]['cost'],
+                                                decimal=TOL)
+                        self.assertTrue(res[i]['strategy'] ==
+                                        res_new[i]['strategy'])

@@ -562,6 +562,7 @@ class Optimizer(object):
                              # '_solver_cache': self._solver_cache,  # Cannot pickle
                              'learner_name': self._learner.name,
                              'learner_options': self._learner.options,
+                             'learner_best_params': self._learner.best_params,
                              'encoding': self.encoding
                              }
                 pkl.dump(file_dict, optimizer)
@@ -616,10 +617,12 @@ class Optimizer(object):
             # Load learner
             learner_name = optimizer_dict['learner_name']
             learner_options = optimizer_dict['learner_options']
+            learner_best_params = optimizer_dict['learner_best_params']
             optimizer._learner = \
                 LEARNER_MAP[learner_name](n_input=optimizer.n_parameters,
                                           n_classes=len(optimizer.encoding),
                                           **learner_options)
+            optimizer._learner.best_params = learner_best_params
             optimizer._learner.load(os.path.join(tmpdir, "learner"))
 
         return optimizer

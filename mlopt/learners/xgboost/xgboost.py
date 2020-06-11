@@ -145,4 +145,5 @@ class XGBoost(Learner):
         self.bst.save_model(file_name + ".json")
 
     def load(self, file_name):
-        self.bst = self.xgb.Booster().load_model(file_name)
+        self.bst = self.xgb.Booster()
+        self.bst.load_model(file_name + ".json")
