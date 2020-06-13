@@ -46,7 +46,7 @@ class TestSave(unittest.TestCase):
         self.constraints = constraints
 
         # Objective
-        self.cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum_squares(u)
+        self.cost = cp.sum(cp.maximum(h * x, -p * x)) + c * cp.sum_squares(u) + 0.001 * cp.sum_squares(x)
 
         # Define problem
         problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
