@@ -41,8 +41,8 @@ DEFAULT_LEARNER = XGBOOST
 
 # Learners settings
 N_BEST = 10
-N_TRAIN_TRIALS = 200
-FRAC_TRAIN = 0.9  # Fraction dividing training and validation
+N_TRAIN_TRIALS = 300
+FRAC_TRAIN = 0.8  # Fraction dividing training and validation
 
 
 # Sampling
@@ -50,5 +50,6 @@ SAMPLING_TOL = 5e-03
 
 # Filtering
 FILTER_STRATEGIES = True
-FILTER_STRATEGIES_SAMPLES_FRACTION = 0.95
+FILTER_STRATEGIES_SAMPLES_FRACTION = 0.90
 FILTER_SUBOPT = 2e-01
+FILTER_MAX_ITER = 10

@@ -16,16 +16,22 @@ def best_strategy(theta, obj_train, encoding, problem):
     # Compute cost degradation
     degradation = []
     for r in results:
-        diff = np.abs(r['cost'] - obj_train)
+
+        cost = r['cost']
+
+        if r['infeasibility'] > stg.INFEAS_TOL:
+            cost = np.inf
+
+        diff = np.abs(cost - obj_train)
         if np.abs(obj_train) > stg.DIVISION_TOL:  # Normalize in case
             diff /= np.abs(obj_train)
         degradation.append(diff)
 
     # Find minimum one
     best_strategy = np.argmin(degradation)
-    if degradation[best_strategy] > stg.FILTER_SUBOPT:
-        stg.logger.warning("Sample assigned to strategy more " +
-                           "than %.2e suboptimal." % stg.FILTER_SUBOPT)
+    #  if degradation[best_strategy] > stg.FILTER_SUBOPT:
+    #      stg.logger.warning("Sample assigned to strategy more " +
+    #                         "than %.2e suboptimal." % stg.FILTER_SUBOPT)
 
     return best_strategy, degradation[best_strategy]
 
@@ -53,7 +59,7 @@ class Filter(object):
         """
 
         # Backup strategies labels and encodings
-        self.y_full = self.y_train
+        #  self.y_full = self.y_train
 
         # Reassign y_labels
         # selected_strategies: find index where new labels are
@@ -113,6 +119,7 @@ class Filter(object):
 
     def filter(self,
                samples_fraction=stg.FILTER_STRATEGIES_SAMPLES_FRACTION,
+               max_iter=stg.FILTER_MAX_ITER,
                parallel=True):
         """Filter strategies."""
         n_samples = len(self.X_train)
@@ -121,30 +128,49 @@ class Filter(object):
         self.y_full = self.y_train
         self.encoding_full = self.encoding
 
-        selected_strategies = \
-            self.select_strategies(samples_fraction=samples_fraction)
+        degradation = [np.inf]
+        for k in range(max_iter):
 
-        # Reassign encodings and labels
-        self.encoding = [self.encoding[i] for i in selected_strategies]
+            selected_strategies = \
+                self.select_strategies(samples_fraction=samples_fraction)
 
-        # Find discarded samples
-        discarded_samples = np.array([i for i in range(n_samples)
-                                      if self.y_train[i]
-                                      not in selected_strategies])
+            # Reassign encodings and labels
+            self.encoding = [self.encoding[i] for i in selected_strategies]
 
-        stg.logger.info("Discarded strategies for %d samples (%.2f %%)" %
-                        (len(discarded_samples),
-                         (100 * len(discarded_samples) / n_samples)))
+            # Find discarded samples
+            discarded_samples = np.array([i for i in range(n_samples)
+                                          if self.y_train[i]
+                                          not in selected_strategies])
 
-        # Reassign discarded samples to selected strategies
-        degradation = self.assign_samples(discarded_samples,
-                                          selected_strategies,
-                                          parallel=parallel)
+            stg.logger.info("Samples fraction at least %.3f %%" % (100 * samples_fraction))
+            stg.logger.info("Discarded strategies for %d samples (%.2f %%)" %
+                            (len(discarded_samples),
+                             (100 * len(discarded_samples) / n_samples)))
 
-        if any(degradation):
-            stg.logger.info("Average cost degradation = %.2e %%" %
-                            (100 * np.mean(degradation)))
-            stg.logger.info("Max cost degradation = %.2e %%" %
-                            (100 * np.max(degradation)))
+            # Reassign discarded samples to selected strategies
+            degradation = self.assign_samples(discarded_samples,
+                                              selected_strategies,
+                                              parallel=parallel)
+
+            if len(degradation) > 0:
+                stg.logger.info("Average cost degradation = %.2e %%" %
+                                (100 * np.mean(degradation)))
+                stg.logger.info("Max cost degradation = %.2e %%" %
+                                (100 * np.max(degradation)))
+
+                if np.mean(degradation) > stg.FILTER_SUBOPT:
+                    samples_fraction = 1 - (1 - samples_fraction)/2
+
+                    stg.logger.warning("Mean degradation too high, "
+                                       "trying samples_fraction = %.4f " % samples_fraction)
+                    self.y_train = self.y_full
+                    self.encoding = self.encoding_full
+            else:
+                break
+
+        if k == max_iter - 1:
+            self.y_train = self.y_full
+            self.encoding = self.encoding_full
+            stg.logger.warning("No feasible filtering found")
 
         return self.y_train, self.encoding

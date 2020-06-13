@@ -162,8 +162,9 @@ class PytorchNeuralNet(Learner):
         self.n_train = len(X)
 
         # Split train and validation
-        X_train, X_valid, y_train, y_valid = train_test_split(X, y, stratify=y,
-                                                              test_size=0.1,
+        X_train, X_valid, y_train, y_valid = train_test_split(X, y,
+                                                              #  stratify=y,
+                                                              test_size=stg.FRAC_TRAIN,
                                                               random_state=0)
 
         data = {'X_train': X_train, 'y_train': y_train,
