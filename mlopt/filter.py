@@ -153,7 +153,7 @@ class Filter(object):
                                               parallel=parallel)
 
             if len(degradation) > 0:
-                stg.logger.info("Average cost degradation = %.2e %%" %
+                stg.logger.info("\nAverage cost degradation = %.2e %%" %
                                 (100 * np.mean(degradation)))
                 stg.logger.info("Max cost degradation = %.2e %%" %
                                 (100 * np.max(degradation)))
@@ -161,16 +161,20 @@ class Filter(object):
                 if np.mean(degradation) > stg.FILTER_SUBOPT:
                     samples_fraction = 1 - (1 - samples_fraction)/2
 
-                    stg.logger.warning("Mean degradation too high, "
-                                       "trying samples_fraction = %.4f " % samples_fraction)
+                    stg.logger.info("Mean degradation too high, "
+                                    "trying samples_fraction = %.4f " % samples_fraction)
                     self.y_train = self.y_full
                     self.encoding = self.encoding_full
+                else:
+                    stg.logger.info("Acceptable degradation found")
+                    break
             else:
+                stg.logger.info("No more discarded points.")
                 break
 
         if k == max_iter - 1:
             self.y_train = self.y_full
             self.encoding = self.encoding_full
-            stg.logger.warning("No feasible filtering found")
+            stg.logger.warning("No feasible filtering found.")
 
         return self.y_train, self.encoding

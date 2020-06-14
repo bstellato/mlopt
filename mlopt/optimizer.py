@@ -178,6 +178,9 @@ class Optimizer(object):
         self._problem = data_dict['_problem']
         self.encoding = data_dict['encoding']
 
+        # Set n_train in learner
+        self._learner.n_train = len(self.y_train)
+
         stg.logger.info("Loaded %d points with %d strategies" %
                         (len(self.y_train), len(self.encoding)))
 
@@ -628,6 +631,8 @@ class Optimizer(object):
         return optimizer
 
     def performance(self, theta,
+                    results_test=None,
+                    results_heuristic=None,
                     parallel=False,
                     use_cache=True):
         """
@@ -650,15 +655,34 @@ class Optimizer(object):
         """
 
         stg.logger.info("Performance evaluation")
-        # Get strategy for each point
-        results_test = self._problem.solve_parametric(theta,
-                                                      parallel=parallel,
-                                                      message="Compute " +
-                                                      "tight constraints " +
-                                                      "for test set")
+
+        if results_test is None:
+            # Get strategy for each point
+            results_test = self._problem.solve_parametric(theta,
+                                                          parallel=parallel,
+                                                          message="Compute " +
+                                                          "tight constraints " +
+                                                          "for test set")
+
+        if results_heuristic is None:
+            self._problem.solver_options['MIPGap'] = 0.1  # 10% MIP Gap
+
+            # Get strategy for each point
+            results_heuristic = self._problem.solve_parametric(theta,
+                                                               parallel=parallel,
+                                                               message="Compute " +
+                                                               "tight constraints " +
+                                                               "with heuristic MIP Gap 10 %%" +
+                                                               "for test set")
+
+            self._problem.solver_options.pop('MIPGap')  # Remove MIP Gap option
+
 
         time_test = [r['time'] for r in results_test]
         cost_test = [r['cost'] for r in results_test]
+
+        time_heuristic = [r['time'] for r in results_heuristic]
+        cost_heuristic = [r['cost'] for r in results_heuristic]
 
         # Get predicted strategy for each point
         results_pred = self.solve(theta,
@@ -679,17 +703,20 @@ class Optimizer(object):
         # Compute comparative statistics
         time_comp = np.array([time_test[i] / time_pred[i]
                               for i in range(n_test)])
+
+        time_comp_heuristic = np.array([time_heuristic[i] / time_pred[i]
+                                        for i in range(n_test)])
+
         subopt = np.array([suboptimality(cost_pred[i], cost_test[i],
                                          self._problem.sense())
                            for i in range(n_test)])
+        subopt_heuristic = np.array([suboptimality(cost_heuristic[i], cost_test[i],
+                                                   self._problem.sense())
+                                     for i in range(n_test)])
 
         # accuracy
         test_accuracy, idx_correct = accuracy(results_pred, results_test,
                                               self._problem.sense())
-
-        # Time statistics
-        avg_time_improv = np.mean(time_test) / np.mean(time_pred)
-        max_time_improv = np.max(time_test) / np.max(time_pred)
 
         # Create dataframes to return
         df = pd.Series(
@@ -710,35 +737,37 @@ class Optimizer(object):
                 "n_infeas": np.sum(infeas >= stg.INFEAS_TOL),
                 "avg_infeas": np.mean(infeas),
                 "std_infeas": np.std(infeas),
+                "max_infeas": np.max(infeas),
                 "avg_subopt": np.mean(subopt[np.where(infeas <=
                                       stg.INFEAS_TOL)[0]]),
                 "std_subopt": np.std(subopt[np.where(infeas <=
                                      stg.INFEAS_TOL)[0]]),
-                "max_infeas": np.max(infeas),
-                "max_subopt": np.max(subopt),
+                "max_subopt": np.max(subopt[np.where(infeas <=
+                                     stg.INFEAS_TOL)[0]]),
+                "avg_subopt_heuristic": np.mean(subopt_heuristic),
+                "std_subopt_heuristic": np.std(subopt_heuristic),
+                "max_subopt_heuristic": np.max(subopt_heuristic),
                 "mean_solve_time_pred": np.mean(solve_time_pred),
                 "std_solve_time_pred": np.std(solve_time_pred),
                 "mean_pred_time_pred": np.mean(pred_time_pred),
                 "std_pred_time_pred": np.std(pred_time_pred),
                 "mean_time_pred": np.mean(time_pred),
                 "std_time_pred": np.std(time_pred),
+                "max_time_pred": np.max(time_pred),
                 "mean_time_full": np.mean(time_test),
                 "std_time_full": np.std(time_test),
-                "avg_time_improv": avg_time_improv,
-                "max_time_improv": max_time_improv,
+                "max_time_full": np.max(time_test),
+                "mean_time_heuristic": np.mean(time_heuristic),
+                "std_time_heuristic": np.std(time_heuristic),
+                "max_time_heuristic": np.max(time_heuristic),
             }
         )
-        # Add radius info if problem has it.
-        # TODO: We should remove it later
-        #  try:
-        #      df["radius"] = [self._problem.radius]
-        #  except AttributeError:
-        #      pass
 
         df_detail = pd.DataFrame(
             {
                 "problem": [self.name] * n_test,
                 "learner": [self._learner.name] * n_test,
+                "n_best": [self._learner.options['n_best']] * n_test,
                 "correct": idx_correct,
                 "infeas": infeas,
                 "subopt": subopt,
@@ -746,7 +775,9 @@ class Optimizer(object):
                 "pred_time_pred": pred_time_pred,
                 "time_pred": time_pred,
                 "time_full": time_test,
+                "time_heuristic": time_heuristic,
                 "time_improvement": time_comp,
+                "time_improvement_heuristic": time_comp_heuristic,
             }
         )
 
