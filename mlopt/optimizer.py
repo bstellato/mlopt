@@ -710,6 +710,17 @@ class Optimizer(object):
         subopt = np.array([suboptimality(cost_pred[i], cost_test[i],
                                          self._problem.sense())
                            for i in range(n_test)])
+
+        subopt_real = subopt[np.where(infeas <= stg.INFEAS_TOL)[0]]
+        if any(subopt_real):
+            max_subopt = np.max(subopt_real)
+            avg_subopt = np.mean(subopt_real)
+            std_subopt = np.std(subopt_real)
+        else:
+            max_subopt = np.nan
+            avg_subopt = np.nan
+            std_subopt = np.nan
+
         subopt_heuristic = np.array([suboptimality(cost_heuristic[i], cost_test[i],
                                                    self._problem.sense())
                                      for i in range(n_test)])
@@ -738,12 +749,9 @@ class Optimizer(object):
                 "avg_infeas": np.mean(infeas),
                 "std_infeas": np.std(infeas),
                 "max_infeas": np.max(infeas),
-                "avg_subopt": np.mean(subopt[np.where(infeas <=
-                                      stg.INFEAS_TOL)[0]]),
-                "std_subopt": np.std(subopt[np.where(infeas <=
-                                     stg.INFEAS_TOL)[0]]),
-                "max_subopt": np.max(subopt[np.where(infeas <=
-                                     stg.INFEAS_TOL)[0]]),
+                "avg_subopt": avg_subopt,
+                "std_subopt": std_subopt,
+                "max_subopt": max_subopt,
                 "avg_subopt_heuristic": np.mean(subopt_heuristic),
                 "std_subopt_heuristic": np.std(subopt_heuristic),
                 "max_subopt_heuristic": np.max(subopt_heuristic),
