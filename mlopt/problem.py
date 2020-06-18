@@ -213,6 +213,8 @@ class Problem(object):
 
     def infeasibility(self, x, data):
         """Compute infeasibility for variables given internally stored solution.
+        NB. Using conditions similar to:
+        https://docs.mosek.com/9.0/pythonfusion/solving-conic.html#interior-point-termination-criterion
         TODO: Make it independent from the problem.
 
         Args:
@@ -229,8 +231,10 @@ class Problem(object):
         eq_viol, ineq_viol = 0, 0
         if A.size:
             eq_viol = np.linalg.norm(A.dot(x) - b, np.inf)
+            eq_viol /= 1 + np.linalg.norm(b, np.inf)
         if F.size:
             ineq_viol = np.linalg.norm(np.maximum(F.dot(x) - g, 0), np.inf)
+            ineq_viol /= 1 + np.linalg.norm(g, np.inf)
 
         return np.maximum(eq_viol, ineq_viol)
 
