@@ -179,7 +179,8 @@ class Optimizer(object):
         self.encoding = data_dict['encoding']
 
         # Set n_train in learner
-        self._learner.n_train = len(self.y_train)
+        if self._learner is not None:
+            self._learner.n_train = len(self.y_train)
 
         stg.logger.info("Loaded %d points with %d strategies" %
                         (len(self.y_train), len(self.encoding)))
