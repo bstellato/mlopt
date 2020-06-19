@@ -24,6 +24,10 @@ class Strategy(object):
         self.tight_constraints = self.get_tight_constraints(x, data)
         self.int_vars = x[data[cps.INT_IDX]]
 
+        # Store hash for comparisons
+        self._hash = hash((frozenset(self.tight_constraints),
+                           frozenset(self.int_vars)))
+
     def get_tight_constraints(self, x, data):
         """Compute tight constraints for solution x
 
@@ -46,21 +50,9 @@ class Strategy(object):
 
         return tight_constraints
 
-    #  def __repr__(self):
-    #      string = "Strategy\n"
-    #      string += "  - Tight constraints:\n"
-    #      string += self.tight_constraints.__str__() + "\n"
-    #      if len(self.int_vars) > 0:
-    #          string += "  - Integer variables values:\n"
-    #          string += self.int_vars.__str__() + "\n"
-    #      return string
-
-    # TODO: Implement hash if unique list comparison starts getting slow
-    #  def __hash__(self):
-    #      """Overrides default hash implementation"""
-    #      f_int_vars = frozenset(self.int_vars)
-    #      f_tight_constraints = frozenset(self.tight_constraints)
-    #      return hash((f_tight_constraints, f_int_vars))
+    def __hash__(self):
+        """Overrides default hash implementation"""
+        return self._hash
 
     def __eq__(self, other):
         """Overrides the default equality implementation"""
@@ -148,15 +140,15 @@ def unique_strategies(strategies):
         Unique strategies.
     """
     # Using set (we must define hash to use this)
-    #  unique = list(set(strategies))
+    unique = list(set(strategies))
 
     # Using list
-    unique = []
-    # traverse for all elements
-    for x in strategies:
-        # check if x exists in unique_list or not
-        if x not in unique:
-            unique.append(x)
+    #  unique = []
+    #  # traverse for all elements
+    #  for x in strategies:
+    #      # check if x exists in unique_list or not
+    #      if x not in unique:
+    #          unique.append(x)
 
     return unique
 
