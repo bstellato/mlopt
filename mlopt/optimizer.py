@@ -374,7 +374,7 @@ class Optimizer(object):
 
             self._solver_cache += [cache]
 
-    def choose_best(self, labels, parallel=False, use_cache=True):
+    def choose_best(self, labels, parallel=False, batch_size=stg.JOBLIB_BATCH_SIZE, use_cache=True):
         """
         Choose best strategy between provided ones
 
@@ -410,7 +410,7 @@ class Optimizer(object):
 
         n_jobs = u.get_n_processes(n_best) if parallel else 1
 
-        results = Parallel(n_jobs=n_jobs)(
+        results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
             delayed(self._problem.solve)(strategy=strategies[j],
                                          cache=cache[j])
             for j in range(n_best))

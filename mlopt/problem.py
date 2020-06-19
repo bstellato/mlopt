@@ -346,6 +346,7 @@ class Problem(object):
         return results
 
     def solve_parametric(self, theta,
+                         batch_size=stg.JOBLIB_BATCH_SIZE,
                          parallel=True,  # Solve problems in parallel
                          message="Solving for all theta",
                          ):
@@ -372,7 +373,7 @@ class Problem(object):
 
         stg.logger.info(message + " (n_jobs = %d)" % n_jobs)
 
-        results = Parallel(n_jobs=n_jobs)(
+        results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
             delayed(self.populate_and_solve)(theta.iloc[i])
             for i in tqdm(range(n))
         )

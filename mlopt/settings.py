@@ -19,6 +19,10 @@ logger.propagate = False   # Disable double logging
 #  logger.addHandler(file_handler)
 
 
+# Parallel
+JOBLIB_BATCH_SIZE = 100
+
+
 # Define constants
 INFEAS_TOL = 1e-04
 SUBOPT_TOL = 1e-04
@@ -43,7 +47,6 @@ DEFAULT_LEARNER = XGBOOST
 N_BEST = 10
 N_TRAIN_TRIALS = 300
 FRAC_TRAIN = 0.8  # Fraction dividing training and validation
-
 
 # Sampling
 SAMPLING_TOL = 5e-03

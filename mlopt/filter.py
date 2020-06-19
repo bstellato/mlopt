@@ -53,7 +53,7 @@ class Filter(object):
         self.problem = problem
 
     def assign_samples(self, discarded_samples, selected_strategies,
-                       parallel=True):
+                       batch_size, parallel=True):
         """
         Assign samples to strategies choosing the ones minimizing the cost.
         """
@@ -120,6 +120,7 @@ class Filter(object):
     def filter(self,
                samples_fraction=stg.FILTER_STRATEGIES_SAMPLES_FRACTION,
                max_iter=stg.FILTER_MAX_ITER,
+               batch_size=stg.JOBLIB_BATCH_SIZE,
                parallel=True):
         """Filter strategies."""
         n_samples = len(self.X_train)
@@ -150,6 +151,7 @@ class Filter(object):
             # Reassign discarded samples to selected strategies
             degradation = self.assign_samples(discarded_samples,
                                               selected_strategies,
+                                              batch_size=batch_size,
                                               parallel=parallel)
 
             if len(degradation) > 0:
