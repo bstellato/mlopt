@@ -34,7 +34,7 @@ class TestProblem(unittest.TestCase):
 
         # Check violation
         viol_cvxpy = mlprob.infeasibility(x_val, data)
-        viol_manual = np.linalg.norm(np.maximum(A.dot(x_val) - b, 0), np.inf)
+        viol_manual = np.linalg.norm(np.maximum(A.dot(x_val) - b, 0), np.inf)/(1 + np.linalg.norm(b, np.inf))
 
         self.assertTrue(abs(viol_cvxpy - viol_manual) <= TOL)
 
@@ -62,7 +62,3 @@ class TestProblem(unittest.TestCase):
 
         npt.assert_almost_equal(x_problem, x_cvxpy, decimal=TOL)
         npt.assert_almost_equal(cost_problem, cost_cvxpy, decimal=TOL)
-
-
-if __name__ == "__main__":
-    unittest.main()

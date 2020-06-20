@@ -1,8 +1,15 @@
+from joblib import Parallel, delayed
 import numpy as np
 from scipy.special import gammainc
 import pandas as pd
 from mlopt.strategy import encode_strategies
 import mlopt.settings as stg
+import mlopt.utils as u
+from tqdm import tqdm
+
+
+def count_occurrences(labels, i):
+    return len(np.where(labels == i)[0])
 
 
 class Sampler(object):
@@ -30,18 +37,26 @@ class Sampler(object):
         self.alpha = alpha
         self.n_samples = n_samples   # Initialize numer of samples
         self.good_turing_smooth = 1.  # Initialize Good Turing estimator
-
-    def frequencies(self, labels):
+    def frequencies(self, labels, batch_size=stg.JOBLIB_BATCH_SIZE, n_jobs=-1):
         """
         Get frequency for each unique strategy
         """
-        return np.array([len(np.where(labels == i)[0])
-                         for i in np.unique(labels)])
 
-    def compute_good_turing(self, labels):
+        results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(delayed(count_occurrences)(labels, i) for i in tqdm(np.unique(labels)))
+
+        return np.array(results)
+
+    def compute_good_turing(self, labels,
+                            batch_size=stg.JOBLIB_BATCH_SIZE,
+                            parallel=True):
         """Compute good turing estimator"""
+        stg.logger.info("Computing Good Turing Estimator")
+
+        n_jobs = u.get_n_processes() if parallel else 1
+
+        stg.logger.info("Compute frequencies")
         # Get frequencies
-        freq = self.frequencies(labels)
+        freq = self.frequencies(labels, batch_size, n_jobs=n_jobs)
 
         # Check if there are labels appearing only once
         if not any(np.where(freq == 1)[0]):
@@ -49,8 +64,9 @@ class Sampler(object):
             n1 = 0
             #  n1 = np.inf
         else:
+            stg.logger.info("Compute frequencies of frequencies")
             # Get frequency of frequencies
-            freq_freq = self.frequencies(freq)
+            freq_freq = self.frequencies(freq, batch_size=batch_size, n_jobs=n_jobs)
             n1 = freq_freq[0]
 
         # Get Good Turing estimator

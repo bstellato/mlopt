@@ -77,7 +77,7 @@ class Filter(object):
         stg.logger.info("Assign samples to selected strategies (n_jobs = %d)"
                         % n_jobs)
 
-        results = Parallel(n_jobs=n_jobs)(
+        results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
             delayed(best_strategy)(self.X_train.iloc[i], self.obj_train[i],
                                    self.encoding, self.problem)
             for i in tqdm(range(len(discarded_samples)))

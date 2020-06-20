@@ -1,8 +1,12 @@
+from joblib import Parallel, delayed
 import numpy as np
 import mlopt.settings as stg
 import mlopt.error as e
+import mlopt.utils as u
 import cvxpy.settings as cps
 import scipy.sparse as spa
+from time import time
+from tqdm import tqdm
 
 
 class Strategy(object):
@@ -139,6 +143,7 @@ def unique_strategies(strategies):
     Strategy set :
         Unique strategies.
     """
+
     # Using set (we must define hash to use this)
     unique = list(set(strategies))
 
@@ -153,7 +158,20 @@ def unique_strategies(strategies):
     return unique
 
 
-def encode_strategies(strategies):
+def assign_to_unique_strategy(strategy, unique_strategies):
+    y = -1
+    n_unique_strategies = len(unique_strategies)
+    for j in range(n_unique_strategies):
+        if unique_strategies[j] == strategy:
+            y = j
+            break
+    if y == -1:
+        e.value_error("Strategy not found")
+    return y
+
+
+def encode_strategies(strategies, batch_size=stg.JOBLIB_BATCH_SIZE,
+                      parallel=True):
     """
     Encode strategies
 
@@ -174,21 +192,22 @@ def encode_strategies(strategies):
     N = len(strategies)
 
     stg.logger.info("Getting unique set of strategies")
+    start_time = time()
     unique = unique_strategies(strategies)
+    end_time = time()
+    stg.logger.info("Extraction time %.3f sec" % (end_time - start_time))
     n_unique_strategies = len(unique)
     stg.logger.info("Found %d unique strategies" % n_unique_strategies)
 
     # Map strategies to number
-    y = -1 * np.ones(N, dtype='int')
-    for i in range(N):
-        for j in range(n_unique_strategies):
-            if unique[j] == strategies[i]:
-                y[i] = j
-                break
-        assert y[i] != -1, "Strategy not found"
+    n_jobs = u.get_n_processes() if parallel else 1
+    stg.logger.info("Assign samples to unique strategies (n_jobs = %d)"
+                    % n_jobs)
+
+    results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(delayed(assign_to_unique_strategy)(s, unique) for s in tqdm(strategies))
+    y = np.array(results)
 
     return y, unique
-
 
 def strategy2array(s):
     """Convert strategy to array"""

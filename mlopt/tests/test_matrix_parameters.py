@@ -110,6 +110,7 @@ class TestMatrixParams(unittest.TestCase):
 
         # Train and test using pytorch
         m.train(df_train, filter_strategies=True, parallel=True,
+                n_train_trials=10,
                 learner=PYTORCH)
 
         # Assert fewer strategies than training samples
