@@ -225,11 +225,13 @@ class Optimizer(object):
                                                      "tight constraints " +
                                                      "for training set")
 
-            not_feasible_points = {i: x for i, x in enumerate(results)
+            stg.logger.info("Checking for infeasible points")
+            not_feasible_points = {i: x for i, x in tqdm(enumerate(results))
                                    if np.isnan(x['x']).any()}
             if not_feasible_points:
                 e.value_error("Infeasible points found. Number of infeasible "
                               "points %d" % len(not_feasible_points))
+            stg.logger.info("No infeasible point found.")
 
             self.obj_train = [r['cost'] for r in results]
             train_strategies = [r['strategy'] for r in results]

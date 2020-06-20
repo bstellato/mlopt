@@ -159,12 +159,14 @@ def unique_strategies(strategies):
 
 
 def assign_to_unique_strategy(strategy, unique_strategies):
-    y = -1
-    n_unique_strategies = len(unique_strategies)
-    for j in range(n_unique_strategies):
-        if unique_strategies[j] == strategy:
-            y = j
-            break
+    y = next((index for (index, s) in enumerate(unique_strategies)
+             if strategy == s), -1)
+    #  y = -1
+    #  n_unique_strategies = len(unique_strategies)
+    #  for j in range(n_unique_strategies):
+    #      if unique_strategies[j] == strategy:
+    #          y = j
+    #          break
     if y == -1:
         e.value_error("Strategy not found")
     return y
