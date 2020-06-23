@@ -98,15 +98,15 @@ class TestParallel(unittest.TestCase):
         Sample points
         '''
         theta_bar = np.random.randn(n)
-        radius = 0.2
+        radius = 1.0
 
         '''
         Train and solve
         '''
 
         # Training and testing data
-        n_train = 100
-        n_test = 10
+        n_train = 1000
+        n_test = 1000
         # Sample points from multivariate ball
         X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
         X_d_test = uniform_sphere_sample(theta_bar, radius, n=n_test)
@@ -117,6 +117,7 @@ class TestParallel(unittest.TestCase):
         m.train(df,
                 parallel=True,
                 filter_strategies=True,
+                n_train_trials=10,
                 learner=PYTORCH)
         m.performance(df_test, parallel=True)
 

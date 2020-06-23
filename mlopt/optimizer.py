@@ -376,7 +376,8 @@ class Optimizer(object):
 
             self._solver_cache += [cache]
 
-    def choose_best(self, labels, parallel=False, batch_size=stg.JOBLIB_BATCH_SIZE, use_cache=True):
+    def choose_best(self, problem_data, labels, parallel=False,
+                    batch_size=stg.JOBLIB_BATCH_SIZE, use_cache=True):
         """
         Choose best strategy between provided ones
 
@@ -413,7 +414,8 @@ class Optimizer(object):
         n_jobs = u.get_n_processes(n_best) if parallel else 1
 
         results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
-            delayed(self._problem.solve)(strategy=strategies[j],
+            delayed(self._problem.solve)(problem_data,
+                                         strategy=strategies[j],
                                          cache=cache[j])
             for j in range(n_best))
 
@@ -505,8 +507,9 @@ class Optimizer(object):
 
             # Populate problem with i-th data point
             self._problem.populate(X.iloc[i])
-
-            results.append(self.choose_best(classes[i, :],
+            problem_data = self._problem._get_problem_data()
+            results.append(self.choose_best(problem_data,
+                                            classes[i, :],
                                             use_cache=use_cache))
 
         # Append predict time
@@ -661,25 +664,22 @@ class Optimizer(object):
 
         if results_test is None:
             # Get strategy for each point
-            results_test = self._problem.solve_parametric(theta,
-                                                          parallel=parallel,
-                                                          message="Compute " +
-                                                          "tight constraints " +
-                                                          "for test set")
+            results_test = self._problem.solve_parametric(
+                theta, parallel=parallel, message="Compute " +
+                                                  "tight constraints " +
+                                                  "for test set")
 
         if results_heuristic is None:
             self._problem.solver_options['MIPGap'] = 0.1  # 10% MIP Gap
 
             # Get strategy for each point
-            results_heuristic = self._problem.solve_parametric(theta,
-                                                               parallel=parallel,
-                                                               message="Compute " +
-                                                               "tight constraints " +
-                                                               "with heuristic MIP Gap 10 %%" +
-                                                               "for test set")
+            results_heuristic = self._problem.solve_parametric(
+                theta, parallel=parallel, message="Compute " +
+                                                  "tight constraints " +
+                                                  "with heuristic MIP Gap 10 %%" +
+                                                  "for test set")
 
             self._problem.solver_options.pop('MIPGap')  # Remove MIP Gap option
-
 
         time_test = [r['time'] for r in results_test]
         cost_test = [r['cost'] for r in results_test]
@@ -724,7 +724,8 @@ class Optimizer(object):
             avg_subopt = np.nan
             std_subopt = np.nan
 
-        subopt_heuristic = np.array([suboptimality(cost_heuristic[i], cost_test[i],
+        subopt_heuristic = np.array([suboptimality(cost_heuristic[i],
+                                                   cost_test[i],
                                                    self._problem.sense())
                                      for i in range(n_test)])
 

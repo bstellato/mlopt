@@ -254,7 +254,8 @@ class Problem(object):
 
         return data, inverse_data, solving_chain
 
-    def solve(self, solver=None, strategy=None, cache=None):
+    def solve(self, problem_data=None, solver_data=None,
+              strategy=None, cache=None):
         """Solve optimization problem.
 
         Kwargs:
@@ -266,7 +267,10 @@ class Problem(object):
 
         """
 
-        data, inverse_data, solving_chain = self._get_problem_data()
+        if problem_data is None:
+            data, inverse_data, solving_chain = self._get_problem_data()
+        else:
+            data, inverse_data, solving_chain = problem_data
 
         if strategy is not None:
             if not strategy.accepts(data):
