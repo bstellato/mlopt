@@ -670,16 +670,22 @@ class Optimizer(object):
                                                   "for test set")
 
         if results_heuristic is None:
-            self._problem.solver_options['MIPGap'] = 0.1  # 10% MIP Gap
+            #  self._problem.solver_options['MIPGap'] = 0.1  # 10% MIP Gap
+            # Focus on feasibility
+            self._problem.solver_options['MIPFocus'] = 1
+            # Limit time to one second
+            self._problem.solver_options['TimeLimit'] = 1.
 
             # Get strategy for each point
             results_heuristic = self._problem.solve_parametric(
                 theta, parallel=parallel, message="Compute " +
                                                   "tight constraints " +
-                                                  "with heuristic MIP Gap 10 %%" +
+                                                  "with heuristic Gurobi " +
                                                   "for test set")
 
-            self._problem.solver_options.pop('MIPGap')  # Remove MIP Gap option
+            # Remove options
+            self._problem.solver_options.pop('MIPFocus')
+            self._problem.solver_options.pop('TimeLimit')
 
         time_test = [r['time'] for r in results_test]
         cost_test = [r['cost'] for r in results_test]

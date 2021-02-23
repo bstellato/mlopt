@@ -66,13 +66,13 @@ class PytorchObjective(object):
         trainer = Trainer(
             logger=False,
             checkpoint_callback=False,
-            distributed_backend='dp',
+            accelerator='dp',
             max_epochs=parameters['max_epochs'],
-            verbose=False,
             gpus=-1 if self.use_gpu else None,
-            callbacks=[metrics_callback],
-            early_stop_callback=PyTorchLightningPruningCallback(
-                trial, monitor="val_loss"),
+            callbacks=[metrics_callback,
+                       PyTorchLightningPruningCallback(trial,
+                                                       monitor="val_loss")],
+
         )
 
         model = LightningNet(parameters, self.data)
@@ -203,7 +203,7 @@ class PytorchNeuralNet(Learner):
 
         self.trainer = Trainer(
             checkpoint_callback=False,
-            distributed_backend='dp',
+            accelerator='dp',
             logger=False,  # ??
             max_epochs=self.best_params['max_epochs'],
             gpus=-1 if self.use_gpu else None,
@@ -219,10 +219,14 @@ class PytorchNeuralNet(Learner):
 
         # Disable gradients computation
         #  self.model.eval()  # Put layers in evaluation mode
-        with self.torch.no_grad():  # Needed?
+        #  with self.torch.no_grad():  # Needed?
+        #
+        #      X = self.torch.tensor(X, dtype=self.torch.float).to(self.device)
+        #      y = self.model(X).detach().cpu().numpy()
 
-            X = self.torch.tensor(X, dtype=self.torch.float).to(self.device)
-            y = self.model(X).detach().cpu().numpy()
+        X = self.torch.tensor(X, dtype=self.torch.float)
+        with self.torch.no_grad():
+            y = self.model(X).detach().numpy()
 
         return self.pick_best_class(y, n_best=self.options['n_best'])
 
@@ -239,7 +243,9 @@ class PytorchNeuralNet(Learner):
         if not os.path.isfile(path):
             e.value_error("Pytorch checkpoint file does not exist.")
 
-        self.model = LightningNet.load_from_checkpoint(path, self.best_params).to(self.device)
+        self.model = LightningNet.load_from_checkpoint(
+                checkpoint_path=path, hparams_file=self.best_params
+        ).to(self.device)
         self.model.eval()  # Necessary to set the model to evaluation mode
         self.model.freeze()  # Necessary to set the model to evaluation mode
 

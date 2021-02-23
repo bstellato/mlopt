@@ -49,7 +49,8 @@ class TestCaching(unittest.TestCase):
         X_d = uniform_sphere_sample(theta_bar, radius, n=n_train)
         df = pd.DataFrame({'mu': list(X_d)})
 
-        m.train(df, filter_strategies=True, parallel=False, learner=mlopt.PYTORCH, n_train_trials=10)
+        m.train(df, filter_strategies=True, parallel=False,
+                learner=mlopt.PYTORCH, n_train_trials=10)
         #  m.train(df, parallel=False, learner=mlopt.XGBOOST, n_train_trials=10)
 
         # Testing data

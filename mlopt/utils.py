@@ -48,7 +48,7 @@ def get_n_processes(max_n=np.inf):
 
     try:
         # Check number of cpus if we are on a SLURM server
-        n_cpus = int(os.environ["SLURM_NPROCS"])
+        n_cpus = int(os.environ["SLURM_CPUS_PER_TASK"])
     except KeyError:
         n_cpus = joblib.cpu_count()
 
