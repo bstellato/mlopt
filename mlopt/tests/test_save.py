@@ -15,7 +15,7 @@ class TestSave(unittest.TestCase):
 
     def setUp(self):
         # Generate data
-        np.random.seed(1)
+        np.random.seed(0)
         T = 5
         M = 2.
         h = 1.
