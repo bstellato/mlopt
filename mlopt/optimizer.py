@@ -411,8 +411,7 @@ class Optimizer(object):
         if self._solver_cache and use_cache:
             cache = [self._solver_cache[label] for label in labels]
 
-        n_jobs = u.get_n_processes(n_best) if parallel else 1
-
+        n_jobs = u.get_n_processes() if parallel else 1
         results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
             delayed(self._problem.solve)(problem_data,
                                          strategy=strategies[j],

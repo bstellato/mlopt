@@ -73,7 +73,6 @@ class Filter(object):
         degradation = np.zeros(len(discarded_samples))
 
         n_jobs = u.get_n_processes() if parallel else 1
-
         stg.logger.info("Assign samples to selected strategies (n_jobs = %d)"
                         % n_jobs)
 

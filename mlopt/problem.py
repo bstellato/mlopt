@@ -15,6 +15,26 @@ from cvxpy.reductions.solvers.solving_chain import SolvingChain
 from tqdm.auto import tqdm
 
 
+# DEBUG
+import pickle
+def is_pickleable(obj):
+    try:
+        pickle.dumps(obj)
+    except pickle.PicklingError:
+        return False
+    return True
+
+
+def populate_and_solve(problem, theta):
+    """Single function to populate the problem with
+       theta and solve it with the solver.
+       Useful for multiprocessing."""
+    problem.populate(theta)
+    results = problem.solve()
+
+    return results
+
+
 class Problem(object):
 
     def __init__(self,
@@ -315,6 +335,13 @@ class Problem(object):
         self.cvxpy_problem.unpack_results(raw_solution, solving_chain,
                                           inverse_data)
 
+        # Remove unpickleable solver-specific elements
+        # Example: Gurobi model
+        if cps.EXTRA_STATS in self.cvxpy_problem._solution.attr:
+            self.cvxpy_problem._solution.attr.pop(cps.EXTRA_STATS)
+        if hasattr(self.cvxpy_problem._solver_stats, "extra_stats"):
+            del self.cvxpy_problem._solver_stats.extra_stats
+
         results = {}
 
         # Get time and status
@@ -337,15 +364,6 @@ class Problem(object):
             results['cost'] = np.inf
             results['infeasibility'] = np.inf
             results['strategy'] = None
-
-        return results
-
-    def populate_and_solve(self, theta):
-        """Single function to populate the problem with
-           theta and solve it with the solver.
-           Useful for multiprocessing."""
-        self.populate(theta)
-        results = self.solve()
 
         return results
 
@@ -374,11 +392,10 @@ class Problem(object):
         n = len(theta)  # Number of points
 
         n_jobs = u.get_n_processes() if parallel else 1
-
         stg.logger.info(message + " (n_jobs = %d)" % n_jobs)
 
         results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
-            delayed(self.populate_and_solve)(theta.iloc[i])
+            delayed(populate_and_solve)(self, theta.iloc[i])
             for i in tqdm(range(n))
         )
 

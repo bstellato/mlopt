@@ -52,7 +52,7 @@ def get_n_processes(max_n=np.inf):
     except KeyError:
         n_cpus = joblib.cpu_count()
 
-    n_proc = min(max_n, n_cpus)
+    n_proc = max(min(max_n, n_cpus), 1)
 
     return n_proc
 

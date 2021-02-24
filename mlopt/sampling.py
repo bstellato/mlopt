@@ -37,12 +37,15 @@ class Sampler(object):
         self.alpha = alpha
         self.n_samples = n_samples   # Initialize numer of samples
         self.good_turing_smooth = 1.  # Initialize Good Turing estimator
-    def frequencies(self, labels, batch_size=stg.JOBLIB_BATCH_SIZE, n_jobs=-1):
+
+    def frequencies(self, labels, batch_size=stg.JOBLIB_BATCH_SIZE,
+                    n_jobs=1):
         """
         Get frequency for each unique strategy
         """
-
-        results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(delayed(count_occurrences)(labels, i) for i in tqdm(np.unique(labels)))
+        results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
+            delayed(count_occurrences)(labels, i)
+            for i in tqdm(np.unique(labels)))
 
         return np.array(results)
 

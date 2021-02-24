@@ -191,7 +191,6 @@ def encode_strategies(strategies, batch_size=stg.JOBLIB_BATCH_SIZE,
         Array of unique strategies.
     """
     stg.logger.info("Encoding strategies")
-    N = len(strategies)
 
     stg.logger.info("Getting unique set of strategies")
     start_time = time()
@@ -201,15 +200,19 @@ def encode_strategies(strategies, batch_size=stg.JOBLIB_BATCH_SIZE,
     n_unique_strategies = len(unique)
     stg.logger.info("Found %d unique strategies" % n_unique_strategies)
 
-    # Map strategies to number
     n_jobs = u.get_n_processes() if parallel else 1
+
+    # Map strategies to number
     stg.logger.info("Assign samples to unique strategies (n_jobs = %d)"
                     % n_jobs)
 
-    results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(delayed(assign_to_unique_strategy)(s, unique) for s in tqdm(strategies))
+    results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
+        delayed(assign_to_unique_strategy)(s, unique)
+        for s in tqdm(strategies))
     y = np.array(results)
 
     return y, unique
+
 
 def strategy2array(s):
     """Convert strategy to array"""

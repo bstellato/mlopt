@@ -20,7 +20,8 @@ logger.propagate = False   # Disable double logging
 
 
 # Parallel
-JOBLIB_BATCH_SIZE = 100
+#  JOBLIB_BATCH_SIZE = 'auto'
+JOBLIB_BATCH_SIZE = 2
 
 
 # Define constants
@@ -31,7 +32,10 @@ DIVISION_TOL = 1e-8
 
 # Define default solver
 DEFAULT_SOLVER = cp.GUROBI
-DEFAULT_SOLVER_OPTIONS = {'Method': 1}  # Dual simplex
+DEFAULT_SOLVER_OPTIONS = {'Method': 1,  # Dual simplex
+                          'Threads': 1
+                          }
+
 #  DEFAULT_SOLVER = cp.CPLEX
 #  DEFAULT_SOLVER = cp.MOSEK
 #  DEFAULT_SOLVER = cp.ECOS

@@ -244,10 +244,10 @@ class PytorchNeuralNet(Learner):
             e.value_error("Pytorch checkpoint file does not exist.")
 
         self.model = LightningNet.load_from_checkpoint(
-                checkpoint_path=path, hparams_file=self.best_params
-        ).to(self.device)
+                checkpoint_path=path, options=self.best_params
+        )
         self.model.eval()  # Necessary to set the model to evaluation mode
-        self.model.freeze()  # Necessary to set the model to evaluation mode
+        self.model.freeze()  # Fix layers parameters
 
         #  # Load state dictionary from file
         #  # https://pytorch.org/tutorials/beginner/saving_loading_models.html
