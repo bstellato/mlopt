@@ -20,7 +20,7 @@ import pickle
 def is_pickleable(obj):
     try:
         pickle.dumps(obj)
-    except pickle.PicklingError:
+    except (pickle.PicklingError, TypeError):
         return False
     return True
 
@@ -176,6 +176,16 @@ class Problem(object):
 
         """
         return self._parameters_in_matrices
+
+    def make_serializable(self):
+        """
+        Remove unpickleable solver-specific elements
+        Example: Gurobi model
+        """
+        if cps.EXTRA_STATS in self.cvxpy_problem._solution.attr:
+            self.cvxpy_problem._solution.attr.pop(cps.EXTRA_STATS)
+        if hasattr(self.cvxpy_problem._solver_stats, "extra_stats"):
+            del self.cvxpy_problem._solver_stats.extra_stats
 
     def check_parameters_in_matrices(self):
         """Check if parameters are in matrices.
@@ -335,13 +345,6 @@ class Problem(object):
         self.cvxpy_problem.unpack_results(raw_solution, solving_chain,
                                           inverse_data)
 
-        # Remove unpickleable solver-specific elements
-        # Example: Gurobi model
-        if cps.EXTRA_STATS in self.cvxpy_problem._solution.attr:
-            self.cvxpy_problem._solution.attr.pop(cps.EXTRA_STATS)
-        if hasattr(self.cvxpy_problem._solver_stats, "extra_stats"):
-            del self.cvxpy_problem._solver_stats.extra_stats
-
         results = {}
 
         # Get time and status
@@ -393,6 +396,9 @@ class Problem(object):
 
         n_jobs = u.get_n_processes() if parallel else 1
         stg.logger.info(message + " (n_jobs = %d)" % n_jobs)
+
+        # Remove unpickleable objects
+        self.make_serializable()
 
         results = Parallel(n_jobs=n_jobs, batch_size=batch_size)(
             delayed(populate_and_solve)(self, theta.iloc[i])
