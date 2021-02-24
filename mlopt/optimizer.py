@@ -66,7 +66,7 @@ class Optimizer(object):
         """Number of strategies."""
         if self.encoding is None:
             e.value_error("Model has been trained yet to " +
-                    "return the number of strategies.")
+                          "return the number of strategies.")
 
         return len(self.encoding)
 
@@ -707,6 +707,7 @@ class Optimizer(object):
         n_train = self._learner.n_train  # Number of training samples
         n_theta = n_features(theta)  # Number of parameters
         n_strategies = len(self.encoding)  # Number of strategies
+        n_unpruned_strategies = len(self.encoding_full)  # Number of strategies
 
         # Compute comparative statistics
         time_comp = np.array([time_test[i] / time_pred[i]
@@ -752,6 +753,7 @@ class Optimizer(object):
                 "good_turing": self._sampler.good_turing,
                 "good_turing_smooth": self._sampler.good_turing_smooth,
                 "n_correct": np.sum(idx_correct),
+                "n_strategies_unpruned": n_unpruned_strategies,
                 "n_strategies": n_strategies,
                 "accuracy": 100 * test_accuracy,
                 "n_infeas": np.sum(infeas >= stg.INFEAS_TOL),
