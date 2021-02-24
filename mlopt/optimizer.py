@@ -672,6 +672,7 @@ class Optimizer(object):
             #  self._problem.solver_options['MIPGap'] = 0.1  # 10% MIP Gap
             # Focus on feasibility
             self._problem.solver_options['MIPFocus'] = 1
+
             # Limit time to one second
             self._problem.solver_options['TimeLimit'] = 1.
 
@@ -707,7 +708,10 @@ class Optimizer(object):
         n_train = self._learner.n_train  # Number of training samples
         n_theta = n_features(theta)  # Number of parameters
         n_strategies = len(self.encoding)  # Number of strategies
-        n_unpruned_strategies = len(self.encoding_full)  # Number of strategies
+        if hasattr(self, "encoding_full"):
+            n_unpruned_strategies = len(self.encoding_full)
+        else:
+            n_unpruned_strategies = n_strategies
 
         # Compute comparative statistics
         time_comp = np.array([time_test[i] / time_pred[i]

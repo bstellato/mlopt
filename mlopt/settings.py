@@ -20,8 +20,8 @@ logger.propagate = False   # Disable double logging
 
 
 # Parallel
-#  JOBLIB_BATCH_SIZE = 'auto'
-JOBLIB_BATCH_SIZE = 2
+JOBLIB_BATCH_SIZE = 'auto'
+#  JOBLIB_BATCH_SIZE = 2
 
 
 # Define constants
