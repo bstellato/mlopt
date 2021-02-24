@@ -33,7 +33,6 @@ DIVISION_TOL = 1e-8
 # Define default solver
 DEFAULT_SOLVER = cp.GUROBI
 DEFAULT_SOLVER_OPTIONS = {'Method': 1,  # Dual simplex
-                          'Threads': 1
                           }
 
 #  DEFAULT_SOLVER = cp.CPLEX
