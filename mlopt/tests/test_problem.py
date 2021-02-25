@@ -62,3 +62,20 @@ class TestProblem(unittest.TestCase):
 
         npt.assert_almost_equal(x_problem, x_cvxpy, decimal=TOL)
         npt.assert_almost_equal(cost_problem, cost_cvxpy, decimal=TOL)
+
+    def test_warm_start(self):
+        """Solve with Gurobi twice and check warm start."""
+        np.random.seed(0)
+        m, n = 80, 30
+        A = np.random.rand(m, n)
+        b = np.random.randn(m)
+        x = cp.Variable(n, integer=True)
+        cost = cp.norm(A @ x - b, 1)
+        cvxpy_problem = cp.Problem(cp.Minimize(cost))
+        problem = Problem(cvxpy_problem)
+        results_first = problem.solve()
+        results_second = problem.solve()
+
+        npt.assert_array_less(results_second['time'],
+                              results_first['time'])
+

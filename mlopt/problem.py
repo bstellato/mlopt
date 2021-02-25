@@ -182,8 +182,11 @@ class Problem(object):
         Remove unpickleable solver-specific elements
         Example: Gurobi model
         """
-        if cps.EXTRA_STATS in self.cvxpy_problem._solution.attr:
-            self.cvxpy_problem._solution.attr.pop(cps.EXTRA_STATS)
+        if self.cvxpy_problem._solution is not None:
+            if cps.EXTRA_STATS in self.cvxpy_problem._solution.attr:
+                self.cvxpy_problem._solution.attr.pop(cps.EXTRA_STATS)
+        if self.cvxpy_problem._solver_cache is not None:
+            self.cvxpy_problem._solver_cache = {}
         if hasattr(self.cvxpy_problem._solver_stats, "extra_stats"):
             del self.cvxpy_problem._solver_stats.extra_stats
 
@@ -404,5 +407,8 @@ class Problem(object):
             delayed(populate_and_solve)(self, theta.iloc[i])
             for i in tqdm(range(n))
         )
+
+        # Remove unpickleable objects for storage
+        self.make_serializable()
 
         return results
