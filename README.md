@@ -21,13 +21,16 @@ If you use `mlopt` for research, please cite the following papers:
 * [The Voice of Optimization](https://arxiv.org/pdf/1812.09991.pdf):
 
   ```
-  @article{mlopt,
-    author = {{Bertsimas}, D. and {Stellato}, B.},
-    title = {The Voice of Optimization},
-    journal = {Machine Learning (to appear)},
-    year = {2020},
-    month = jun,
-  }
+  @Article{bertsimas2021,
+  author        = {{Bertsimas}, D. and {Stellato}, B.},
+  title         = {The Voice of Optimization},
+  journal       = {Machine Learning},
+  year          = {2021},
+  month         = {2},
+  volume        = {110},
+  issue         = {2},
+  pages         = {249--277},
+}
   ```
 
 * [Online Mixed-Integer Optimization in Milliseconds](https://arxiv.org/pdf/1907.02206.pdf)
@@ -49,6 +52,8 @@ If you use `mlopt` for research, please cite the following papers:
   }
 
   ```
+
+## The code to reproduce the results in the papers is available at [bstellato/mlopt_benchmarks](https://github.com/bstellato/mlopt_benchmarks).
 
 
 ## Projects using mlopt framework
