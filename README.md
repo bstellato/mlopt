@@ -30,7 +30,7 @@ If you use `mlopt` for research, please cite the following papers:
   volume        = {110},
   issue         = {2},
   pages         = {249--277},
-}
+  }
   ```
 
 * [Online Mixed-Integer Optimization in Milliseconds](https://arxiv.org/pdf/1907.02206.pdf)
@@ -53,7 +53,8 @@ If you use `mlopt` for research, please cite the following papers:
 
   ```
 
-## The code to reproduce the results in the papers is available at [bstellato/mlopt_benchmarks](https://github.com/bstellato/mlopt_benchmarks).
+
+The code to **reproduce the results in the papers** is available at [bstellato/mlopt_benchmarks](https://github.com/bstellato/mlopt_benchmarks).
 
 
 ## Projects using mlopt framework
