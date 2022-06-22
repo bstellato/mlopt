@@ -16,7 +16,7 @@ joblib==0.15.1
 mccabe==0.6.1
 -e git+https://github.com/bstellato/mlopt.git@90ff0179d54b92ac907fef3e0df2dc7602627428#egg=mlopt
 msgpack==1.0.0
-numpy==1.18.4
+numpy==1.22.0
 osqp==0.6.1
 pandas==1.0.3
 parso==0.7.0
