@@ -12,7 +12,7 @@ ipdb==0.13.2
 ipython==7.14.0
 ipython-genutils==0.2.0
 jedi==0.17.0
-joblib==0.15.1
+joblib==1.2.0
 mccabe==0.6.1
 -e git+https://github.com/bstellato/mlopt.git@90ff0179d54b92ac907fef3e0df2dc7602627428#egg=mlopt
 msgpack==1.0.0
